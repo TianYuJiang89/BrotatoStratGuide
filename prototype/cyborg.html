@@ -137,6 +137,10 @@ function srcHTML(){
   const s = DATA.source;
   return `<cite class="src">主取材：<a href="${s.url}">${s.title}</a><br>视频 ID：<code>${s.vid}</code> / 发布：${s.pub} / 难度：${DATA.difficulty} / 角色：${DATA.en}<br>${s.game} · 转述非搬运，只留可复现骨架</cite>`;
 }
+function attrRow(a){
+  var icon = a[3] ? `<img class="sic" alt="" src="https://brotato.wiki.spellsandguns.com${a[3]}" onerror="this.remove()" referrerpolicy="no-referrer"> ` : `<span class="sic none" title="wiki 无专用图标">◆</span> `;
+  return `<tr><td>${icon}${a[0]}</td><td><b>${a[1]}</b></td><td>${a[2]}</td></tr>`;
+}
 function renderA(){
   return `<div class="A">
     <div class="hero"><h1>赛博格 (Cyborg)※ <span class="pill hot">取材待补</span></h1>
@@ -144,8 +148,10 @@ function renderA(){
     <p style="font-size:13px">写法演示：中文 (English) · DLC 角标如诅咒 (Curse)（Abyssal Terrors DLC）· 版本双标注见页底</p></div>
     <div class="ver">取材视频（2026-10）＋ 适用版本（Abyssal Terrors 后）· Danger 5 保底不启用 · 假数据</div>
     <nav class="toc"><a href="#a-attr">核心属性</a><a href="#a-w">武器 T1/T2</a><a href="#a-p">开局/中/后期</a><a href="#a-shop">商店</a><a href="#a-pit">避坑</a><a href="#a-src">取材</a></nav>
-    <div class="card" id="a-attr"><h2>核心属性优先级</h2><p style="font-size:12px;color:var(--muted);margin:0 0 8px">排序与图标随 wiki Stats 页主表（16 主 + 诅咒 + 次级 3）；评级是 Cyborg 视角。次级 3 项 wiki 本无专用图标，暂用 ◆ 占位。</p>
-      <table><tr><th>属性</th><th>评级</th><th>Cyborg 怎么看</th></tr>${DATA.attrs.map(a=>`<tr><td>${a[3]?`<img class="sic" alt="" src="https://brotato.wiki.spellsandguns.com${a[3]}" onerror="this.remove()" referrerpolicy="no-referrer"> `:`<span class="sic none" title="wiki 无专用图标">◆</span> `}${a[0]}</td><td><b>${a[1]}</b></td><td>${a[2]}</td></tr>`).join("")}</table></div>
+    <div class="card" id="a-attr"><h2>核心属性优先级</h2><p style="font-size:12px;color:var(--muted);margin:0 0 8px">排序与图标随 wiki Stats 页；评级是 Cyborg 视角。</p>
+      <table><tr><th>属性</th><th>评级</th><th>Cyborg 怎么看</th></tr>${DATA.attrs.filter(a=>a[0].indexOf("次级")<0).map(attrRow).join("")}</table>
+      <h3>次级属性</h3><p style="font-size:12px;color:var(--muted);margin:0 0 8px">wiki 本无专用图标，暂用 ◆ 占位。</p>
+      <table><tr><th>属性</th><th>评级</th><th>Cyborg 怎么看</th></tr>${DATA.attrs.filter(a=>a[0].indexOf("次级")>=0).map(attrRow).join("")}</table></div>
     <div class="card" id="a-w"><h2>推荐武器</h2><h3>T1 主选</h3>
       <table>${DATA.weaponsT1.map(w=>`<tr><td><b>${w[0]}</b></td><td>${w[1]}</td></tr>`).join("")}</table>
       <h3>T2 备选</h3><table>${DATA.weaponsT2.map(w=>`<tr><td><b>${w[0]}</b></td><td>${w[1]}</td></tr>`).join("")}</table>

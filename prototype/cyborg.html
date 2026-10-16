@@ -34,6 +34,13 @@
   .r-B { color:#2e7d32; background:#e8f5e9; } .r-C { color:#1565c0; background:#e3f2fd; }
   .r-D { color:#616161; background:#eeeeee; } .r-F { color:#fff; background:#424242; }
   .r-none { color:#9e9e9e; border:1px dashed #bdbdbd; background:transparent; font-weight:400; }
+  .has-tip { position:relative; border-bottom:1px dotted var(--muted); cursor:help; }
+  .has-tip .tip { display:none; position:absolute; left:0; top:100%; z-index:30; background:#1f1b16; color:#fdf6e3; border-radius:10px; padding:8px 10px; font-size:12px; min-width:190px; max-width:250px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
+  .has-tip:hover .tip, .has-tip:focus .tip { display:block; }
+  .tip .th { display:block; font-weight:700; color:#ffd966; margin-bottom:4px; }
+  .tip .ti { display:flex; gap:7px; align-items:center; margin:4px 0; }
+  .tip .ti img { width:24px; height:24px; object-fit:contain; image-rendering:pixelated; background:rgba(255,255,255,.12); border-radius:6px; }
+  .tip .tf { display:block; color:#b9ad93; margin-top:4px; font-size:11px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin:12px 0; }
   .card h2 { font-size:17px; margin:0 0 8px; }
   .card h3 { font-size:15px; margin:12px 0 6px; }
@@ -100,45 +107,45 @@ const DATA = {
   hook: "远程养炮塔：远程伤害 (Ranged Damage) 吃 200% 加成，波次过半时 100% 远程按 1:2 暂转化为工程 (Engineering)；工程直购 -75%、近战 (Melee) / 元素 (Elemental) -100%，全靠转化养结构。（机制来自 wiki Cyborg 页实测，中文名※待客户端校对）",
   difficulty: "取材待补", stateNote: "按取材规范选片：Ultimate > Nightmare Guide > Nightmare > Danger 5 保底；先用 wiki 机制占位",
   attrs: [
-    ["最大生命 (Max HP)", "B", "血够吃两下就行，别追", "/images/thumb/3/3b/Max_HP.png/20px-Max_HP.png"],
-    ["生命回复 (HP Regeneration)", null, null, "/images/thumb/8/8d/HP_Regeneration.png/20px-HP_Regeneration.png"],
-    ["生命窃取 (Life Steal)", "B", "中期补一口，回得上来", "/images/thumb/b/b5/Life_Steal.png/20px-Life_Steal.png"],
-    ["伤害 (Damage)", "A", "枪伤即一切，见了就拿", "/images/thumb/6/6a/Damage.png/20px-Damage.png"],
-    ["近战伤害 (Melee Damage)", null, null, "/images/thumb/0/01/Melee_Damage.png/20px-Melee_Damage.png"],
-    ["远程伤害 (Ranged Damage)", "S", "唯一核心，无脑堆", "/images/thumb/c/cb/Ranged_Damage.png/20px-Ranged_Damage.png"],
-    ["元素伤害 (Elemental Damage)", null, null, "/images/thumb/8/82/Elemental_Damage.png/20px-Elemental_Damage.png"],
-    ["攻击速度 (Attack Speed)", "A", "第二核心，枪快=清得快", "/images/thumb/6/6e/Attack_Speed.png/20px-Attack_Speed.png"],
-    ["暴击率 (Crit Chance)", null, null, "/images/thumb/4/41/Crit_Chance.png/20px-Crit_Chance.png"],
-    ["工程 (Engineering)", "A", "靠转化养，一个不买", "/images/thumb/2/28/Engineering_Stat.png/20px-Engineering_Stat.png"],
-    ["攻击范围 (Range)", null, null, "/images/thumb/2/21/Range_Stat.png/20px-Range_Stat.png"],
-    ["护甲 (Armor)", "C", "后期顺手拿点", "/images/thumb/0/06/Armor.png/20px-Armor.png"],
-    ["闪避 (Dodge)", null, null, "/images/thumb/7/72/Dodge_Stat.png/20px-Dodge_Stat.png"],
-    ["移动速度 (Speed)", null, null, "/images/thumb/e/e0/Speed_Stat.png/20px-Speed_Stat.png"],
-    ["幸运 (Luck)", null, null, "/images/thumb/f/f0/Luck.png/20px-Luck.png"],
-    ["收获 (Harvesting)", null, null, "/images/thumb/b/bb/Harvesting.png/20px-Harvesting.png"],
-    ["诅咒 (Curse)（Abyssal Terrors DLC）", null, null, "/images/thumb/8/85/Curse.png/20px-Curse.png"],
-    ["消耗品治疗 (Consumable Heal)（次级）", null, null, null],
-    ["材料回血 (% Materials Healing)（次级）", null, null, null],
-    ["经验获取 (% XP Gain)（次级）", "B", "升级快就是压制，早拿早享受", null],
-    ["拾取范围 (% Pickup Range)（次级）", null, null, null],
-    ["道具价格 (% Items Price)（次级）", null, null, null],
-    ["爆炸伤害 (% Explosion Damage)（次级）", "C", "有爆炸件才追，不主动找", null],
-    ["爆炸范围 (% Explosion Size)（次级）", null, null, null],
-    ["弹跳 (Bounces)（次级）", null, null, null],
-    ["穿透 (Piercing)（次级）", null, null, null],
-    ["穿透伤害 (% Piercing Damage)（次级）", null, null, null],
-    ["对首领伤害 (% Damage against Bosses)（次级）", null, null, null],
-    ["结构攻速 (% Structure Attack Speed)（次级）", "B", "炮塔也吃这个，结构核心", null],
-    ["结构射程 (Structure Range)（次级）", "C", "炮塔够得着就行", null],
-    ["燃烧速度 (% Burning Speed)（次级）", null, null, null],
-    ["燃烧蔓延 (Burning Spread)（次级）", null, null, null],
-    ["击退 (Knockback)（次级）", null, null, null],
-    ["双倍材料率 (% Double Material Chance)（次级）", null, null, null],
-    ["免费重随 (Free Rerolls)（次级）", null, null, null],
-    ["树木 (Trees)（次级）", null, null, null],
-    ["敌人数量 (% Enemies)（次级）", null, null, null],
-    ["敌方速度 (% Enemy Speed)（次级）", null, null, null],
-    ["重随价格 (% Reroll Price)（次级）", null, null, null],
+    ["最大生命 (Max HP)", "B", "血够吃两下就行，别追", "/images/thumb/3/3b/Max_HP.png/20px-Max_HP.png", null],
+    ["生命回复 (HP Regeneration)", null, null, "/images/thumb/8/8d/HP_Regeneration.png/20px-HP_Regeneration.png", null],
+    ["生命窃取 (Life Steal)", "B", "中期补一口，回得上来", "/images/thumb/b/b5/Life_Steal.png/20px-Life_Steal.png", null],
+    ["伤害 (Damage)", "A", "枪伤即一切，见了就拿", "/images/thumb/6/6a/Damage.png/20px-Damage.png", null],
+    ["近战伤害 (Melee Damage)", null, null, "/images/thumb/0/01/Melee_Damage.png/20px-Melee_Damage.png", null],
+    ["远程伤害 (Ranged Damage)", "S", "唯一核心，无脑堆", "/images/thumb/c/cb/Ranged_Damage.png/20px-Ranged_Damage.png", null],
+    ["元素伤害 (Elemental Damage)", null, null, "/images/thumb/8/82/Elemental_Damage.png/20px-Elemental_Damage.png", null],
+    ["攻击速度 (Attack Speed)", "A", "第二核心，枪快=清得快", "/images/thumb/6/6e/Attack_Speed.png/20px-Attack_Speed.png", null],
+    ["暴击率 (Crit Chance)", null, null, "/images/thumb/4/41/Crit_Chance.png/20px-Crit_Chance.png", null],
+    ["工程 (Engineering)", "A", "靠转化养，一个不买", "/images/thumb/2/28/Engineering_Stat.png/20px-Engineering_Stat.png", null],
+    ["攻击范围 (Range)", null, null, "/images/thumb/2/21/Range_Stat.png/20px-Range_Stat.png", null],
+    ["护甲 (Armor)", "C", "后期顺手拿点", "/images/thumb/0/06/Armor.png/20px-Armor.png", null],
+    ["闪避 (Dodge)", null, null, "/images/thumb/7/72/Dodge_Stat.png/20px-Dodge_Stat.png", null],
+    ["移动速度 (Speed)", null, null, "/images/thumb/e/e0/Speed_Stat.png/20px-Speed_Stat.png", null],
+    ["幸运 (Luck)", null, null, "/images/thumb/f/f0/Luck.png/20px-Luck.png", null],
+    ["收获 (Harvesting)", null, null, "/images/thumb/b/bb/Harvesting.png/20px-Harvesting.png", null],
+    ["诅咒 (Curse)（Abyssal Terrors DLC）", null, null, "/images/thumb/8/85/Curse.png/20px-Curse.png", null],
+    ["消耗品治疗 (Consumable Heal)（次级）", null, null, null, [["Alien Worm","/images/thumb/4/40/Alien_Worm.png/30px-Alien_Worm.png"],["Jerky","/images/thumb/6/68/Jerky.png/30px-Jerky.png"],["Lemonade","/images/thumb/2/2a/Lemonade.png/30px-Lemonade.png"],["Weird Food","/images/thumb/b/bb/Weird_Food.png/30px-Weird_Food.png"]]],
+    ["材料回血 (% Materials Healing)（次级）", null, null, null, [["Cute Monkey","/images/thumb/8/83/Cute_Monkey.png/30px-Cute_Monkey.png"]]],
+    ["经验获取 (% XP Gain)（次级）", "B", "升级快就是压制，早拿早享受", null, [["Bean Teacher","/images/thumb/8/88/Bean_Teacher.png/30px-Bean_Teacher.png"],["Black Belt","/images/thumb/f/f4/Black_Belt.png/30px-Black_Belt.png"],["Celery Tea","/images/thumb/4/4a/Celery_Tea.png/30px-Celery_Tea.png"],["Diploma","/images/thumb/4/49/Diploma.png/30px-Diploma.png"],["Feather","/images/thumb/3/33/Feather.png/30px-Feather.png"],["Peacock","/images/thumb/6/61/Peacock.png/30px-Peacock.png"],["Scar","/images/thumb/c/c7/Scar.png/30px-Scar.png"]]],
+    ["拾取范围 (% Pickup Range)（次级）", null, null, null, [["Alien Tongue","/images/thumb/a/a7/Alien_Tongue.png/30px-Alien_Tongue.png"],["Cauldron","/images/thumb/3/37/Cauldron.png/30px-Cauldron.png"],["Gnome","/images/thumb/7/78/Gnome.png/30px-Gnome.png"],["Little Frog","/images/thumb/b/b2/Little_Frog.png/30px-Little_Frog.png"]]],
+    ["道具价格 (% Items Price)（次级）", null, null, null, [["Coupon","/images/thumb/c/c5/Coupon.png/30px-Coupon.png"]]],
+    ["爆炸伤害 (% Explosion Damage)（次级）", "C", "有爆炸件才追，不主动找", null, [["Dynamite","/images/thumb/f/fc/Dynamite.png/30px-Dynamite.png"],["Explosive Shells","/images/thumb/f/fb/Explosive_Shells.png/30px-Explosive_Shells.png"],["Honey","/images/thumb/c/c6/Honey.png/30px-Honey.png"]]],
+    ["爆炸范围 (% Explosion Size)（次级）", null, null, null, [["Explosive Shells","/images/thumb/f/fb/Explosive_Shells.png/30px-Explosive_Shells.png"],["Honey","/images/thumb/c/c6/Honey.png/30px-Honey.png"],["Plastic Explosive","/images/thumb/b/bb/Plastic_Explosive.png/30px-Plastic_Explosive.png"]]],
+    ["弹跳 (Bounces)（次级）", null, null, null, [["Ricochet","/images/thumb/8/87/Ricochet.png/30px-Ricochet.png"]]],
+    ["穿透 (Piercing)（次级）", null, null, null, [["Bandana","/images/thumb/0/0d/Bandana.png/30px-Bandana.png"],["Sharp Bullet","/images/thumb/6/6b/Sharp_Bullet.png/30px-Sharp_Bullet.png"]]],
+    ["穿透伤害 (% Piercing Damage)（次级）", null, null, null, [["Pumpkin","/images/thumb/6/64/Pumpkin.png/30px-Pumpkin.png"],["Sharp Bullet","/images/thumb/6/6b/Sharp_Bullet.png/30px-Sharp_Bullet.png"]]],
+    ["对首领伤害 (% Damage against Bosses)（次级）", null, null, null, [["Silver Bullet","/images/thumb/0/0f/Silver_Bullet.png/30px-Silver_Bullet.png"]]],
+    ["结构攻速 (% Structure Attack Speed)（次级）", "B", "炮塔也吃这个，结构核心", null, [["Clockwork Wasp","/images/thumb/8/8a/Clockwork_Wasp.png/30px-Clockwork_Wasp.png"],["Improved Tools","/images/thumb/3/31/Improved_Tools.png/30px-Improved_Tools.png"]]],
+    ["结构射程 (Structure Range)（次级）", "C", "炮塔够得着就行", null, [["Builder","/images/thumb/1/14/Builder.png/30px-Builder.png"]]],
+    ["燃烧速度 (% Burning Speed)（次级）", null, null, null, [["Eyes Surgery","/images/thumb/2/26/Eyes_Surgery.png/30px-Eyes_Surgery.png"],["Frozen Heart","/images/thumb/1/18/Frozen_Heart.png/30px-Frozen_Heart.png"]]],
+    ["燃烧蔓延 (Burning Spread)（次级）", null, null, null, [["Snake","/images/thumb/5/5a/Snake.png/30px-Snake.png"]]],
+    ["击退 (Knockback)（次级）", null, null, null, [["Ball and Chain","/images/thumb/6/60/Ball_and_Chain.png/30px-Ball_and_Chain.png"],["Banner","/images/thumb/8/87/Banner.png/30px-Banner.png"],["Coil","/images/thumb/e/e4/Coil.png/30px-Coil.png"],["Black Belt","/images/thumb/f/f4/Black_Belt.png/30px-Black_Belt.png"],["Boxing Glove","/images/thumb/e/e1/Boxing_Glove.png/30px-Boxing_Glove.png"]]],
+    ["双倍材料率 (% Double Material Chance)（次级）", null, null, null, [["Metal Detector","/images/thumb/3/35/Metal_Detector.png/30px-Metal_Detector.png"]]],
+    ["免费重随 (Free Rerolls)（次级）", null, null, null, [["Dangerous Bunny","/images/thumb/7/79/Dangerous_Bunny.png/30px-Dangerous_Bunny.png"]]],
+    ["树木 (Trees)（次级）", null, null, null, [["Tree","/images/thumb/a/ac/Tree.png/30px-Tree.png"]]],
+    ["敌人数量 (% Enemies)（次级）", null, null, null, [["Black Flag","/images/thumb/a/a7/Black_Flag.png/30px-Black_Flag.png"],["Candle","/images/thumb/3/30/Candle.png/30px-Candle.png"],["Gentle Alien","/images/thumb/2/22/Gentle_Alien.png/30px-Gentle_Alien.png"],["Mouse","/images/thumb/5/5c/Mouse.png/30px-Mouse.png"],["White Flag","/images/thumb/4/43/White_Flag.png/30px-White_Flag.png"]]],
+    ["敌方速度 (% Enemy Speed)（次级）", null, null, null, [["Snail","/images/thumb/d/d2/Snail.png/30px-Snail.png"]]],
+    ["重随价格 (% Reroll Price)（次级）", null, null, null, [["Spyglass","/images/thumb/c/c1/Spyglass.png/30px-Spyglass.png"]]],
   ],
   weaponsT1: [["冲锋枪 (SMG)", "wiki 起始池，前期过渡最滑"], ["手枪 (Pistol)", "wiki 起始池，便宜好升满"]],
   weaponsT2: [["加特林 (Minigun)", "高射速吃远程加成，待你确认"], ["左轮 (Revolver)", "wiki 起始池，单发补伤"]],
@@ -168,7 +175,12 @@ function attrRow(a){
   var icon = a[3] ? `<img class="sic" alt="" src="https://brotato.wiki.spellsandguns.com${a[3]}" onerror="this.remove()" referrerpolicy="no-referrer"> ` : `<span class="sic none" title="wiki 无专用图标">◆</span> `;
   var r = a[1] ? `<span class="r r-${a[1]}">${a[1]}</span>` : `<span class="r r-none" title="视频作者未提及，诚实空出">—</span>`;
   var v = a[2] ? a[2] : `<span style="color:#bdbdbd">作者未提及</span>`;
-  return `<tr><td>${icon}${a[0]}</td><td>${r}</td><td>${v}</td></tr>`;
+  var name = a[0];
+  if (a[4]) {
+    var items = a[4].map(function(it){ return `<span class="ti"><img alt="" src="https://brotato.wiki.spellsandguns.com${it[1]}" onerror="this.remove()" referrerpolicy="no-referrer">${it[0]}</span>`; }).join("");
+    name = `<span class="has-tip" tabindex="0">${a[0]}<span class="tip"><span class="th">加该属性的道具（wiki Notable Items）</span>${items}<span class="tf">英文为 wiki 原名，中文待客户端校对</span></span></span>`;
+  }
+  return `<tr><td>${icon}${name}</td><td>${r}</td><td>${v}</td></tr>`;
 }
 function renderA(){
   return `<div class="A">
@@ -179,7 +191,7 @@ function renderA(){
     <nav class="toc"><a href="#a-attr">核心属性</a><a href="#a-w">武器 T1/T2</a><a href="#a-p">开局/中/后期</a><a href="#a-shop">商店</a><a href="#a-pit">避坑</a><a href="#a-src">取材</a></nav>
     <div class="card" id="a-attr"><h2>核心属性优先级</h2><p style="font-size:12px;color:var(--muted);margin:0 0 8px">排序与图标随 wiki Stats 页；<b>评级与“怎么看”口径 = 取材视频作者，作者没提的诚实空出（—），不是差评。</b>本表为演示编造数据（Cyborg 片待补），选片后按真实作者口径替换。</p><p style="font-size:12px;margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">图例：<span class="r r-S">S</span><span class="r r-A">A</span><span class="r r-B">B</span><span class="r r-C">C</span><span class="r r-D">D</span><span class="r r-F">F</span><span class="r r-none">— 未提及</span></p>
       <table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>${DATA.attrs.filter(a=>a[0].indexOf("次级")<0).map(attrRow).join("")}</table>
-      <h3>次级属性（22 项，随 wiki 次级表原序）</h3><p style="font-size:12px;color:var(--muted);margin:0 0 8px">wiki 本无专用图标，暂用 ◆ 占位；次级中文为占位写法，待客户端校对。注意：次级普遍对结构生效，Cyborg 的炮塔吃这些。</p>
+      <h3>次级属性（22 项，随 wiki 次级表原序）</h3><p style="font-size:12px;color:var(--muted);margin:0 0 8px">wiki 本无专用图标，暂用 ◆ 占位；次级中文为占位写法，待客户端校对。注意：次级普遍对结构生效，Cyborg 的炮塔吃这些。悬浮属性名查看来源道具（wiki Notable Items，手机点按亦可）。</p>
       <table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>${DATA.attrs.filter(a=>a[0].indexOf("次级")>=0).map(attrRow).join("")}</table></div>
     <div class="card" id="a-w"><h2>推荐武器</h2><h3>T1 主选</h3>
       <table>${DATA.weaponsT1.map(w=>`<tr><td><b>${w[0]}</b></td><td>${w[1]}</td></tr>`).join("")}</table>

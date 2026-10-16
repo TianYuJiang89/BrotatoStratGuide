@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{PAGE_TITLE}}</title>
+<style>
+:root { --bg:#f7f5ef; --card:#fff; --ink:#1f1b16; --muted:#7a7166; --line:#e7e0d2; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 -apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif; }
+a { color:#0b5fff; }
+.wrap { max-width:720px; margin:0 auto; padding:14px 14px 80px; }
+.topbar { position:sticky; top:0; z-index:5; background:rgba(247,245,239,.94); padding:10px 14px; border-bottom:1px solid var(--line); }
+.hero { background:#1f1b16; color:#fdf6e3; border-radius:16px; padding:18px 16px; }
+.hero h1 { margin:0 0 6px; font-size:24px; }
+.hero p { margin:6px 0; color:#e8ddc4; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin:12px 0; }
+.card h2 { font-size:17px; margin:0 0 8px; }
+.card h3 { font-size:15px; margin:12px 0 6px; }
+.table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { color:var(--muted); font-weight:600; font-size:12px; }
+td.rating-cell { width:2.6em; text-align:center; white-space:nowrap; }
+.rating { display:inline-block; min-width:1.9em; padding:1px 6px; border-radius:999px; font-weight:800; text-align:center; font-size:14px; }
+.rating-S { color:#b71c1c; background:#ffebee; }
+.rating-A { color:#e65100; background:#fff3e0; }
+.rating-B { color:#2e7d32; background:#e8f5e9; }
+.rating-C { color:#1565c0; background:#e3f2fd; }
+.rating-D { color:#616161; background:#eeeeee; }
+.rating-F { color:#fff; background:#424242; }
+.rating-none { color:#9e9e9e; border:1px dashed #bdbdbd; background:transparent; font-weight:400; }
+.empty { color:#9e9e9e; }
+.badge-pending { display:inline-block; font-size:12px; border:1px solid #9a3412; color:#9a3412; border-radius:999px; padding:2px 9px; margin-left:8px; }
+.legend { font-size:12px; color:var(--muted); margin:0 0 10px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.toc { position:sticky; top:53px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 10px; display:flex; gap:8px; overflow-x:auto; font-size:13px; }
+.toc a { white-space:nowrap; text-decoration:none; background:#f2ecdd; border-radius:999px; padding:4px 10px; color:var(--ink); }
+.footer { font-size:12px; color:var(--muted); margin-top:16px; }
+@media (max-width:480px){ .hero h1 { font-size:20px; } }
+</style>
+</head>
+<body>
+<div class="topbar"><a href="./index.html">← 索引</a></div>
+<div class="wrap">
+<div class="hero">
+<h1>{{ZH}} ({{EN}}){{PENDING_BADGE}}</h1>
+<p>土豆兄弟 (Brotato) · 单角色攻略 · 纯静态单模板</p>
+</div>
+<nav class="toc" aria-label="目录">
+<a href="#s-mechanism">机制一句话</a><a href="#s-attrs-primary">核心属性·主表</a><a href="#s-attrs-secondary">核心属性·次级表</a><a href="#s-weapons">武器分档</a><a href="#s-items">关键道具</a><a href="#s-phases">开局/中期/后期</a><a href="#s-upgrade">升级优先级</a><a href="#s-shop">商店优先级</a><a href="#s-pitfalls">避坑</a><a href="#s-hard">高难特例</a><a href="#s-source">取材与版本</a>
+</nav>
+<section class="card" id="s-mechanism" data-section="mechanism"><h2>机制一句话</h2><p>{{MECHANISM}}</p></section>
+<section class="card" id="s-attrs-primary" data-section="attrs-primary"><h2>核心属性·主表</h2><p class="legend">图例：<span class="rating rating-S">S</span><span class="rating rating-A">A</span><span class="rating rating-B">B</span><span class="rating rating-C">C</span><span class="rating rating-D">D</span><span class="rating rating-F">F</span><span class="rating rating-none">— 未提及</span> · 评级只认视频作者口径，未提诚实空出</p><div class="table-wrap"><table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>{{ATTRS_PRIMARY_ROWS}}</table></div></section>
+<section class="card" id="s-attrs-secondary" data-section="attrs-secondary"><h2>核心属性·次级表</h2><p class="legend">次级全量拆表，规则同主表，未提诚实空出</p><div class="table-wrap"><table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>{{ATTRS_SECONDARY_ROWS}}</table></div></section>
+<section class="card" id="s-weapons" data-section="weapons"><h2>武器分档</h2><h3>T1 主选</h3><div class="table-wrap"><table><tr><th>武器</th><th>为什么 / 何时拿换</th></tr>{{WEAPONS_T1_ROWS}}</table></div><h3>T2 备选过渡</h3><div class="table-wrap"><table><tr><th>武器</th><th>为什么 / 何时拿换</th></tr>{{WEAPONS_T2_ROWS}}</table></div></section>
+<section class="card" id="s-items" data-section="items"><h2>关键道具</h2><div class="table-wrap"><table><tr><th>道具</th><th>推荐理由</th></tr>{{ITEMS_ROWS}}</table></div></section>
+<section class="card" id="s-phases" data-section="phases"><h2>开局 / 中期 / 后期</h2>{{PHASES_BLOCK}}</section>
+<section class="card" id="s-upgrade" data-section="upgrade"><h2>升级优先级</h2><p>{{UPGRADE}}</p></section>
+<section class="card" id="s-shop" data-section="shop"><h2>商店优先级</h2><p>{{SHOP}}</p></section>
+<section class="card" id="s-pitfalls" data-section="pitfalls"><h2>避坑</h2><ul>{{PITFALLS_ITEMS}}</ul></section>
+<section class="card" id="s-hard" data-section="hard"><h2>高难特例</h2><p>{{HARD}}</p></section>
+<section class="card" id="s-source" data-section="source"><h2>取材与版本</h2>{{SOURCE_BLOCK}}</section>
+<div class="footer"><p>构建产物，人不手改，只改源码重构建。图标与文本授权见后续合规票，骨架先保证可读。</p></div>
+</div>
+<!-- GENERATED by scripts/build.py: do not edit, rebuild from data/ + templates/ -->
+</body>
+</html>

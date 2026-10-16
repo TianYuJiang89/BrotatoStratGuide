@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>赛博格 (Cyborg) · 土豆兄弟攻略</title>
+<style>
+:root { --bg:#f7f5ef; --card:#fff; --ink:#1f1b16; --muted:#7a7166; --line:#e7e0d2; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 -apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif; }
+a { color:#0b5fff; }
+.wrap { max-width:720px; margin:0 auto; padding:14px 14px 80px; }
+.topbar { position:sticky; top:0; z-index:5; background:rgba(247,245,239,.94); padding:10px 14px; border-bottom:1px solid var(--line); }
+.hero { background:#1f1b16; color:#fdf6e3; border-radius:16px; padding:18px 16px; }
+.hero h1 { margin:0 0 6px; font-size:24px; }
+.hero p { margin:6px 0; color:#e8ddc4; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin:12px 0; }
+.card h2 { font-size:17px; margin:0 0 8px; }
+.card h3 { font-size:15px; margin:12px 0 6px; }
+.table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { color:var(--muted); font-weight:600; font-size:12px; }
+td.rating-cell { width:2.6em; text-align:center; white-space:nowrap; }
+.rating { display:inline-block; min-width:1.9em; padding:1px 6px; border-radius:999px; font-weight:800; text-align:center; font-size:14px; }
+.rating-S { color:#b71c1c; background:#ffebee; }
+.rating-A { color:#e65100; background:#fff3e0; }
+.rating-B { color:#2e7d32; background:#e8f5e9; }
+.rating-C { color:#1565c0; background:#e3f2fd; }
+.rating-D { color:#616161; background:#eeeeee; }
+.rating-F { color:#fff; background:#424242; }
+.rating-none { color:#9e9e9e; border:1px dashed #bdbdbd; background:transparent; font-weight:400; }
+.empty { color:#9e9e9e; }
+.badge-pending { display:inline-block; font-size:12px; border:1px solid #9a3412; color:#9a3412; border-radius:999px; padding:2px 9px; margin-left:8px; }
+.legend { font-size:12px; color:var(--muted); margin:0 0 10px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.toc { position:sticky; top:53px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 10px; display:flex; gap:8px; overflow-x:auto; font-size:13px; }
+.toc a { white-space:nowrap; text-decoration:none; background:#f2ecdd; border-radius:999px; padding:4px 10px; color:var(--ink); }
+.footer { font-size:12px; color:var(--muted); margin-top:16px; }
+@media (max-width:480px){ .hero h1 { font-size:20px; } }
+</style>
+</head>
+<body>
+<div class="topbar"><a href="./index.html">← 索引</a></div>
+<div class="wrap">
+<div class="hero">
+<h1>赛博格 (Cyborg)</h1>
+<p>土豆兄弟 (Brotato) · 单角色攻略 · 纯静态单模板</p>
+</div>
+<nav class="toc" aria-label="目录">
+<a href="#s-mechanism">机制一句话</a><a href="#s-attrs-primary">核心属性·主表</a><a href="#s-attrs-secondary">核心属性·次级表</a><a href="#s-weapons">武器分档</a><a href="#s-items">关键道具</a><a href="#s-phases">开局/中期/后期</a><a href="#s-upgrade">升级优先级</a><a href="#s-shop">商店优先级</a><a href="#s-pitfalls">避坑</a><a href="#s-hard">高难特例</a><a href="#s-source">取材与版本</a>
+</nav>
+<section class="card" id="s-mechanism" data-section="mechanism"><h2>机制一句话</h2><p>远程养炮塔：远程伤害 (Ranged Damage) 吃 200% 加成，波次过半时 100% 远程按 1:2 暂转化为工程 (Engineering)；工程直购 -75%、近战 (Melee Damage) / 元素 (Elemental Damage) -100%，全靠转化养结构。解锁条件：10 远程伤害 (Ranged Damage) + 3 结构；胜场奖励：改良工具 (Improved Tools)。（机制译自 Wiki，中文待客户端校对；数值演示占位，选片后按视频口径替换）</p></section>
+<section class="card" id="s-attrs-primary" data-section="attrs-primary"><h2>核心属性·主表</h2><p class="legend">图例：<span class="rating rating-S">S</span><span class="rating rating-A">A</span><span class="rating rating-B">B</span><span class="rating rating-C">C</span><span class="rating rating-D">D</span><span class="rating rating-F">F</span><span class="rating rating-none">— 未提及</span> · 评级只认视频作者口径，未提诚实空出</p><div class="table-wrap"><table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr><tr><td>远程伤害 (Ranged Damage)</td><td class="rating-cell"><span class="rating rating-S">S</span></td><td>唯一核心，无脑堆</td></tr><tr><td>攻击速度 (Attack Speed)</td><td class="rating-cell"><span class="rating rating-A">A</span></td><td>第二核心，枪快清得快</td></tr><tr><td>工程 (Engineering)</td><td class="rating-cell"><span class="rating rating-A">A</span></td><td>靠转化养，一个不直购</td></tr><tr><td>最大生命 (Max HP)</td><td class="rating-cell"><span class="rating rating-B">B</span></td><td>血够吃两下就行</td></tr><tr><td>近战伤害 (Melee Damage)</td><td class="rating-cell"><span class="rating rating-none" title="视频作者未提及，诚实空出">—</span></td><td><span class="empty">作者未提及</span></td></tr></table></div></section>
+<section class="card" id="s-attrs-secondary" data-section="attrs-secondary"><h2>核心属性·次级表</h2><p class="legend">次级全量拆表，规则同主表，未提诚实空出</p><div class="table-wrap"><table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr><tr><td>经验获取 (XP Gain)</td><td class="rating-cell"><span class="rating rating-B">B</span></td><td>升级快就是压制</td></tr><tr><td>爆炸伤害 (Explosion Damage)</td><td class="rating-cell"><span class="rating rating-C">C</span></td><td>有爆炸件才追</td></tr><tr><td>重随价格 (Reroll Price)</td><td class="rating-cell"><span class="rating rating-none" title="视频作者未提及，诚实空出">—</span></td><td><span class="empty">作者未提及</span></td></tr></table></div></section>
+<section class="card" id="s-weapons" data-section="weapons"><h2>武器分档</h2><h3>T1 主选</h3><div class="table-wrap"><table><tr><th>武器</th><th>为什么 / 何时拿换</th></tr><tr><td><b>冲锋枪 (SMG)</b></td><td>前期过渡最滑，W1 即拿，升满再换</td></tr><tr><td><b>手枪 (Pistol)</b></td><td>便宜好升满，过渡不亏</td></tr></table></div><h3>T2 备选过渡</h3><div class="table-wrap"><table><tr><th>武器</th><th>为什么 / 何时拿换</th></tr><tr><td><b>加特林 (Minigun)</b></td><td>高射速吃远程加成，中期可换</td></tr></table></div></section>
+<section class="card" id="s-items" data-section="items"><h2>关键道具</h2><div class="table-wrap"><table><tr><th>道具</th><th>推荐理由</th></tr><tr><td><b>改良工具 (Improved Tools)</b></td><td>胜场解锁，结构流本命，见了必拿</td></tr><tr><td><b>炮塔 (Turret)</b></td><td>转化养大的主力输出，先占 2 个</td></tr><tr><td><b>咖啡 (Coffee)</b></td><td>攻速即清线，枪炮双吃</td></tr></table></div></section>
+<section class="card" id="s-phases" data-section="phases"><h2>开局 / 中期 / 后期</h2><h3>开局（W1-5）</h3><p>（W1-5）锁 1 把 T1 枪升满，只拿远程伤害 (Ranged Damage) / 攻击速度 (Attack Speed)；结构件便宜先占 1-2 个，前半段靠枪自己清。<br><span>买什么：冲锋枪 (SMG) → 升满</span></p><h3>中期（W6-12）</h3><p>（W6-12）转向点：结构数量铺起来吃转化红利，过半后 1 远程 = 2 工程；工程 (Engineering) 一件也别直购，全靠转化。<br><span>买什么：补第 2 把枪 + 炮塔 / 地雷</span></p><h3>后期（W13-20）</h3><p>（W13-20）转向点：最大生命 (Max HP) + 护甲补坦度；近战 / 元素一件不拿，站位让炮塔吃波次。<br><span>买什么：T1 升满后追攻击速度与血量</span></p></section>
+<section class="card" id="s-upgrade" data-section="upgrade"><h2>升级优先级</h2><p>远程伤害 (Ranged Damage) &gt; 攻击速度 (Attack Speed) &gt; 最大生命 (Max HP)；工程 / 近战 / 元素出了也不拿；血量告急时保命优先。（演示口径，选片后替换）</p></section>
+<section class="card" id="s-shop" data-section="shop"><h2>商店优先级</h2><p>属性 Top3：远程伤害 (Ranged Damage) / 攻击速度 (Attack Speed) / 最大生命 (Max HP)；必拿：炮塔 / 改良工具；必刷：缺关键结构时点 1-2 次重随；工程直购永远跳过。（演示口径，选片后替换）</p></section>
+<section class="card" id="s-pitfalls" data-section="pitfalls"><h2>避坑</h2><ul><li>别直买工程 (Engineering)：-75%，全靠波次过半转化。</li><li>别碰近战 (Melee Damage) / 元素 (Elemental Damage)：-100%，拿了等于白板。</li></ul></section>
+<section class="card" id="s-hard" data-section="hard"><h2>高难特例</h2><p>高难特例：仅 Nightmare / Ultimate 成立——前半段压力更大，优先保证清线枪的等级再铺结构。（演示占位，待视频口径）</p></section>
+<section class="card" id="s-source" data-section="source"><h2>取材与版本</h2><p>主取材：<a href="https://www.youtube.com/@Cephalopocalypse">赛博格演示占位（按取材规范待补真片，选片后替换）</a></p><p>视频 ID：<code>demo-placeholder</code> / 发布：2026-10-17 / 难度：Nightmare</p><p>适用版本：Steam 当前版本双标注占位（发布日期 2026-10-17 + 游戏版本待写）（发布日期 + 游戏版本双标注）</p><p>转述非搬运，只留可复现骨架。</p></section>
+<div class="footer"><p>构建产物，人不手改，只改源码重构建。图标与文本授权见后续合规票，骨架先保证可读。</p></div>
+</div>
+<!-- GENERATED by scripts/build.py: do not edit, rebuild from data/ + templates/ -->
+</body>
+</html>

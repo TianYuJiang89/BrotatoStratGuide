@@ -1,0 +1,127 @@
+{
+  "slug": "cyborg",
+  "mechanism": "远程养炮塔：远程伤害 (Ranged Damage) 吃 200% 加成，波次过半时 100% 远程按 1:2 暂转化为工程 (Engineering)；工程直购 -75%、近战 (Melee Damage) / 元素 (Elemental Damage) -100%，全靠转化养结构。解锁条件：10 远程伤害 (Ranged Damage) + 3 结构；胜场奖励：改良工具 (Improved Tools)。（机制译自 Wiki，中文待客户端校对；数值演示占位，选片后按视频口径替换）",
+  "attrs_primary": [
+    {
+      "name_zh": "远程伤害",
+      "name_en": "Ranged Damage",
+      "rating": "S",
+      "note": "唯一核心，无脑堆"
+    },
+    {
+      "name_zh": "攻击速度",
+      "name_en": "Attack Speed",
+      "rating": "A",
+      "note": "第二核心，枪快清得快"
+    },
+    {
+      "name_zh": "工程",
+      "name_en": "Engineering",
+      "rating": "A",
+      "note": "靠转化养，一个不直购"
+    },
+    {
+      "name_zh": "最大生命",
+      "name_en": "Max HP",
+      "rating": "B",
+      "note": "血够吃两下就行"
+    },
+    {
+      "name_zh": "近战伤害",
+      "name_en": "Melee Damage",
+      "rating": null,
+      "note": null
+    }
+  ],
+  "attrs_secondary": [
+    {
+      "name_zh": "经验获取",
+      "name_en": "XP Gain",
+      "rating": "B",
+      "note": "升级快就是压制"
+    },
+    {
+      "name_zh": "爆炸伤害",
+      "name_en": "Explosion Damage",
+      "rating": "C",
+      "note": "有爆炸件才追"
+    },
+    {
+      "name_zh": "重随价格",
+      "name_en": "Reroll Price",
+      "rating": null,
+      "note": null
+    }
+  ],
+  "weapons_t1": [
+    {
+      "name_zh": "冲锋枪",
+      "name_en": "SMG",
+      "note": "前期过渡最滑，W1 即拿，升满再换"
+    },
+    {
+      "name_zh": "手枪",
+      "name_en": "Pistol",
+      "note": "便宜好升满，过渡不亏"
+    }
+  ],
+  "weapons_t2": [
+    {
+      "name_zh": "加特林",
+      "name_en": "Minigun",
+      "note": "高射速吃远程加成，中期可换"
+    }
+  ],
+  "items": [
+    {
+      "name_zh": "改良工具",
+      "name_en": "Improved Tools",
+      "reason": "胜场解锁，结构流本命，见了必拿"
+    },
+    {
+      "name_zh": "炮塔",
+      "name_en": "Turret",
+      "reason": "转化养大的主力输出，先占 2 个"
+    },
+    {
+      "name_zh": "咖啡",
+      "name_en": "Coffee",
+      "reason": "攻速即清线，枪炮双吃"
+    }
+  ],
+  "phases": [
+    {
+      "label": "开局",
+      "waves": "W1-5",
+      "body": "锁 1 把 T1 枪升满，只拿远程伤害 (Ranged Damage) / 攻击速度 (Attack Speed)；结构件便宜先占 1-2 个，前半段靠枪自己清。",
+      "buy": "冲锋枪 (SMG) → 升满"
+    },
+    {
+      "label": "中期",
+      "waves": "W6-12",
+      "body": "转向点：结构数量铺起来吃转化红利，过半后 1 远程 = 2 工程；工程 (Engineering) 一件也别直购，全靠转化。",
+      "buy": "补第 2 把枪 + 炮塔 / 地雷"
+    },
+    {
+      "label": "后期",
+      "waves": "W13-20",
+      "body": "转向点：最大生命 (Max HP) + 护甲补坦度；近战 / 元素一件不拿，站位让炮塔吃波次。",
+      "buy": "T1 升满后追攻击速度与血量"
+    }
+  ],
+  "upgrade": "远程伤害 (Ranged Damage) > 攻击速度 (Attack Speed) > 最大生命 (Max HP)；工程 / 近战 / 元素出了也不拿；血量告急时保命优先。（演示口径，选片后替换）",
+  "shop": "属性 Top3：远程伤害 (Ranged Damage) / 攻击速度 (Attack Speed) / 最大生命 (Max HP)；必拿：炮塔 / 改良工具；必刷：缺关键结构时点 1-2 次重随；工程直购永远跳过。（演示口径，选片后替换）",
+  "pitfalls": [
+    "别直买工程 (Engineering)：-75%，全靠波次过半转化。",
+    "别碰近战 (Melee Damage) / 元素 (Elemental Damage)：-100%，拿了等于白板。"
+  ],
+  "hard": "高难特例：仅 Nightmare / Ultimate 成立——前半段压力更大，优先保证清线枪的等级再铺结构。（演示占位，待视频口径）",
+  "source": {
+    "title": "赛博格演示占位（按取材规范待补真片，选片后替换）",
+    "url": "https://www.youtube.com/@Cephalopocalypse",
+    "video_id": "demo-placeholder",
+    "published": "2026-10-17",
+    "difficulty": "Nightmare",
+    "game_version": "Steam 当前版本双标注占位（发布日期 2026-10-17 + 游戏版本待写）"
+  }
+}

@@ -69,7 +69,7 @@
 </style>
 </head>
 <body>
-<div class="proto">PROTOTYPE throwaway · 假数据演示 · 不定终稿 · 对应票 <b>页面模板原型：一页一样式，多方案可点</b> · 数据同源、三渲染 · <a href="./index.html">← 索引页</a></div>
+<div class="proto">PROTOTYPE throwaway · 已定 <b>A 长文式</b> · 样例赛博格 (Cyborg)※ · B/C 冻结 · <a href="./index.html">← 索引页</a></div>
 <div class="topbar">
   <a class="back" href="./index.html">← 索引</a>
   <img alt="Cyborg" src="https://brotato.wiki.spellsandguns.com/images/thumb/a/a3/Cyborg.png/60px-Cyborg.png" width="34" height="34" style="border-radius:9px;background:#efe9d8;object-fit:contain;image-rendering:pixelated" referrerpolicy="no-referrer" onerror="this.remove()">
@@ -90,9 +90,26 @@ const DATA = {
   hook: "远程养炮塔：远程伤害 (Ranged Damage) 吃 200% 加成，波次过半时 100% 远程按 1:2 暂转化为工程 (Engineering)；工程直购 -75%、近战 (Melee) / 元素 (Elemental) -100%，全靠转化养结构。（机制来自 wiki Cyborg 页实测，中文名※待客户端校对）",
   difficulty: "取材待补", stateNote: "按取材规范选片：Ultimate > Nightmare Guide > Nightmare > Danger 5 保底；先用 wiki 机制占位",
   attrs: [
-    ["远程伤害 (Ranged Damage)", "S · 唯一主堆，前后半段都吃"], ["工程 (Engineering)", "A · 靠转化，不直购（-75%）"],
-    ["攻击速度 (Attack Speed)", "A · 枪和炮塔都吃"], ["最大生命 (Max HP)", "B · 站得住才能吃转化"],
-    ["护甲 (Armor)", "B · 13波后补"], ["近战伤害 (Melee Damage)", "F · -100% 别碰"]
+    ["远程伤害 (Ranged Damage)", "S", "唯一主堆：+200% 加成，前后半段都吃"],
+    ["工程 (Engineering)", "A", "靠波次过半转化养结构，绝不直购（-75%）"],
+    ["伤害 (Damage)", "A", "加成枪械不加成结构；枪是前半段的命"],
+    ["攻击速度 (Attack Speed)", "A", "枪吃，结构不吃；走位也吃"],
+    ["最大生命 (Max HP)", "A", "站得住才能吃到转化红利"],
+    ["暴击率 (Crit Chance)", "B", "枪吃；顺手拿，不追"],
+    ["攻击范围 (Range)", "B", "枪的射程；结构另有结构射程"],
+    ["生命回复 (HP Regeneration)", "B", "续航，有就拿"],
+    ["生命窃取 (Life Steal)", "B", "枪能吸，结构不吸；中期补"],
+    ["闪避 (Dodge)", "B", "锦上添花"],
+    ["护甲 (Armor)", "B", "13 波后补"],
+    ["移动速度 (Speed)", "B", "拉扯吃波次"],
+    ["爆炸伤害 (Explosion Damage)", "B", "看发牌，有爆炸件才追"],
+    ["经验获取 (XP Gain)", "B", "等级即属性"],
+    ["幸运 (Luck)", "C", "中性，不主动追"],
+    ["收获 (Harvesting)", "C", "经济向，别前期拿"],
+    ["诅咒 (Curse)（Abyssal Terrors DLC）", "C", "双刃剑，无 synergy，慎点"],
+    ["重随价格 (Reroll Price)（Abyssal Terrors DLC）", "C", "省钱向，随缘"],
+    ["近战伤害 (Melee Damage)", "F", "-100%，拿了等于白板"],
+    ["元素伤害 (Elemental Damage)", "F", "-100%，别碰"]
   ],
   weaponsT1: [["冲锋枪 (SMG)", "wiki 起始池，前期过渡最滑"], ["手枪 (Pistol)", "wiki 起始池，便宜好升满"]],
   weaponsT2: [["加特林 (Minigun)", "高射速吃远程加成，待你确认"], ["左轮 (Revolver)", "wiki 起始池，单发补伤"]],
@@ -126,7 +143,7 @@ function renderA(){
     <div class="ver">取材视频（2026-10）＋ 适用版本（Abyssal Terrors 后）· Danger 5 保底不启用 · 假数据</div>
     <nav class="toc"><a href="#a-attr">核心属性</a><a href="#a-w">武器 T1/T2</a><a href="#a-p">开局/中/后期</a><a href="#a-shop">商店</a><a href="#a-pit">避坑</a><a href="#a-src">取材</a></nav>
     <div class="card" id="a-attr"><h2>核心属性优先级</h2>
-      <table><tr><th>属性</th><th>评级</th></tr>${DATA.attrs.map(a=>`<tr><td>${a[0]}</td><td>${a[1]}</td></tr>`).join("")}</table></div>
+      <table><tr><th>属性</th><th>评级</th><th>Cyborg 怎么看</th></tr>${DATA.attrs.map(a=>`<tr><td>${a[0]}</td><td><b>${a[1]}</b></td><td>${a[2]}</td></tr>`).join("")}</table></div>
     <div class="card" id="a-w"><h2>推荐武器</h2><h3>T1 主选</h3>
       <table>${DATA.weaponsT1.map(w=>`<tr><td><b>${w[0]}</b></td><td>${w[1]}</td></tr>`).join("")}</table>
       <h3>T2 备选</h3><table>${DATA.weaponsT2.map(w=>`<tr><td><b>${w[0]}</b></td><td>${w[1]}</td></tr>`).join("")}</table>

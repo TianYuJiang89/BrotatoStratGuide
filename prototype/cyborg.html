@@ -189,7 +189,7 @@ function renderA(){
     <p><b>机制一句话：</b>${DATA.hook}</p>
     <p style="font-size:13px">写法演示：中文 (English) · DLC 角标如诅咒 (Curse)（Abyssal Terrors DLC）· 版本双标注见页底</p></div>
     <div class="ver">取材视频（2026-10）＋ 适用版本（Abyssal Terrors 后）· Danger 5 保底不启用 · 假数据</div>
-    <nav class="toc"><a href="#a-attr">核心属性</a><a href="#a-w">武器 T1/T2</a><a href="#a-p">开局/中/后期</a><a href="#a-shop">商店</a><a href="#a-levelup">升级</a><a href="#a-pit">避坑</a><a href="#a-src">取材</a></nav>
+    <nav class="toc"><a href="#a-attr">核心属性</a><a href="#a-w">武器 T1/T2</a><a href="#a-p">开局/中/后期</a><a href="#a-levelup">升级</a><a href="#a-shop">商店</a><a href="#a-pit">避坑</a><a href="#a-src">取材</a></nav>
     <div class="card" id="a-attr"><h2>核心属性优先级</h2><p style="font-size:12px;color:var(--muted);margin:0 0 8px">排序与图标随 wiki Stats 页；<b>评级与“怎么看”口径 = 取材视频作者，作者没提的诚实空出（—），不是差评。</b>本表为演示编造数据（Cyborg 片待补），选片后按真实作者口径替换。</p><p style="font-size:12px;margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">图例：<span class="r r-S">S</span><span class="r r-A">A</span><span class="r r-B">B</span><span class="r r-C">C</span><span class="r r-D">D</span><span class="r r-F">F</span><span class="r r-none">— 未提及</span></p>
       <table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>${DATA.attrs.filter(a=>a[0].indexOf("次级")<0).map(attrRow).join("")}</table>
       <h3>次级属性（22 项，随 wiki 次级表原序）</h3><p style="font-size:12px;color:var(--muted);margin:0 0 8px">wiki 本无专用图标，暂用 ◆ 占位；次级中文为占位写法，待客户端校对。注意：次级普遍对结构生效，Cyborg 的炮塔吃这些。悬浮属性名查看来源道具（wiki Notable Items，手机点按亦可）。</p>
@@ -200,8 +200,8 @@ function renderA(){
       <h3>关键道具 3–5 件</h3><p style="font-size:12px;color:var(--muted);margin:0 0 8px">名单与推荐理由口径 = 视频作者；下表为演示编造，选片后替换。</p>
       <table><tr><th>道具</th><th>推荐理由</th></tr>${DATA.items.map(i=>`<tr><td><b>${i[2]?`<img class="sic" alt="" src="https://brotato.wiki.spellsandguns.com${i[2]}" onerror="this.remove()" referrerpolicy="no-referrer"> `:""}${i[0]}</b></td><td>${i[1]}</td></tr>`).join("")}</table></div>
     <div class="card" id="a-p"><h2>开局 / 中 / 后期</h2><ol class="tight">${DATA.phases.map(p=>`<li><b>${p.w}：</b>${p.d}<br><span style="color:var(--muted)">买什么：${p.buy}</span></li>`).join("")}</ol></div>
-    <div class="card" id="a-shop"><h2>商店优先级</h2><p>${DATA.shop}</p></div>
     <div class="card" id="a-levelup"><h2>升级优先级</h2><p>${DATA.levelup}</p></div>
+    <div class="card" id="a-shop"><h2>商店优先级</h2><p>${DATA.shop}</p></div>
     <div class="card" id="a-pit"><h2>避坑 1–3 条</h2><ul class="tight">${DATA.pitfalls.map(p=>`<li>${p}</li>`).join("")}</ul>
       <h2>高难特例</h2><p>${DATA.hard}</p></div>
     <div class="card" id="a-src"><h2>取材与版本</h2>${srcHTML()}</div>

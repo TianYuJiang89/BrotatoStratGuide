@@ -24,6 +24,8 @@
   .pill { display:inline-block; font-size:12px; border:1px solid var(--line); border-radius:999px; padding:2px 9px; color:var(--muted); background:#fff; margin:2px 4px 2px 0; }
   .pill.hot { color:var(--good); border-color:var(--good); }
   .pill.dlc { color:var(--warn); border-color:var(--warn); }
+  .sic { width:22px; height:22px; vertical-align:-5px; image-rendering:pixelated; background:#efe9d8; border-radius:6px; }
+  .sic.none { display:inline-flex; width:22px; height:22px; vertical-align:-5px; align-items:center; justify-content:center; font-size:12px; color:var(--muted); background:#f2ecdd; border-radius:6px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin:12px 0; }
   .card h2 { font-size:17px; margin:0 0 8px; }
   .card h3 { font-size:15px; margin:12px 0 6px; }
@@ -90,26 +92,26 @@ const DATA = {
   hook: "远程养炮塔：远程伤害 (Ranged Damage) 吃 200% 加成，波次过半时 100% 远程按 1:2 暂转化为工程 (Engineering)；工程直购 -75%、近战 (Melee) / 元素 (Elemental) -100%，全靠转化养结构。（机制来自 wiki Cyborg 页实测，中文名※待客户端校对）",
   difficulty: "取材待补", stateNote: "按取材规范选片：Ultimate > Nightmare Guide > Nightmare > Danger 5 保底；先用 wiki 机制占位",
   attrs: [
-    ["远程伤害 (Ranged Damage)", "S", "唯一主堆：+200% 加成，前后半段都吃"],
-    ["工程 (Engineering)", "A", "靠波次过半转化养结构，绝不直购（-75%）"],
-    ["伤害 (Damage)", "A", "加成枪械不加成结构；枪是前半段的命"],
-    ["攻击速度 (Attack Speed)", "A", "枪吃，结构不吃；走位也吃"],
-    ["最大生命 (Max HP)", "A", "站得住才能吃到转化红利"],
-    ["暴击率 (Crit Chance)", "B", "枪吃；顺手拿，不追"],
-    ["攻击范围 (Range)", "B", "枪的射程；结构另有结构射程"],
-    ["生命回复 (HP Regeneration)", "B", "续航，有就拿"],
-    ["生命窃取 (Life Steal)", "B", "枪能吸，结构不吸；中期补"],
-    ["闪避 (Dodge)", "B", "锦上添花"],
-    ["护甲 (Armor)", "B", "13 波后补"],
-    ["移动速度 (Speed)", "B", "拉扯吃波次"],
-    ["爆炸伤害 (Explosion Damage)", "B", "看发牌，有爆炸件才追"],
-    ["经验获取 (XP Gain)", "B", "等级即属性"],
-    ["幸运 (Luck)", "C", "中性，不主动追"],
-    ["收获 (Harvesting)", "C", "经济向，别前期拿"],
-    ["诅咒 (Curse)（Abyssal Terrors DLC）", "C", "双刃剑，无 synergy，慎点"],
-    ["重随价格 (Reroll Price)（Abyssal Terrors DLC）", "C", "省钱向，随缘"],
-    ["近战伤害 (Melee Damage)", "F", "-100%，拿了等于白板"],
-    ["元素伤害 (Elemental Damage)", "F", "-100%，别碰"]
+    ["最大生命 (Max HP)", "A", "站得住才能吃到转化红利", "/images/thumb/3/3b/Max_HP.png/20px-Max_HP.png"],
+    ["生命回复 (HP Regeneration)", "B", "续航，有就拿", "/images/thumb/8/8d/HP_Regeneration.png/20px-HP_Regeneration.png"],
+    ["生命窃取 (Life Steal)", "B", "枪能吸，结构不吸；中期补", "/images/thumb/b/b5/Life_Steal.png/20px-Life_Steal.png"],
+    ["伤害 (Damage)", "A", "加成枪械不加成结构；枪是前半段的命", "/images/thumb/6/6a/Damage.png/20px-Damage.png"],
+    ["近战伤害 (Melee Damage)", "F", "-100%，拿了等于白板", "/images/thumb/0/01/Melee_Damage.png/20px-Melee_Damage.png"],
+    ["远程伤害 (Ranged Damage)", "S", "唯一主堆：+200% 加成，前后半段都吃", "/images/thumb/c/cb/Ranged_Damage.png/20px-Ranged_Damage.png"],
+    ["元素伤害 (Elemental Damage)", "F", "-100%，别碰", "/images/thumb/8/82/Elemental_Damage.png/20px-Elemental_Damage.png"],
+    ["攻击速度 (Attack Speed)", "A", "枪吃，结构不吃；走位也吃", "/images/thumb/6/6e/Attack_Speed.png/20px-Attack_Speed.png"],
+    ["暴击率 (Crit Chance)", "B", "枪吃；顺手拿，不追", "/images/thumb/4/41/Crit_Chance.png/20px-Crit_Chance.png"],
+    ["工程 (Engineering)", "A", "靠波次过半转化养结构，绝不直购（-75%）", "/images/thumb/2/28/Engineering_Stat.png/20px-Engineering_Stat.png"],
+    ["攻击范围 (Range)", "B", "枪的射程；结构另有结构射程", "/images/thumb/2/21/Range_Stat.png/20px-Range_Stat.png"],
+    ["护甲 (Armor)", "B", "13 波后补", "/images/thumb/0/06/Armor.png/20px-Armor.png"],
+    ["闪避 (Dodge)", "B", "锦上添花", "/images/thumb/7/72/Dodge_Stat.png/20px-Dodge_Stat.png"],
+    ["移动速度 (Speed)", "B", "拉扯吃波次", "/images/thumb/e/e0/Speed_Stat.png/20px-Speed_Stat.png"],
+    ["幸运 (Luck)", "C", "中性，不主动追", "/images/thumb/f/f0/Luck.png/20px-Luck.png"],
+    ["收获 (Harvesting)", "C", "经济向，别前期拿", "/images/thumb/b/bb/Harvesting.png/20px-Harvesting.png"],
+    ["诅咒 (Curse)（Abyssal Terrors DLC）", "C", "双刃剑，无 synergy，慎点", "/images/thumb/8/85/Curse.png/20px-Curse.png"],
+    ["经验获取 (XP Gain)（次级）", "B", "等级即属性；wiki 无专用图标", null],
+    ["爆炸伤害 (Explosion Damage)（次级）", "B", "看发牌，有爆炸件才追；wiki 无专用图标", null],
+    ["重随价格 (Reroll Price)（Abyssal Terrors DLC·次级）", "C", "省钱向，随缘；wiki 无专用图标", null]
   ],
   weaponsT1: [["冲锋枪 (SMG)", "wiki 起始池，前期过渡最滑"], ["手枪 (Pistol)", "wiki 起始池，便宜好升满"]],
   weaponsT2: [["加特林 (Minigun)", "高射速吃远程加成，待你确认"], ["左轮 (Revolver)", "wiki 起始池，单发补伤"]],
@@ -142,8 +144,8 @@ function renderA(){
     <p style="font-size:13px">写法演示：中文 (English) · DLC 角标如诅咒 (Curse)（Abyssal Terrors DLC）· 版本双标注见页底</p></div>
     <div class="ver">取材视频（2026-10）＋ 适用版本（Abyssal Terrors 后）· Danger 5 保底不启用 · 假数据</div>
     <nav class="toc"><a href="#a-attr">核心属性</a><a href="#a-w">武器 T1/T2</a><a href="#a-p">开局/中/后期</a><a href="#a-shop">商店</a><a href="#a-pit">避坑</a><a href="#a-src">取材</a></nav>
-    <div class="card" id="a-attr"><h2>核心属性优先级</h2>
-      <table><tr><th>属性</th><th>评级</th><th>Cyborg 怎么看</th></tr>${DATA.attrs.map(a=>`<tr><td>${a[0]}</td><td><b>${a[1]}</b></td><td>${a[2]}</td></tr>`).join("")}</table></div>
+    <div class="card" id="a-attr"><h2>核心属性优先级</h2><p style="font-size:12px;color:var(--muted);margin:0 0 8px">排序与图标随 wiki Stats 页主表（16 主 + 诅咒 + 次级 3）；评级是 Cyborg 视角。次级 3 项 wiki 本无专用图标，暂用 ◆ 占位。</p>
+      <table><tr><th>属性</th><th>评级</th><th>Cyborg 怎么看</th></tr>${DATA.attrs.map(a=>`<tr><td>${a[3]?`<img class="sic" alt="" src="https://brotato.wiki.spellsandguns.com${a[3]}" onerror="this.remove()" referrerpolicy="no-referrer"> `:`<span class="sic none" title="wiki 无专用图标">◆</span> `}${a[0]}</td><td><b>${a[1]}</b></td><td>${a[2]}</td></tr>`).join("")}</table></div>
     <div class="card" id="a-w"><h2>推荐武器</h2><h3>T1 主选</h3>
       <table>${DATA.weaponsT1.map(w=>`<tr><td><b>${w[0]}</b></td><td>${w[1]}</td></tr>`).join("")}</table>
       <h3>T2 备选</h3><table>${DATA.weaponsT2.map(w=>`<tr><td><b>${w[0]}</b></td><td>${w[1]}</td></tr>`).join("")}</table>

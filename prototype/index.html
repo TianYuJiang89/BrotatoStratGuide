@@ -37,14 +37,14 @@
 </style>
 </head>
 <body>
-<div class="proto">PROTOTYPE throwaway · 对应 <b>页面模板原型：一页一样式，多方案可点</b> · 假数据 · <a href="./glutton.html?variant=A">去 Glutton 页</a></div>
+<div class="proto">PROTOTYPE throwaway · 对应 <b>页面模板原型：一页一样式，多方案可点</b> · 样例：赛博格 (Cyborg)※ · <a href="./cyborg.html?variant=A">去 Cyborg 页</a></div>
 <div class="wrap">
   <header>
     <h1>土豆兄弟 (Brotato) · 角色攻略索引</h1>
     <p>单模板复用演示：一个角色一页 + 索引导航页 · 纯静态 · 双击可开 · 手机可读</p>
   </header>
   <div class="filter" role="search">
-    <input id="q" type="search" placeholder="搜索：暴食 / glutton / ranger…" autocomplete="off">
+    <input id="q" type="search" placeholder="搜索：赛博 / cyborg / ranger…" autocomplete="off">
     <select id="dlc" aria-label="DLC 筛选">
       <option value="all">全部（含 DLC）</option>
       <option value="base">仅本体</option>
@@ -63,7 +63,8 @@
 // 简易筛选原型：同源 ROSTER 数组渲染，file:// 可跑，无 fetch
 var WIKI = "https://brotato.wiki.spellsandguns.com";
 var ROSTER = [
-  { slug:"glutton", zh:"暴食者", en:"Glutton", dlc:null, img:"/images/thumb/3/39/Glutton.png/60px-Glutton.png", playable:true },
+  { slug:"cyborg", zh:"赛博格※", en:"Cyborg", dlc:null, img:"/images/thumb/a/a3/Cyborg.png/60px-Cyborg.png", playable:true },
+  { slug:"glutton", zh:"暴食者", en:"Glutton", dlc:null, img:"/images/thumb/3/39/Glutton.png/60px-Glutton.png", playable:false },
   { slug:"ranger", zh:"游侠", en:"Ranger", dlc:null, img:"/images/thumb/e/e9/Ranger.png/60px-Ranger.png", playable:false },
   { slug:"mage", zh:"法师", en:"Mage", dlc:null, img:"/images/thumb/2/20/Mage.png/60px-Mage.png", playable:false },
   { slug:"engineer", zh:"工程师", en:"Engineer", dlc:null, img:"/images/thumb/d/d8/Engineer.png/60px-Engineer.png", playable:false },
@@ -93,7 +94,7 @@ function render(){
   grid.innerHTML = list.map(function(r){
     var sub = (r.dlc ? "Abyssal Terrors DLC · " : "本体 · ") + (r.playable ? "可点 · 假数据" : "置灰占位");
     var right = r.playable
-      ? '<span class="tag ok">● 可点</span><div class="links"><a href="./glutton.html?variant=A">A 长文</a><a href="./glutton.html?variant=B">B 仪表盘</a><a href="./glutton.html?variant=C">C 时间轴</a></div>'
+      ? '<span class="tag ok">● 可点</span><div class="links"><a href="./' + r.slug + '.html?variant=A">A 长文</a><a href="./' + r.slug + '.html?variant=B">B 仪表盘</a><a href="./' + r.slug + '.html?variant=C">C 时间轴</a></div>'
       : '<span class="tag">' + (r.dlc ? "DLC · 待填充" : "待填充") + "</span>";
     return '<div class="card"><div class="ava"><span>🥔</span><img loading="lazy" alt="' + esc(r.en) + '" src="' + WIKI + r.img + '" onerror="this.remove()" referrerpolicy="no-referrer"></div>'
       + '<div class="nm">' + esc(r.zh) + " (" + esc(r.en) + ")<small>" + esc(sub) + "</small></div>"

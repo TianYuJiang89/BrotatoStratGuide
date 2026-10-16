@@ -117,9 +117,28 @@ const DATA = {
     ["幸运 (Luck)", null, null, "/images/thumb/f/f0/Luck.png/20px-Luck.png"],
     ["收获 (Harvesting)", null, null, "/images/thumb/b/bb/Harvesting.png/20px-Harvesting.png"],
     ["诅咒 (Curse)（Abyssal Terrors DLC）", null, null, "/images/thumb/8/85/Curse.png/20px-Curse.png"],
-    ["经验获取 (XP Gain)（次级）", "B", "升级快就是压制，早拿早享受", null],
-    ["爆炸伤害 (Explosion Damage)（次级）", "C", "有爆炸件才追，不主动找", null],
-    ["重随价格 (Reroll Price)（Abyssal Terrors DLC·次级）", null, null, null],
+    ["消耗品治疗 (Consumable Heal)（次级）", null, null, null],
+    ["材料回血 (% Materials Healing)（次级）", null, null, null],
+    ["经验获取 (% XP Gain)（次级）", "B", "升级快就是压制，早拿早享受", null],
+    ["拾取范围 (% Pickup Range)（次级）", null, null, null],
+    ["道具价格 (% Items Price)（次级）", null, null, null],
+    ["爆炸伤害 (% Explosion Damage)（次级）", "C", "有爆炸件才追，不主动找", null],
+    ["爆炸范围 (% Explosion Size)（次级）", null, null, null],
+    ["弹跳 (Bounces)（次级）", null, null, null],
+    ["穿透 (Piercing)（次级）", null, null, null],
+    ["穿透伤害 (% Piercing Damage)（次级）", null, null, null],
+    ["对首领伤害 (% Damage against Bosses)（次级）", null, null, null],
+    ["结构攻速 (% Structure Attack Speed)（次级）", "B", "炮塔也吃这个，结构核心", null],
+    ["结构射程 (Structure Range)（次级）", "C", "炮塔够得着就行", null],
+    ["燃烧速度 (% Burning Speed)（次级）", null, null, null],
+    ["燃烧蔓延 (Burning Spread)（次级）", null, null, null],
+    ["击退 (Knockback)（次级）", null, null, null],
+    ["双倍材料率 (% Double Material Chance)（次级）", null, null, null],
+    ["免费重随 (Free Rerolls)（次级）", null, null, null],
+    ["树木 (Trees)（次级）", null, null, null],
+    ["敌人数量 (% Enemies)（次级）", null, null, null],
+    ["敌方速度 (% Enemy Speed)（次级）", null, null, null],
+    ["重随价格 (% Reroll Price)（次级）", null, null, null],
   ],
   weaponsT1: [["冲锋枪 (SMG)", "wiki 起始池，前期过渡最滑"], ["手枪 (Pistol)", "wiki 起始池，便宜好升满"]],
   weaponsT2: [["加特林 (Minigun)", "高射速吃远程加成，待你确认"], ["左轮 (Revolver)", "wiki 起始池，单发补伤"]],
@@ -160,7 +179,7 @@ function renderA(){
     <nav class="toc"><a href="#a-attr">核心属性</a><a href="#a-w">武器 T1/T2</a><a href="#a-p">开局/中/后期</a><a href="#a-shop">商店</a><a href="#a-pit">避坑</a><a href="#a-src">取材</a></nav>
     <div class="card" id="a-attr"><h2>核心属性优先级</h2><p style="font-size:12px;color:var(--muted);margin:0 0 8px">排序与图标随 wiki Stats 页；<b>评级与“怎么看”口径 = 取材视频作者，作者没提的诚实空出（—），不是差评。</b>本表为演示编造数据（Cyborg 片待补），选片后按真实作者口径替换。</p><p style="font-size:12px;margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">图例：<span class="r r-S">S</span><span class="r r-A">A</span><span class="r r-B">B</span><span class="r r-C">C</span><span class="r r-D">D</span><span class="r r-F">F</span><span class="r r-none">— 未提及</span></p>
       <table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>${DATA.attrs.filter(a=>a[0].indexOf("次级")<0).map(attrRow).join("")}</table>
-      <h3>次级属性</h3><p style="font-size:12px;color:var(--muted);margin:0 0 8px">wiki 本无专用图标，暂用 ◆ 占位。</p>
+      <h3>次级属性（22 项，随 wiki 次级表原序）</h3><p style="font-size:12px;color:var(--muted);margin:0 0 8px">wiki 本无专用图标，暂用 ◆ 占位；次级中文为占位写法，待客户端校对。注意：次级普遍对结构生效，Cyborg 的炮塔吃这些。</p>
       <table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>${DATA.attrs.filter(a=>a[0].indexOf("次级")>=0).map(attrRow).join("")}</table></div>
     <div class="card" id="a-w"><h2>推荐武器</h2><h3>T1 主选</h3>
       <table>${DATA.weaponsT1.map(w=>`<tr><td><b>${w[0]}</b></td><td>${w[1]}</td></tr>`).join("")}</table>

@@ -21,8 +21,9 @@
   .count { font-size:13px; color:var(--muted); margin:8px 2px; }
   .grid { display:grid; gap:10px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:flex; gap:12px; align-items:center; }
-  .ava { width:52px; height:52px; flex:0 0 52px; border-radius:12px; background:#efe9d8; display:flex; align-items:center; justify-content:center; font-size:26px; overflow:hidden; }
-  .ava img { width:100%; height:100%; object-fit:contain; image-rendering:pixelated; }
+  .ava { position:relative; width:52px; height:52px; flex:0 0 52px; border-radius:12px; background:#efe9d8; overflow:hidden; }
+  .ava span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:26px; }
+  .ava img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; image-rendering:pixelated; background:#efe9d8; }
   .card .nm { font-weight:700; }
   .card .nm small { display:block; font-weight:400; color:var(--muted); font-size:12px; }
   .card .right { margin-left:auto; text-align:right; }

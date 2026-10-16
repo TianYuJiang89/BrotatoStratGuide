@@ -177,8 +177,8 @@ function attrRow(a){
   var v = a[2] ? a[2] : `<span style="color:#bdbdbd">作者未提及</span>`;
   var name = a[0];
   if (a[4]) {
-    var items = a[4].map(function(it){ return `<span class="ti"><img alt="" src="https://brotato.wiki.spellsandguns.com${it[1]}" onerror="this.remove()" referrerpolicy="no-referrer">${it[0]}</span>`; }).join("");
-    name = `<span class="has-tip" tabindex="0">${a[0]}<span class="tip"><span class="th">加该属性的道具（wiki Notable Items）</span>${items}<span class="tf">英文为 wiki 原名，中文待客户端校对</span></span></span>`;
+    var items = a[4].map(function(it){ return `<span class="ti"><img alt="" src="https://brotato.wiki.spellsandguns.com${it[1]}" onerror="this.remove()" referrerpolicy="no-referrer">※ (${it[0]})</span>`; }).join("");
+    name = `<span class="has-tip" tabindex="0">${a[0]}<span class="tip"><span class="th">加该属性的道具（wiki Notable Items）</span>${items}<span class="tf">※ = 中文待客户端简中校对；英文为 wiki 原名</span></span></span>`;
   }
   return `<tr><td>${icon}${name}</td><td>${r}</td><td>${v}</td></tr>`;
 }

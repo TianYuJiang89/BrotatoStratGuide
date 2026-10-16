@@ -149,7 +149,7 @@ const DATA = {
   ],
   weaponsT1: [["冲锋枪 (SMG)", "wiki 起始池，前期过渡最滑", "/images/thumb/d/d6/SMG.png/30px-SMG.png"], ["手枪 (Pistol)", "wiki 起始池，便宜好升满", "/images/thumb/a/a2/Pistol.png/30px-Pistol.png"]],
   weaponsT2: [["加特林 (Minigun)", "高射速吃远程加成，待你确认", "/images/thumb/e/eb/Minigun.png/30px-Minigun.png"], ["左轮 (Revolver)", "wiki 起始池，单发补伤", "/images/thumb/6/6d/Revolver.png/30px-Revolver.png"]],
-  items: ["改良工具 (Improved Tools)", "炮塔 (Turret) 类结构件", "地雷 (Landmine) 类结构件", "咖啡 (Coffee)", "勋章 (Medal)"],
+  items: [["改良工具 (Improved Tools)", "胜场解锁，结构流本命，见了必拿（演示口径）", "/images/thumb/3/31/Improved_Tools.png/30px-Improved_Tools.png"], ["炮塔 (Turret)", "转化养大的主力输出，先占 2 个（演示口径）", "/images/thumb/3/32/Turret.png/30px-Turret.png"], ["地雷 (Landmines)", "补前期伤害曲线，便宜好用（演示口径）", "/images/thumb/e/e5/Landmines.png/30px-Landmines.png"], ["咖啡 (Coffee)", "攻速即清线，枪炮双吃（演示口径）", "/images/thumb/e/e9/Coffee.png/30px-Coffee.png"], ["勋章 (Medal)", "便宜的属性包，过渡不亏（演示口径）", "/images/thumb/b/b7/Medal.png/30px-Medal.png"]],
   phases: [
     { w: "W1–5 开局", d: "锁 1 把 T1 枪升满，只拿远程伤害 (Ranged Damage) / 攻击速度 (Attack Speed)；结构件便宜先占 1–2 个。前半段靠枪自己清，转化还没发生。", buy: "冲锋枪 (SMG) → 升满" },
     { w: "W6–12 中期", d: "结构数量铺起来吃转化红利：过半后 1 远程 = 2 工程。工程 (Engineering) 一件也别直购（-75%），全靠转化。", buy: "补第 2 把枪 + 炮塔/地雷" },
@@ -196,7 +196,8 @@ function renderA(){
     <div class="card" id="a-w"><h2>推荐武器</h2><p style="font-size:12px;color:var(--muted);margin:0 0 8px">图标随 wiki Weapons 页；T1/T2 为演示划分（SMG/手枪/左轮出自 wiki 起始池，加特林待确认），选片后按作者口径定。</p><h3>T1 主选</h3>
       <table>${DATA.weaponsT1.map(w=>`<tr><td><b>${w[2]?`<img class="sic" alt="" src="https://brotato.wiki.spellsandguns.com${w[2]}" onerror="this.remove()" referrerpolicy="no-referrer"> `:""}${w[0]}</b></td><td>${w[1]}</td></tr>`).join("")}</table>
       <h3>T2 备选</h3><table>${DATA.weaponsT2.map(w=>`<tr><td><b>${w[2]?`<img class="sic" alt="" src="https://brotato.wiki.spellsandguns.com${w[2]}" onerror="this.remove()" referrerpolicy="no-referrer"> `:""}${w[0]}</b></td><td>${w[1]}</td></tr>`).join("")}</table>
-      <h3>关键道具 3–5 件</h3><div>${DATA.items.map(i=>`<span class="pill">${i}</span>`).join("")}</div></div>
+      <h3>关键道具 3–5 件</h3><p style="font-size:12px;color:var(--muted);margin:0 0 8px">名单与推荐理由口径 = 视频作者；下表为演示编造，选片后替换。</p>
+      <table><tr><th>道具</th><th>推荐理由</th></tr>${DATA.items.map(i=>`<tr><td><b>${i[2]?`<img class="sic" alt="" src="https://brotato.wiki.spellsandguns.com${i[2]}" onerror="this.remove()" referrerpolicy="no-referrer"> `:""}${i[0]}</b></td><td>${i[1]}</td></tr>`).join("")}</table></div>
     <div class="card" id="a-p"><h2>开局 / 中 / 后期</h2><ol class="tight">${DATA.phases.map(p=>`<li><b>${p.w}：</b>${p.d}<br><span style="color:var(--muted)">买什么：${p.buy}</span></li>`).join("")}</ol></div>
     <div class="card" id="a-shop"><h2>商店与升级优先级</h2><p>${DATA.shop}</p><h2>避坑 1–3 条</h2><ul class="tight">${DATA.pitfalls.map(p=>`<li>${p}</li>`).join("")}</ul>
       <h2>高难特例</h2><p>${DATA.hard}</p></div>
@@ -229,7 +230,7 @@ function renderB(){
 function renderC(){
   return `<div class="C">
     <div class="strip"><span>最大生命 (Max HP) → 生命窃取 (Life Steal) → 近战伤害 (Melee Damage) → 护甲 (Armor)</span><span>·</span><span>T1 拳/冲锋枪 · T2 火焰/剪刀（假数据）</span></div>
-    <div class="card"><h2>赛博格 (Cyborg)※ · 跟着波次打</h2><p>${DATA.hook}</p><div>${DATA.items.map(i=>`<span class="pill">${i}</span>`).join("")}</div></div>
+    <div class="card"><h2>赛博格 (Cyborg)※ · 跟着波次打</h2><p>${DATA.hook}</p><div>${DATA.items.map(i=>`<span class="pill">${i[0]}</span>`).join("")}</div></div>
     <div class="tl">${DATA.phases.map(p=>`<div class="node"><div class="wave">${p.w}</div><p>${p.d}</p><p style="color:var(--muted);font-size:14px">买：${p.buy}</p></div>`).join("")}</div>
     <div class="warn"><b>避坑：</b>${DATA.pitfalls[0]}</div>
     <div class="warn"><b>高难：</b>${DATA.hard}</div>

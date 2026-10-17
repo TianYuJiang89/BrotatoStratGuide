@@ -12,111 +12,111 @@
       "ratings": {
         "Engineering": {
           "rating": "S",
-          "note": "越多越好，但别直购堆数值，靠扳手 tier 与结构数量"
+          "note": "全程85次点名：观众问工程流，Nightmare靠工程打伤害但偏慢；roll到engineering优先拿，越堆越强，唯一主属性"
         },
         "Harvesting": {
           "rating": "A",
-          "note": "开局必 roll，钱即更多扳手与结构"
+          "note": "开局roll‘找harvesting或engineering’滚钱买扳手，中期dodge/harvesting顺手都拿；经济发动机，优先级仅次于工程 (n=27)"
         },
         "Attack Speed": {
           "rating": "A",
-          "note": "乘区稀缺，时钟 wasp 与改良工具最赚"
+          "note": "wasp/improved tools配攻速‘very good’，coffee+攻速给扳手更多击退；稀缺但质变，靠道具拿 (n=33)"
         },
         "Armor": {
           "rating": "A",
-          "note": "标准 roll 牌，站桩必吃伤"
+          "note": "多次‘take armor, that’s great’，站撸承伤roll到就拿，和回血同为站桩续航 (n=32)"
         },
         "Max HP": {
           "rating": "B",
-          "note": "血够吃两下，W1 可拿 3 点过渡"
+          "note": "开局拿3点补血，中期‘really good max HP’是站撸本钱；要血但优先级在工程/收获之后 (n=6)"
         },
         "HP Regeneration": {
           "rating": "B",
-          "note": "与护甲同为站桩本钱"
+          "note": "padding+4 regen开局，jerky堆回血续航，和护甲同为站桩续航 (n=26)"
         },
         "Life Steal": {
           "rating": "D",
-          "note": "作者明确不好用，直接 ban"
+          "note": "只提3次且定性‘generally not very good’，缺货不找；炮塔不吃吸血 (n=3)"
         },
         "Crit Chance": {
           "rating": "D",
-          "note": "不靠武器平砍，基本无用"
+          "note": "42次但定性‘not particularly useful’，结构能暴击只是bonus；有books/eyepatch联动也不主动堆 (n=42)"
         },
         "Damage": {
           "rating": "A",
-          "note": "UH-Wge0:mode. Nightmare mode is mostly just about maximizing upfront damage so that"
+          "note": "全文143次核心论点：Nightmare就是‘maximizing upfront damage so you dodge less’，工程伤害慢更要前伤拉满 (n=143)"
         },
         "Melee Damage": {
           "rating": "D",
-          "note": "UH-Wge0:incendiary turrets. We'll lock peaceful bee. Losing a melee damage not a big"
+          "note": "‘losing a melee damage not a big deal’；近战加成无用 (n=3)"
         },
         "Range": {
           "rating": "D",
-          "note": "UH-Wge0:does a very small amount of damage, and of course we're not buying range damage,"
+          "note": "‘not buying range damage’；射程无用 (n=6)"
         },
         "Dodge": {
           "rating": "D",
-          "note": "UH-Wge0:about maximizing upfront damage so that you have to dodge as little as possible"
+          "note": "核心论点就是少走位‘dodge as little as possible’；偶尔‘can be good’顺手，不堆 (n=14)"
         },
         "Speed": {
           "rating": "C",
-          "note": "UH-Wge0:speed can potentially result in uh more"
+          "note": "improved tools联动+compass补移速，‘don’t care capping at 9’；够用就行 (n=11)"
         },
         "Luck": {
           "rating": "C",
-          "note": "UH-Wge0:we have pile of books, and then we'll re-roll here. I'll take the lucky charm"
+          "note": "lucky charm顺手拿，15 luck和roll护甲冲突时让护甲；不追 (n=10)"
         },
         "Curse": {
           "rating": "D",
-          "note": "UH-Wge0:Also, we're playing on the abyss. I'm going to be avoiding getting cursed, at"
+          "note": "abyss‘avoiding getting cursed’；诅咒=加怪，不要 (n=14)"
         },
         "Consumable Heal": {
           "rating": "B",
-          "note": "UH-Wge0:that you can heal and tank"
+          "note": "‘heal and tank’定调，cute monkey必拿，rip and tear偶尔；回血即坦度 (n=35)"
         },
         "% Pickup Range": {
           "rating": "B",
-          "note": "UH-Wge0:order to go kill trees anymore. Um and of course, it helps pick up materials,"
+          "note": "材料拾取是短板‘struggle with’，bag/拾取范围补，树远了靠它；痛点补强 (n=18)"
         },
         "% Explosion Damage": {
           "rating": "C",
-          "note": "UH-Wge0:damage uh at half rate, so our explosion damage"
+          "note": "L4附带‘a little bit is fine’；有范围前提下顺带 (n=8)"
         },
         "% Explosion Size": {
           "rating": "B",
-          "note": "UH-Wge0:level four wrenches benefit from that. We would much prefer explosion size, but"
+          "note": "L4扳手吃范围‘much prefer explosion size’；L4质变 (n=3)"
         },
         "Piercing": {
           "rating": "C",
-          "note": "UH-Wge0:does work with the crit chance from pile of books, so we can get extra piercing"
+          "note": "books暴击联动‘extra piercing’； incidental增益 (n=6)"
         },
         "% Damage against Bosses": {
           "rating": "C",
-          "note": "UH-Wge0:much. Now, these enhanced mini bosses, which"
+          "note": "‘enhanced mini bosses’语境，前伤够了boss自然过；无独立堆法 (n=22)"
         },
         "% Burning Speed": {
           "rating": "C",
-          "note": "UH-Wge0:multiple incendiary turrets is that the burning from them doesn't stack. And on"
+          "note": "incendiary不叠层‘doesn’t stack’；机制说明，不堆 (n=14)"
         },
         "Knockback": {
           "rating": "B",
-          "note": "UH-Wge0:is good because it gives us more knockback with with our wrenches, which"
+          "note": "33次：攻速给扳手更多击退‘very relevant’，跑树时靠击退保命；保命技 (n=33)"
         },
         "Free Rerolls": {
           "rating": "B",
-          "note": "UH-Wge0:We'll ban fresh meat and I'll save my last ban for a reroll. We'll buy a"
+          "note": "留ban给reroll，多次reroll找咖啡/扳手蘑菇；找关键牌手段 (n=24)"
         },
         "Trees": {
           "rating": "B",
-          "note": "UH-Wge0:going to pass on for now and then we'll block a we'll buy a tree and now I will"
+          "note": "40次多次买树，‘run off after that tree’+key item定性；树=经济+走位目标 (n=40)"
         },
         "% Enemies": {
           "rating": "D",
-          "note": "UH-Wge0:going to be avoiding getting cursed, at least for a while. Uh cursed enemies are"
+          "note": "abyss‘avoid cursed enemies’；怪多=死，不碰 (n=34)"
         },
         "% Enemy Speed": {
           "rating": "C",
-          "note": "UH-Wge0:chance of reducing the number of attacks that it takes uh to kill an enemy cuz uh"
+          "note": "只在算斩杀线时提一笔；无策略含义 (n=3)"
         }
       },
       "weapons_t1": [

@@ -1623,5 +1623,265 @@
       ],
       "updated": "2026-10-17"
     }
+  },
+  "items": {
+    "Big Arms": {
+      "page": "https://brotato.wiki.spellsandguns.com/Big_Arms",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/0c/Big_Arms.png/60px-Big_Arms.png",
+      "zh": "",
+      "needs_review": true,
+      "dlc": null,
+      "tier": "Tier 4",
+      "effects": [
+        {
+          "pre": "",
+          "val": "+12",
+          "neg": false,
+          "suf": "Melee Damage",
+          "term": "Melee Damage"
+        },
+        {
+          "pre": "",
+          "val": "+6",
+          "neg": false,
+          "suf": "Ranged Damage",
+          "term": "Ranged Damage"
+        },
+        {
+          "pre": "",
+          "val": "+3",
+          "neg": false,
+          "suf": "Knockback",
+          "term": "Knockback"
+        },
+        {
+          "pre": "",
+          "val": "-3",
+          "neg": true,
+          "suf": "% Attack Speed",
+          "term": "Attack Speed"
+        },
+        {
+          "pre": "",
+          "val": "-3",
+          "neg": true,
+          "suf": "% Speed",
+          "term": "Speed"
+        }
+      ],
+      "price": "105",
+      "limit": "",
+      "unlock": "Win a run with Generalist",
+      "tags": [
+        "Melee Damage",
+        "Ranged Damage",
+        "Knockback"
+      ]
+    },
+    "Improved Tools": {
+      "page": "https://brotato.wiki.spellsandguns.com/Improved_Tools",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/31/Improved_Tools.png/60px-Improved_Tools.png",
+      "zh": "",
+      "needs_review": true,
+      "dlc": null,
+      "tier": "Tier 3",
+      "effects": [
+        {
+          "pre": "",
+          "val": "+10",
+          "neg": false,
+          "suf": "% Attack Speed",
+          "term": "Attack Speed"
+        },
+        {
+          "free": "Increases the attack speed of your structures by 0% (50%)"
+        }
+      ],
+      "price": "70",
+      "limit": "1",
+      "unlock": "Win a run with Cyborg",
+      "tags": [
+        "Structure",
+        "Attack Speed"
+      ]
+    },
+    "Turret": {
+      "page": "https://brotato.wiki.spellsandguns.com/Turret",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/32/Turret.png/60px-Turret.png",
+      "zh": "",
+      "needs_review": true,
+      "dlc": null,
+      "tier": "Tier 1",
+      "effects": [
+        {
+          "pre": "Spawns a turret that shoots bullets dealing",
+          "val": "10",
+          "neg": false,
+          "suf": "(+80%) damage"
+        }
+      ],
+      "price": "15",
+      "limit": "",
+      "unlock": "",
+      "tags": [
+        "Engineering",
+        "Structure"
+      ]
+    },
+    "Coffee": {
+      "page": "https://brotato.wiki.spellsandguns.com/Coffee",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e9/Coffee.png/60px-Coffee.png",
+      "zh": "",
+      "needs_review": true,
+      "dlc": null,
+      "tier": "Tier 1",
+      "effects": [
+        {
+          "pre": "",
+          "val": "+10",
+          "neg": false,
+          "suf": "% Attack Speed",
+          "term": "Attack Speed"
+        },
+        {
+          "pre": "",
+          "val": "-2",
+          "neg": true,
+          "suf": "% Damage",
+          "term": "Damage"
+        }
+      ],
+      "price": "20",
+      "limit": "",
+      "unlock": "",
+      "tags": [
+        "Attack Speed"
+      ]
+    }
+  },
+  "weapons": {
+    "SMG": {
+      "page": "https://brotato.wiki.spellsandguns.com/SMG",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/d/d6/SMG.png/60px-SMG.png",
+      "zh": "",
+      "needs_review": true,
+      "dlc": null,
+      "class": "Gun",
+      "stats": [
+        {
+          "k": "Damage",
+          "v": "3(50%) | 4(60%) | 5(70%) | 8(80%)"
+        },
+        {
+          "k": "Attack Speed",
+          "v": "0.17s | 0.17s | 0.17s | 0.15s"
+        },
+        {
+          "k": "DPS",
+          "v": "17.6(294%)/s | 23.5(352%)/s | 29.4(411%)/s | 53.3(533%)/s"
+        },
+        {
+          "k": "Crit Damage/Chance",
+          "v": "x1.5 (1%) | x1.5 (1%) | x1.5 (1%) | x1.5 (1%)"
+        },
+        {
+          "k": "Range",
+          "v": "400 | 400 | 400 | 400"
+        },
+        {
+          "k": "Knockback",
+          "v": "0 | 0 | 0 | 0"
+        },
+        {
+          "k": "Lifesteal",
+          "v": "0 | 0 | 0 | 0"
+        }
+      ],
+      "special": "",
+      "price": "20 | 39 | 74 | 149",
+      "unlock": "Default"
+    },
+    "Pistol": {
+      "page": "https://brotato.wiki.spellsandguns.com/Pistol",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a2/Pistol.png/60px-Pistol.png",
+      "zh": "",
+      "needs_review": true,
+      "dlc": null,
+      "class": "Gun",
+      "stats": [
+        {
+          "k": "Damage",
+          "v": "12(100%) | 20(100%) | 30(100%) | 50(100%)"
+        },
+        {
+          "k": "Attack Speed",
+          "v": "1.2s | 1.12s | 1.03s | 0.87s"
+        },
+        {
+          "k": "DPS",
+          "v": "10.0(83%)/s | 17.9(89%)/s | 29.1(97%)/s | 57.5(114%)/s"
+        },
+        {
+          "k": "Crit Damage/Chance",
+          "v": "x2 (10%) | x2 (15%) | x2 (20%) | x2 (25%)"
+        },
+        {
+          "k": "Range",
+          "v": "400 | 400 | 400 | 400"
+        },
+        {
+          "k": "Knockback",
+          "v": "15 | 15 | 15 | 15"
+        },
+        {
+          "k": "Lifesteal",
+          "v": "0 | 0 | 0 | 0"
+        }
+      ],
+      "special": "Pierces 1 enemy dealing -50% less to the second enemy",
+      "price": "10 | 22 | 45 | 91",
+      "unlock": "Default"
+    },
+    "Minigun": {
+      "page": "https://brotato.wiki.spellsandguns.com/Minigun",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/eb/Minigun.png/60px-Minigun.png",
+      "zh": "",
+      "needs_review": true,
+      "dlc": null,
+      "class": "Heavy, Gun",
+      "stats": [
+        {
+          "k": "Damage",
+          "v": "- | - | 2(50%) | 5(75%)"
+        },
+        {
+          "k": "Attack Speed",
+          "v": "- | - | 0.09s | 0.09s"
+        },
+        {
+          "k": "DPS",
+          "v": "- | - | 11.1(555%)/s | 41.1(1027%)/s"
+        },
+        {
+          "k": "Crit Damage/Chance",
+          "v": "- | - | x1.75 (1%) | x2 (3%)"
+        },
+        {
+          "k": "Range",
+          "v": "- | - | 400 | 450"
+        },
+        {
+          "k": "Knockback",
+          "v": "- | - | 3 | 3"
+        },
+        {
+          "k": "Lifesteal",
+          "v": "- | - | 0 | 0"
+        }
+      ],
+      "special": "Pierces 1/2 enemies dealing -25% less damage with each pierce.",
+      "price": "- | - | 127 | 255",
+      "unlock": "Default"
+    }
   }
 }

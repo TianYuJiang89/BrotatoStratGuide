@@ -200,6 +200,27 @@ def validate_registry(reg: dict[str, object], terms: list[dict[str, str]]) -> li
         return ["wiki-cache.json stats must be a dict"]
     stats = reg["stats"]
     assert isinstance(stats, dict)
+    for section, required in (
+        ("items", ("tier", "effects", "price", "unlock", "tags")),
+        ("weapons", ("class", "stats", "special", "price", "unlock")),
+    ):
+        sec = reg.get(section)
+        if not isinstance(sec, dict):
+            errors.append(f"wiki-cache.json {section} must be a dict")
+            continue
+        for en, entry in sec.items():
+            if not isinstance(entry, dict):
+                errors.append(f"registry {section} entry broken: {en}")
+                continue
+            for url_field in ("page", "thumb"):
+                value = entry.get(url_field)
+                if not isinstance(value, str) or WIKI_BASE not in value:
+                    errors.append(f"registry missing URL for {section}: {en} ({url_field})")
+            if entry.get("dlc") not in (None, "", "abyssal"):
+                errors.append(f"registry dlc must be null|abyssal, got {entry.get('dlc')} for {section}:{en}")
+            for field in required:
+                if field not in entry:
+                    errors.append(f"registry {section} schema missing {field}: {en}")
     for t in terms:
         en = t["en"]
         entry = stats.get(en)
@@ -220,36 +241,190 @@ def validate_registry(reg: dict[str, object], terms: list[dict[str, str]]) -> li
     return errors
 
 
-def weapon_rows(weapons: list[dict[str, object]]) -> str:
+def icon_html(thumb: object, en: str) -> str:
+    """图标三件套同一渲染路径 (#12 复用, #15 武器道具共用): 有图挂热链, 无图占位。"""
+    if isinstance(thumb, str) and thumb:
+        return (
+            f"<img class=\"sic\" alt=\"{esc(en)}\" width=\"20\" height=\"20\" "
+            f"src=\"{esc(thumb)}\" loading=\"lazy\" "
+            f"referrerpolicy=\"no-referrer\" onerror=\"this.remove()\"> "
+        )
+    return "<span class=\"sic none\" title=\"wiki 无专用图标\">◆</span> "
+
+
+def term_text(en: str, terms_by_en: dict[str, dict[str, str]]) -> str:
+    """术语中英对照 (#15): 有客户端简中即中文括号英文, 缺中文只发英文不自造。"""
+    row = terms_by_en.get(en)
+    if row is None:
+        return en
+    zh = str(row.get("zh", "")).strip()
+    if zh:
+        text = f"{zh} ({en})"
+        if str(row.get("needs_review", "")).upper() == "TRUE":
+            text += "※"
+        return text
+    return en
+
+
+def effect_html(eff: dict[str, object], terms_by_en: dict[str, dict[str, str]]) -> str:
+    """单条效果行: wiki 原样, 数值保留红绿语义, 术语名加对照。"""
+    if "free" in eff:
+        return esc(eff.get("free", ""))
+    val_cls = "neg" if eff.get("neg") else "pos"
+    out = ""
+    if eff.get("pre"):
+        out += esc(eff.get("pre", "")) + " "
+    out += f"<span class=\"{val_cls}\">{esc(eff.get('val', ''))}</span>"
+    term = eff.get("term")
+    suf = str(eff.get("suf", ""))
+    if term and not eff.get("pre") and isinstance(term, str):
+        pct = "% " if suf.startswith("%") else ""
+        out += " " + pct + esc(term_text(term, terms_by_en))
+    elif suf:
+        out += " " + esc(suf)
+    return out
+
+
+def kv_row(key_en: str, value_html: str, terms_by_en: dict[str, dict[str, str]]) -> str:
+    """悬浮内键值行: 占满整行 grid (与 .th/.tm/.tf 同规则)。"""
+    if key_en in terms_by_en:
+        key = esc(term_text(key_en, terms_by_en))
+    else:
+        key = esc(key_en)
+    return f"<span class=\"kv\"><span class=\"ke\">{key}</span><span class=\"kx\">{value_html}</span></span>"
+
+
+def entry_name_html(en: str, entry: dict[str, object]) -> str:
+    """条目名: 注册表中文 (en), 缺中文只发英文; 待校对加标只 warn。"""
+    zh = str(entry.get("zh", "")).strip()
+    pending = entry.get("needs_review") is True or str(entry.get("needs_review", "")).upper() == "TRUE"
+    display = f"{zh} ({en})" if zh else en
+    if pending:
+        display += "※"
+    badges = ""
+    if entry.get("dlc") == "abyssal":
+        badges += ' <span class="badge-dlc" title="Abyssal Terrors DLC 专属">DLC</span>'
+    if pending:
+        badges += ' <span class="badge-review" title="中文待客户端简中校对">待校对</span>'
+    return f"{esc(display)}{badges}"
+
+
+def item_tip(en: str, entry: dict[str, object], terms_by_en: dict[str, dict[str, str]]) -> str:
+    """道具悬浮: Items 行 7 列原样 (名称/稀有度/效果/价格/上限/解锁/标签) 加对照。"""
+    effs = entry.get("effects")
+    eff_list: list[object] = effs if isinstance(effs, list) else []
+    eff_html = "<br>".join(
+        effect_html(e, terms_by_en) if isinstance(e, dict) else esc(e) for e in eff_list
+    )
+    tags = entry.get("tags")
+    tag_list: list[object] = tags if isinstance(tags, list) else []
+    tag_html = ", ".join(
+        esc(term_text(str(t), terms_by_en)) if str(t) in terms_by_en else esc(t)
+        for t in tag_list
+    )
+    rows = [
+        kv_row("Effects", eff_html or "—", terms_by_en),
+        kv_row("Base Price", esc(entry.get("price", "")) or "—", terms_by_en),
+        kv_row("Limit", esc(entry.get("limit", "")) or "—", terms_by_en),
+        kv_row("Unlocked By", esc(entry.get("unlock", "")) or "—", terms_by_en),
+        kv_row("Tags", tag_html or "—", terms_by_en),
+    ]
+    return (
+        f"<span class=\"tip\"><span class=\"th\">{esc(str(entry.get('tier', '')))}</span>"
+        f"{''.join(rows)}"
+        f"<span class=\"tf\">※ = 中文待客户端简中校对；英文为 wiki 原名</span></span>"
+    )
+
+
+def weapon_tip(en: str, entry: dict[str, object], terms_by_en: dict[str, dict[str, str]]) -> str:
+    """武器悬浮: Weapons 列原样 (职业/各级数值/特效/价格/解锁) 加对照。"""
+    stats = entry.get("stats")
+    stat_list: list[object] = stats if isinstance(stats, list) else []
+    rows = [kv_row("Class", esc(entry.get("class", "")) or "—", terms_by_en)]
+    for s in stat_list:
+        if not isinstance(s, dict):
+            continue
+        key = str(s.get("k", ""))
+        val = str(s.get("v", "")).strip()
+        rows.append(kv_row(key, esc(val) if val else "—", terms_by_en))
+    rows.append(kv_row("Special Effects", esc(entry.get("special", "")) or "—", terms_by_en))
+    rows.append(kv_row("Base Price", esc(entry.get("price", "")) or "—", terms_by_en))
+    rows.append(kv_row("Unlocked By", esc(entry.get("unlock", "")) or "—", terms_by_en))
+    return (
+        f"<span class=\"tip\"><span class=\"th\">{esc(str(entry.get('class', '')))}</span>"
+        f"{''.join(rows)}"
+        f"<span class=\"tf\">※ = 中文待客户端简中校对；英文为 wiki 原名</span></span>"
+    )
+
+
+def weapon_rows(
+    weapons: list[dict[str, object]],
+    reg: dict[str, object],
+    terms_by_en: dict[str, dict[str, str]],
+) -> tuple[str, list[str], list[str]]:
+    """武器行: 注册表唯一源, 未知即 fail; 有条目则名可悬浮。返回 (html, errors, warns)。"""
     if not weapons:
-        return '<tr><td colspan="2"><span class="empty">作者未提及 — 待补口径</span></td></tr>'
+        return ('<tr><td colspan="2"><span class="empty">作者未提及 — 待补口径</span></td></tr>', [], [])
+    errors: list[str] = []
+    warns: list[str] = []
     parts: list[str] = []
     for weapon in weapons:
-        name_zh = esc(weapon.get("name_zh", ""))
-        name_en = esc(weapon.get("name_en", ""))
+        if not isinstance(weapon, dict):
+            errors.append("武器条目结构错即 fail: need dict")
+            continue
+        name_en = str(weapon.get("name_en", "")).strip()
+        entry = reg.get(name_en)
+        if not isinstance(entry, dict):
+            errors.append(f"未知武器即 fail: {name_en} (不在 weapons 注册表)")
+            continue
+        if entry.get("needs_review") is True or str(entry.get("needs_review", "")).upper() == "TRUE":
+            warns.append(f"武器待校对: {name_en}（※），中文以客户端简中为准")
         note = weapon.get("note")
         note_html = esc(note) if isinstance(note, str) and note.strip() else (
             '<span class="empty">作者未提及</span>'
         )
-        parts.append(f"<tr><td><b>{name_zh} ({name_en})</b></td><td>{note_html}</td></tr>")
-    return "".join(parts)
+        name_html = (
+            f"<span class=\"has-tip\" tabindex=\"0\">{entry_name_html(name_en, entry)}"
+            f"{weapon_tip(name_en, entry, terms_by_en)}</span>"
+        )
+        thumb = entry.get("thumb")
+        parts.append(f"<tr><td>{icon_html(thumb, name_en)}{name_html}</td><td>{note_html}</td></tr>")
+    return ("".join(parts), errors, warns)
 
 
-def item_rows(items: list[dict[str, object]]) -> str:
+def item_rows(
+    items: list[dict[str, object]],
+    reg: dict[str, object],
+    terms_by_en: dict[str, dict[str, str]],
+) -> tuple[str, list[str], list[str]]:
+    """道具行: 注册表唯一源, 未知即 fail; 有条目则名可悬浮。返回 (html, errors, warns)。"""
     if not items:
-        return '<tr><td colspan="2"><span class="empty">作者未提及 — 待补口径</span></td></tr>'
+        return ('<tr><td colspan="2"><span class="empty">作者未提及 — 待补口径</span></td></tr>', [], [])
+    errors: list[str] = []
+    warns: list[str] = []
     parts: list[str] = []
     for item in items:
-        name_zh = esc(item.get("name_zh", ""))
-        name_en = esc(item.get("name_en", ""))
+        if not isinstance(item, dict):
+            errors.append("道具条目结构错即 fail: need dict")
+            continue
+        name_en = str(item.get("name_en", "")).strip()
+        entry = reg.get(name_en)
+        if not isinstance(entry, dict):
+            errors.append(f"未知道具即 fail: {name_en} (不在 items 注册表)")
+            continue
+        if entry.get("needs_review") is True or str(entry.get("needs_review", "")).upper() == "TRUE":
+            warns.append(f"道具待校对: {name_en}（※），中文以客户端简中为准")
         reason = item.get("reason")
         reason_html = esc(reason) if isinstance(reason, str) and reason.strip() else (
             '<span class="empty">作者未提及</span>'
         )
-        parts.append(
-            f"<tr><td><b>{name_zh} ({name_en})</b></td><td>{reason_html}</td></tr>"
+        name_html = (
+            f"<span class=\"has-tip\" tabindex=\"0\">{entry_name_html(name_en, entry)}"
+            f"{item_tip(name_en, entry, terms_by_en)}</span>"
         )
-    return "".join(parts)
+        thumb = entry.get("thumb")
+        parts.append(f"<tr><td>{icon_html(thumb, name_en)}{name_html}</td><td>{reason_html}</td></tr>")
+    return ("".join(parts), errors, warns)
 
 
 def phases_block(phases: list[dict[str, object]]) -> str:
@@ -334,16 +509,9 @@ def term_row(
         badges += ' <span class="badge-dlc" title="Abyssal Terrors DLC 专属">DLC</span>'
     if pending:
         badges += ' <span class="badge-review" title="中文待客户端简中校对">待校对</span>'
-    # 图标: 主表 wiki 热链三件套, 次级统一占位。
-    if reg_entry and isinstance(reg_entry.get("thumb"), str) and reg_entry.get("thumb"):
-        thumb = str(reg_entry.get("thumb"))
-        icon = (
-            f"<img class=\"sic\" alt=\"{esc(en)}\" width=\"20\" height=\"20\" "
-            f"src=\"{esc(thumb)}\" loading=\"lazy\" "
-            f"referrerpolicy=\"no-referrer\" onerror=\"this.remove()\"> "
-        )
-    else:
-        icon = "<span class=\"sic none\" title=\"wiki 无专用图标\">◆</span> "
+    # 图标: 主表 wiki 热链三件套, 次级统一占位 (同一渲染路径 icon_html)。
+    thumb = reg_entry.get("thumb") if isinstance(reg_entry, dict) else None
+    icon = icon_html(thumb, en)
     # 悬浮: 有 tooltip 则 hover, 诅咒无 Positive 区则无悬浮。
     tips = reg_entry.get("tooltip") if isinstance(reg_entry, dict) else None
     tip_list: list[dict[str, object]] | None = tips if isinstance(tips, list) else None
@@ -499,6 +667,9 @@ def render_character(
     roster_entry: dict[str, object],
     primary_rows: str,
     secondary_rows: str,
+    weapons_t1_rows: str,
+    weapons_t2_rows: str,
+    items_rows: str,
     data: dict[str, object],
     template: str,
     warns: list[str],
@@ -541,9 +712,6 @@ def render_character(
     else:
         pitfalls_html = '<li><span class="empty">作者未提及 — 待补口径</span></li>'
 
-    weapons_t1 = data.get("weapons_t1")
-    weapons_t2 = data.get("weapons_t2")
-    items = data.get("items")
     phases = data.get("phases")
     source = data.get("source")
 
@@ -555,13 +723,9 @@ def render_character(
         "{{MECHANISM}}": mechanism_html,
         "{{ATTRS_PRIMARY_ROWS}}": primary_rows,
         "{{ATTRS_SECONDARY_ROWS}}": secondary_rows,
-        "{{WEAPONS_T1_ROWS}}": weapon_rows(
-            weapons_t1 if isinstance(weapons_t1, list) else []
-        ),
-        "{{WEAPONS_T2_ROWS}}": weapon_rows(
-            weapons_t2 if isinstance(weapons_t2, list) else []
-        ),
-        "{{ITEMS_ROWS}}": item_rows(items if isinstance(items, list) else []),
+        "{{WEAPONS_T1_ROWS}}": weapons_t1_rows,
+        "{{WEAPONS_T2_ROWS}}": weapons_t2_rows,
+        "{{ITEMS_ROWS}}": items_rows,
         "{{PHASES_BLOCK}}": phases_block(phases if isinstance(phases, list) else []),
         "{{UPGRADE}}": upgrade_html,
         "{{SHOP}}": shop_html,
@@ -654,13 +818,38 @@ def build_slug(
     primary_rows, secondary_rows, term_errors, term_warns = build_term_tables(terms, ratings, reg)
     if term_errors:
         return (term_errors, [])
+    terms_by_en: dict[str, dict[str, str]] = {t["en"]: t for t in terms}
+    reg_items = reg.get("items")
+    reg_weapons = reg.get("weapons")
+    items_map: dict[str, object] = reg_items if isinstance(reg_items, dict) else {}
+    weapons_map: dict[str, object] = reg_weapons if isinstance(reg_weapons, dict) else {}
+    weapons_t1_raw = data.get("weapons_t1")
+    weapons_t2_raw = data.get("weapons_t2")
+    items_raw = data.get("items")
+    weapons_t1_rows, w1_errors, w1_warns = weapon_rows(
+        weapons_t1_raw if isinstance(weapons_t1_raw, list) else [], weapons_map, terms_by_en
+    )
+    weapons_t2_rows, w2_errors, w2_warns = weapon_rows(
+        weapons_t2_raw if isinstance(weapons_t2_raw, list) else [], weapons_map, terms_by_en
+    )
+    items_rows, item_errors, item_warns = item_rows(
+        items_raw if isinstance(items_raw, list) else [], items_map, terms_by_en
+    )
+    gear_errors = w1_errors + w2_errors + item_errors
+    if gear_errors:
+        return (gear_errors, [])
     warns = check_acceptance(data)
     warns.extend(term_warns)
+    warns.extend(w1_warns + w2_warns + item_warns)
     # 名录待校对只 warn。
     if str(entry.get("needs_review", "")).upper() == "TRUE" or entry.get("needs_review") is True:
         warns.append(f"名录中文待校对: {entry.get('id')}（※），以客户端简中为准")
     template = (templates_dir / "character.html").read_text(encoding="utf-8")
-    rendered = render_character(entry, primary_rows, secondary_rows, data, template, warns)
+    rendered = render_character(
+        entry, primary_rows, secondary_rows,
+        weapons_t1_rows, weapons_t2_rows, items_rows,
+        data, template, warns,
+    )
     html_errors = check_structure_html(rendered)
     if html_errors:
         return (html_errors, warns)

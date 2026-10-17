@@ -56,6 +56,11 @@ def check_file(path: Path) -> tuple[list[str], list[str]]:
         errors.append("角标缺失即 fail: Curse 缺 DLC 角标")
     if "Reroll Price" in sec_html and "DLC" not in sec_html:
         errors.append("角标缺失即 fail: % Reroll Price 缺 DLC 角标")
+    # 武器道具 hover (#15): 有数据行 (无诚实空出) 必须有悬浮, 空口径行可免。
+    for sec_name in ("weapons", "items"):
+        m_sec = re.search(rf'data-section="{sec_name}".*?</section>', html_text, re.S)
+        if m_sec and "待补口径" not in m_sec.group(0) and "has-tip" not in m_sec.group(0):
+            errors.append(f"hover 缺失即 fail: {sec_name} 区有名无悬浮 (未知武器/道具或模板回归)")
     # 图标: 主表 wiki 热链, 次级 ◆ 占位。
     if "wiki.spellsandguns.com" not in html_text:
         errors.append("图标缺失即 fail: 主表缺 wiki 热链图标 (注册表唯一 URL 源)")

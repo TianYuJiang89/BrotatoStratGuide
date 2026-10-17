@@ -3,17 +3,14 @@
   "items": [
     {
       "name_en": "Improved Tools",
-      "name_zh": "改良工具",
       "reason": "胜场解锁，结构流本命，见了必拿"
     },
     {
       "name_en": "Turret",
-      "name_zh": "炮塔",
       "reason": "转化养大的主力输出，先占 2 个"
     },
     {
       "name_en": "Coffee",
-      "name_zh": "咖啡",
       "reason": "攻速即清线，枪炮双吃"
     }
   ],
@@ -82,19 +79,16 @@
   "weapons_t1": [
     {
       "name_en": "SMG",
-      "name_zh": "冲锋枪",
       "note": "前期过渡最滑，W1 即拿，升满再换"
     },
     {
       "name_en": "Pistol",
-      "name_zh": "手枪",
       "note": "便宜好升满，过渡不亏"
     }
   ],
   "weapons_t2": [
     {
       "name_en": "Minigun",
-      "name_zh": "加特林",
       "note": "高射速吃远程加成，中期可换"
     }
   ]

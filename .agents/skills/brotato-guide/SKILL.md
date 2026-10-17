@@ -26,7 +26,7 @@ Body rules (single source of truth stays in the repo; the ticket only points):
 - Role slots filled from the template (`目标角色`节); the `选定取材` section stays slotted: the executor retrieves Top3 per §4, the human picks, then the executor fills. You fill no video IDs.
 - Requirements section points at, never copies: `docs/sop/new-character-guide.md` (一事一过 8 步 + note rules + 三道闸), `docs/sop/reviewer-checklist.md` (four checks), `.agents/skills/brotato-guide/` is you — do not reference yourself.
 - Constraints line, verbatim: cookie collaboration (human provides repo-root `cookies.txt`, never committed; executor asks on block), TDD seams only (CLI exit codes + `docs/*.html` + `data/*.json` bytes), products human-never-hand-edits, no third-party transcription without a separate ticket.
-- Map link: first line `Part of #16`; acceptance = reviewer gate + human 3-questions (选片对不对 / 转述忠不忠实 / 评级违不违手感).
+- Acceptance: reviewer gate + human 3-questions (选片对不对 / 转述忠不忠实 / 评级违不违手感). Guide tickets stay out of wayfinding: no wayfinder labels, no `Part of` map line.
 - Apply the AFK-ready triage label (`ready-for-agent` per `docs/agents/triage-labels.md`).
 
 Completion: issue number in hand, `gh issue view <new-N>` shows filled body + labels. Output the number and stop. Nothing else runs in this session.

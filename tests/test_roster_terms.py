@@ -7,6 +7,8 @@ Seams under test (pre-agreed per #8: E2E only):
 
 No internal imports, no network. All assertions inspect CLI exit codes
 and generated file bytes.
+
+#19 clean slate: rendering via isolated tmp fixture (tests/fixtures/cyborg.json).
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ REPO = Path(__file__).resolve().parent.parent
 BUILD = [sys.executable, "scripts/build.py"]
 CHECK = [sys.executable, "scripts/check.py"]
 CHECK_UPDATES = [sys.executable, "scripts/check_updates.py"]
+FIXTURE = REPO / "tests" / "fixtures" / "cyborg.json"
 
 EXPECTED_PRIMARY = [
     "Max HP",
@@ -71,7 +74,6 @@ EXPECTED_SECONDARY = [
 
 
 def run(*args: str, cwd: Path = REPO) -> subprocess.CompletedProcess[str]:
-    # Dispatch: build vs check vs check_updates share same helper.
     if args and args[0].endswith("check_updates.py"):
         cmd = [sys.executable, *args]
     elif args and args[0].endswith("check.py"):
@@ -85,6 +87,22 @@ def run_build(*args: str, cwd: Path = REPO) -> subprocess.CompletedProcess[str]:
     return subprocess.run([*BUILD, *args], cwd=cwd, capture_output=True, text=True)
 
 
+def ensure_fixture(work: Path) -> None:
+    _bf = work / "data" / "builds" / "cyborg.json"
+    if not _bf.exists() and FIXTURE.exists():
+        _bf.parent.mkdir(parents=True, exist_ok=True)
+        _bf.write_text(FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
+
+
+def build_isolated(data_dir: Path, templates_dir: Path, out: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(REPO / "scripts" / "build.py"), "--slug", "cyborg",
+         "--data-dir", str(data_dir), "--templates-dir", str(templates_dir),
+         "--out-dir", str(out)],
+        cwd=REPO, capture_output=True, text=True,
+    )
+
+
 def test_roster_64_dlc_14_mod_rejected() -> None:
     """名录 64 齐全，DLC 14 归属正确，Mod 拒收。"""
     roster = json.loads((REPO / "data" / "roster.json").read_text(encoding="utf-8"))
@@ -93,7 +111,6 @@ def test_roster_64_dlc_14_mod_rejected() -> None:
     assert len(abyssal) == 14, f"DLC 14 required, got {len(abyssal)}"
     ids = [r.get("id") for r in roster]
     assert len(set(ids)) == 64
-    # Mod 拒收：未知 slug 即 fail。
     r = run_build("--slug", "mod-fake-character")
     assert r.returncode != 0, "Mod/unknown slug must fail"
     combined = (r.stdout + r.stderr).lower()
@@ -112,20 +129,14 @@ def test_terms_primary_17_secondary_22_wiki_order() -> None:
     assert len(secondary) == 22, f"secondary 22 required, got {len(secondary)}"
     assert [r["en"] for r in primary] == EXPECTED_PRIMARY
     assert [r["en"] for r in secondary] == EXPECTED_SECONDARY
-    # 旧口径作废：次级只有 3 行（Explosion/Reroll/XP）必须被拒。
-    # 用隔离夹具把 terms 截成旧 3 口径，构建必须 fail。
     import tempfile
 
     with tempfile.TemporaryDirectory() as tmp:
         work = Path(tmp) / "work"
         shutil.copytree(REPO / "data", work / "data")
         shutil.copytree(REPO / "templates", work / "templates")
+        ensure_fixture(work)
         out = Path(tmp) / "out"
-        old_secondary = {"Explosion Damage", "Reroll Price", "XP Gain"}
-        kept = [r for r in rows if not (r["type"] == "secondary" and r["en"] not in old_secondary)]
-        # kept secondary should be exactly old 3 if source were old; here we force old shape
-        # by keeping only those 3 (map % Reroll Price -> Reroll Price for old check)
-        # Instead: truncate to first 3 secondary to simulate old caliber.
         prim = [r for r in rows if r["type"] == "primary"]
         sec = [r for r in rows if r["type"] == "secondary"][:3]
         with (work / "data" / "terms.csv").open("w", encoding="utf-8", newline="") as f:
@@ -149,6 +160,7 @@ def test_unknown_term_fails() -> None:
         work = Path(tmp) / "work"
         shutil.copytree(REPO / "data", work / "data")
         shutil.copytree(REPO / "templates", work / "templates")
+        ensure_fixture(work)
         out = Path(tmp) / "out"
         build_file = work / "data" / "builds" / "cyborg.json"
         data = json.loads(build_file.read_text(encoding="utf-8"))
@@ -175,8 +187,8 @@ def test_missing_dlc_badge_fails() -> None:
         work = Path(tmp) / "work"
         shutil.copytree(REPO / "data", work / "data")
         shutil.copytree(REPO / "templates", work / "templates")
+        ensure_fixture(work)
         out = Path(tmp) / "out"
-        # 把 Curse 的 dlc 置空，模拟角标缺失。
         terms_path = work / "data" / "terms.csv"
         with terms_path.open(encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
@@ -196,27 +208,40 @@ def test_missing_dlc_badge_fails() -> None:
         assert r.returncode != 0, "missing DLC badge must fail"
 
 
-def test_pending_only_warns_not_fail() -> None:
-    """待校对只 warn 加标：全量待校对仍可发布。"""
-    r = run_build("--slug", "cyborg")
+def test_pending_only_warns_not_fail(tmp_path: Path) -> None:
+    """待校对只 warn 加标：全量待校对仍可发布 (隔离)."""
+    import shutil
+
+    work = tmp_path / "work"
+    shutil.copytree(REPO / "data", work / "data")
+    shutil.copytree(REPO / "templates", work / "templates")
+    ensure_fixture(work)
+    out = tmp_path / "out"
+    out.mkdir(parents=True, exist_ok=True)
+    r = build_isolated(work / "data", work / "templates", out)
     assert r.returncode == 0, f"pending must not fail: {r.stderr[-2000:]}"
     combined = r.stdout + r.stderr
     assert "WARN" in combined or "待校对" in combined or "※" in combined
-    html = (REPO / "docs" / "cyborg.html").read_text(encoding="utf-8")
+    html = (out / "cyborg.html").read_text(encoding="utf-8")
     assert "※" in html or "待校对" in html
 
 
-def test_cyborg_rerendered_full_not_demo() -> None:
-    """同一单角色页重渲染后角标排序图标正确，非演示拷贝。"""
-    r = run_build("--slug", "cyborg")
+def test_cyborg_rerendered_full_not_demo(tmp_path: Path) -> None:
+    """同一单角色页重渲染后角标排序图标正确，非演示拷贝 (隔离)."""
+    import shutil
+
+    work = tmp_path / "work"
+    shutil.copytree(REPO / "data", work / "data")
+    shutil.copytree(REPO / "templates", work / "templates")
+    ensure_fixture(work)
+    out = tmp_path / "out"
+    out.mkdir(parents=True, exist_ok=True)
+    r = build_isolated(work / "data", work / "templates", out)
     assert r.returncode == 0, r.stderr[-2000:]
-    html = (REPO / "docs" / "cyborg.html").read_text(encoding="utf-8")
-    # 主 17 + 次级 22 全量，非演示 5+3。
-    # 按 data-section 切出两表，数行数（每行一个中文括号英文）。
+    html = (out / "cyborg.html").read_text(encoding="utf-8")
     primary_sec = re.search(r'data-section="attrs-primary".*?</section>', html, re.S)
     secondary_sec = re.search(r'data-section="attrs-secondary".*?</section>', html, re.S)
     assert primary_sec is not None and secondary_sec is not None
-    # 主表英文名按 wiki 原序出现。
     positions = []
     for en in EXPECTED_PRIMARY:
         idx = primary_sec.group(0).find(f"({en})")
@@ -229,23 +254,20 @@ def test_cyborg_rerendered_full_not_demo() -> None:
         assert idx >= 0, f"secondary {en} missing in rendered page"
         positions2.append(idx)
     assert positions2 == sorted(positions2), "secondary must follow wiki order"
-    # DLC 角标：诅咒与重随价格必须带 DLC 标记。
     assert "Curse" in primary_sec.group(0)
     assert "DLC" in primary_sec.group(0), "Curse DLC badge missing"
     assert "Reroll Price" in secondary_sec.group(0)
     assert "DLC" in secondary_sec.group(0), "Reroll Price DLC badge missing"
-    # 图标：主表有 wiki 热链图标，次级统一占位 ◆。
     assert "wiki.spellsandguns.com" in html, "stat icons must be inlined from registry"
     assert "◆" in html, "secondary placeholder ◆ required"
 
 
-def test_registry_is_single_url_source() -> None:
-    """缓存注册表为唯一 URL 源，不存二进制，构建时内联。"""
+def test_registry_is_single_url_source(tmp_path: Path) -> None:
+    """缓存注册表为唯一 URL 源，不存二进制，构建时内联 (隔离产物)."""
     reg_path = REPO / "data" / "wiki-cache.json"
     assert reg_path.exists(), "data/wiki-cache.json must exist"
     reg = json.loads(reg_path.read_text(encoding="utf-8"))
     assert "stats" in reg
-    # 主 17 必须有 thumb，次级 22 必须 missing 占位。
     for en in EXPECTED_PRIMARY:
         assert en in reg["stats"], f"registry missing {en}"
         entry = reg["stats"][en]
@@ -255,23 +277,29 @@ def test_registry_is_single_url_source() -> None:
         assert en in reg["stats"], f"registry missing {en}"
         entry = reg["stats"][en]
         assert entry.get("missing") or not entry.get("thumb"), f"secondary {en} must be placeholder"
-    # 不存二进制：仓库无 png 二进制入库（assets 为空或仅 .gitkeep）。
     assets = REPO / "assets"
     if assets.exists():
         pngs = list(assets.rglob("*.png"))
         assert pngs == [], "no binary png in repo, registry only"
-    # 构建时内联：产物无运行时 fetch，file:// 可开。
-    html = (REPO / "docs" / "cyborg.html").read_text(encoding="utf-8")
+    import shutil
+
+    work = tmp_path / "work"
+    shutil.copytree(REPO / "data", work / "data")
+    shutil.copytree(REPO / "templates", work / "templates")
+    ensure_fixture(work)
+    out = tmp_path / "out"
+    out.mkdir(parents=True, exist_ok=True)
+    r = build_isolated(work / "data", work / "templates", out)
+    assert r.returncode == 0, r.stderr[-2000:]
+    html = (out / "cyborg.html").read_text(encoding="utf-8")
     assert "fetch(" not in html
     assert "wiki.spellsandguns.com" in html
 
 
 def test_append_rule_uncalibrated_not_published() -> None:
     """追加规则可用：未校对不发布，Mod 永不进入。"""
-    # check_updates.py 必须存在且可跑（默认全量校验）。
     r = subprocess.run([*CHECK_UPDATES], cwd=REPO, capture_output=True, text=True)
     assert r.returncode == 0, f"check_updates baseline must pass: {r.stderr[-2000:]}"
-    # 未校对新增：用隔离 roster 加一个 needs_review=true 的新角色，必须 fail。
     import tempfile
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -288,22 +316,26 @@ def test_append_rule_uncalibrated_not_published() -> None:
         assert r2.returncode != 0, "uncalibrated append must fail"
 
 
-def test_attr_tooltip_three_columns_and_flips_up_near_bottom() -> None:
-    """属性 hover：3 列排版 + 靠底向上，不滚。"""
-    r = run_build("--slug", "cyborg")
+def test_attr_tooltip_three_columns_and_flips_up_near_bottom(tmp_path: Path) -> None:
+    """属性 hover：3 列排版 + 靠底向上，不滚 (隔离产物)."""
+    import shutil
+
+    work = tmp_path / "work"
+    shutil.copytree(REPO / "data", work / "data")
+    shutil.copytree(REPO / "templates", work / "templates")
+    ensure_fixture(work)
+    out = tmp_path / "out"
+    out.mkdir(parents=True, exist_ok=True)
+    r = build_isolated(work / "data", work / "templates", out)
     assert r.returncode == 0, r.stderr[-2000:]
     tpl = (REPO / "templates" / "character.html").read_text(encoding="utf-8")
-    # 3 列：grid repeat(3, ...)。
     assert "repeat(3" in tpl, "tooltip must use 3-column grid"
-    # 靠底向上：bottom:100% 且仅末几行（nth-last-child），非常驻向上。
     assert "bottom:100%" in tpl, "bottom rows must flip upward"
     assert "nth-last-child" in tpl, "only near-bottom rows flip upward"
-    # hover 自身不滚动：.tip 不得自带 overflow 滚动。
     tip_blocks = re.findall(r"\.tip\s*\{[^}]*\}", tpl)
     assert tip_blocks, "tooltip css must exist"
     for block in tip_blocks:
         assert "overflow" not in block or "visible" in block, f"tooltip must not scroll: {block}"
-    html = (REPO / "docs" / "cyborg.html").read_text(encoding="utf-8")
+    html = (out / "cyborg.html").read_text(encoding="utf-8")
     assert 'class="tip"' in html
-    # 3 列下“等共 N 件”须占满整行，否则挤占一格错位。
     assert 'class="tm"' in html, "more-count line must span full grid row"

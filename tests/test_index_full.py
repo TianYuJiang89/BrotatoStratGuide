@@ -6,6 +6,8 @@ Seams under test (pre-agreed per #8: E2E only):
 
 No internal imports, no network. All assertions inspect CLI exit codes,
 data file bytes, and generated file bytes.
+
+#19 clean slate: repo index is 0 clickable. Playable assertions updated to 0.
 """
 
 from __future__ import annotations
@@ -99,7 +101,7 @@ def test_search_fuzzy_zh_en_abbr_and_count_empty() -> None:
 
 
 def test_dlc_filter_and_playable_no_dead_links() -> None:
-    """DLC 筛选与仅看可点正确，不点进空页。"""
+    """DLC 筛选与仅看可点正确，不点进空页 (#19: 0 可点干净起点)."""
     r = run_build("--all")
     assert r.returncode == 0, r.stderr[-2000:]
     html = read_index()
@@ -114,13 +116,10 @@ def test_dlc_filter_and_playable_no_dead_links() -> None:
     assert len(base) == 50, f"base 50 required, got {len(base)}"
     assert len(abyssal) == 14, f"abyssal 14 required, got {len(abyssal)}"
     playable = [e for e in roster if e.get("playable")]
-    assert len(playable) >= 1, "at least cyborg playable"
-    assert "cyborg" in {e["slug"] for e in playable}
-    # 可点才有链：已建页有 href，未建页无死链。
-    assert './cyborg.html' in html
-    for slug in ("mage", "sailor", "ranger"):
+    assert playable == [], f"clean slate must be 0 playable, got {[e.get('slug') for e in playable]}"
+    # 可点才有链: 干净起点无已建页, 全无死链.
+    for slug in ("cyborg", "engineer", "mage", "sailor", "ranger"):
         assert f'./{slug}.html' not in html, f"unbuilt {slug} must not link (no dead page)"
-    # JS 必须含 DLC 与可点过滤分支。
     assert 'value="all"' in html
     assert "playable" in html
 
@@ -136,12 +135,10 @@ def test_avatar_hotlink_with_fallback() -> None:
         assert img.startswith("https://"), f"{e.get('slug')} img must be URL"
         assert "wiki.spellsandguns.com" in img, f"{e.get('slug')} img must be wiki hotlink"
         assert "60px-" in img, f"{e.get('slug')} img must be 60px thumbnail"
-    # 三件套：懒加载 + no-referrer + 失败移除，外层 🥔 占位。
     assert 'loading="lazy"' in html
     assert 'referrerpolicy="no-referrer"' in html
     assert 'onerror="this.remove()"' in html
     assert "🥔" in html
-    # 注册表单源：chars 64 全量，不存二进制。
     reg = json.loads((REPO / "data" / "wiki-cache.json").read_text(encoding="utf-8"))
     assert "chars" in reg, "registry must grow chars map (single URL source)"
     assert len(reg["chars"]) == 64, f"chars 64 required, got {len(reg['chars'])}"
@@ -153,7 +150,7 @@ def test_avatar_hotlink_with_fallback() -> None:
 
 
 def test_index_file_double_click_runnable() -> None:
-    """file 双击可跑：无 fetch/外链阻塞，相对链，生成标记。"""
+    """file 双击可跑：无 fetch/外链阻塞，生成标记 (#19: 0 可点无角色链)."""
     r = run_build("--all")
     assert r.returncode == 0, r.stderr[-2000:]
     html = read_index()
@@ -161,16 +158,19 @@ def test_index_file_double_click_runnable() -> None:
     assert "fetch(" not in html
     assert 'rel="stylesheet" href="http' not in html
     assert '<script src="http' not in html
-    assert "./cyborg.html" in html
+    # 干净起点无角色链, 但索引自身可读.
+    assert "./cyborg.html" not in html, "clean slate must not link cyborg"
     assert "GENERATED" in html and "scripts/build.py" in html
     assert '<meta name="viewport"' in html
     assert "max-width" in html
 
 
 def test_per_slug_build_also_refreshes_index() -> None:
-    """按角色构建亦刷新索引全能力（--slug cyborg 后索引仍 64 全量）。"""
+    """干净起点 --slug 无数据必须 fail; --all 仍 64 全量 (#19)."""
     r = run_build("--slug", "cyborg")
-    assert r.returncode == 0, r.stderr[-2000:]
+    assert r.returncode != 0, "missing build on clean slate must fail"
+    r2 = run_build("--all")
+    assert r2.returncode == 0, r2.stderr[-2000:]
     html = read_index()
     roster = extract_roster(html)
     assert len(roster) == 64

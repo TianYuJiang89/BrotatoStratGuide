@@ -37,6 +37,12 @@ def make_workdir() -> tuple[Path, Path, Path, tempfile.TemporaryDirectory[str]]:
     work = Path(tmp.name) / "work"
     shutil.copytree(REPO / "data", work / "data")
     shutil.copytree(REPO / "templates", work / "templates")
+    # #19 clean slate: repo data/builds empty, restore fixture for isolated seam.
+    _fx = REPO / "tests" / "fixtures" / "cyborg.json"
+    _bf = work / "data" / "builds" / "cyborg.json"
+    if not _bf.exists() and _fx.exists():
+        _bf.parent.mkdir(parents=True, exist_ok=True)
+        _bf.write_text(_fx.read_text(encoding="utf-8"), encoding="utf-8")
     out = Path(tmp.name) / "out"
     return (work / "data", work / "templates", out, tmp)
 
@@ -75,20 +81,24 @@ def test_registry_has_items_and_weapons_single_source() -> None:
 
 
 def test_cyborg_weapons_items_render_hover() -> None:
-    """赛博格页武器道具名可悬浮：有本体信息 hover，英文必填，缺中文只英文加标。"""
-    r = run_build("--slug", "cyborg")
-    assert r.returncode == 0, f"build failed: {r.stderr[-2000:]}"
-    html = (REPO / "docs" / "cyborg.html").read_text(encoding="utf-8")
-    for section in ("weapons", "items"):
-        m = re.search(rf'data-section="{section}".*?</section>', html, re.S)
-        assert m is not None
-        assert "has-tip" in m.group(0), f"{section} names must carry hover"
-        assert 'class="tip"' in m.group(0), f"{section} hover body must reuse .tip"
-    # 武器 hover 含本体列，道具 hover 含 Tier。
-    assert "Gun" in html, "SMG/Pistol hover must show wiki Class"
-    assert "Tier 1" in html, "Coffee/Turret hover must show wiki Tier"
-    # 中英对照：术语名中文括号英文；缺中文只英文但挂待校对标。
-    assert "※" in html or "待校对" in html
+    """赛博格页武器道具名可悬浮：有本体信息 hover，英文必填，缺中文只英文加标 (隔离夹具)."""
+    data_dir, templates_dir, out, tmp = make_workdir()
+    try:
+        r = build_fixture(data_dir, templates_dir, out)
+        assert r.returncode == 0, f"build failed: {r.stderr[-2000:]}"
+        html = (out / "cyborg.html").read_text(encoding="utf-8")
+        for section in ("weapons", "items"):
+            m = re.search(rf'data-section="{section}".*?</section>', html, re.S)
+            assert m is not None
+            assert "has-tip" in m.group(0), f"{section} names must carry hover"
+            assert 'class="tip"' in m.group(0), f"{section} hover body must reuse .tip"
+        # 武器 hover 含本体列，道具 hover 含 Tier。
+        assert "Gun" in html, "SMG/Pistol hover must show wiki Class"
+        assert "Tier 1" in html, "Coffee/Turret hover must show wiki Tier"
+        # 中英对照：术语名中文括号英文；缺中文只英文但挂待校对标。
+        assert "※" in html or "待校对" in html
+    finally:
+        tmp.cleanup()
 
 
 def test_big_arms_schema_example_renders_all_fields() -> None:
@@ -151,34 +161,42 @@ def test_unknown_item_fails() -> None:
 
 
 def test_pending_only_warns_not_fail() -> None:
-    """待校对只 warn 加标：首批全未校对仍可发布。"""
-    r = run_build("--slug", "cyborg")
-    assert r.returncode == 0, f"pending must not fail: {r.stderr[-2000:]}"
-    combined = r.stdout + r.stderr
-    assert "WARN" in combined, "pending entries must warn"
-    html = (REPO / "docs" / "cyborg.html").read_text(encoding="utf-8")
-    assert "※" in html or "待校对" in html
+    """待校对只 warn 加标：首批全未校对仍可发布 (隔离)."""
+    data_dir, templates_dir, out, tmp = make_workdir()
+    try:
+        r = build_fixture(data_dir, templates_dir, out)
+        assert r.returncode == 0, f"pending must not fail: {r.stderr[-2000:]}"
+        combined = r.stdout + r.stderr
+        assert "WARN" in combined, "pending entries must warn"
+        html = (out / "cyborg.html").read_text(encoding="utf-8")
+        assert "※" in html or "待校对" in html
+    finally:
+        tmp.cleanup()
 
 
 def test_hover_reuses_icon_and_tip_conventions() -> None:
-    """复用 conventions：图标三件套同一渲染路径，悬浮仍走 .tip，不另起一套。"""
-    r = run_build("--slug", "cyborg")
-    assert r.returncode == 0, r.stderr[-2000:]
-    html = (REPO / "docs" / "cyborg.html").read_text(encoding="utf-8")
-    m = re.search(r'data-section="weapons".*?</section>', html, re.S)
-    assert m is not None
-    sec = m.group(0)
-    # 三件套：替代文本宽高 + 热链源 + 懒加载 + 失败移除。
-    assert 'class="sic"' in sec
-    assert 'loading="lazy"' in sec
-    assert 'referrerpolicy="no-referrer"' in sec
-    assert 'onerror="this.remove()"' in sec
-    # 无第二套图标 class。
-    assert "sic2" not in html and "wtip" not in html and "itip" not in html
-    # kv 行占满整行 grid（与 .th/.tm/.tf 同规则），悬浮自身不滚动。
-    tpl = (REPO / "templates" / "character.html").read_text(encoding="utf-8")
-    assert ".kv" in tpl, "hover kv rows must be styled"
-    assert "1 / -1" in tpl
+    """复用 conventions：图标三件套同一渲染路径，悬浮仍走 .tip，不另起一套 (隔离)."""
+    data_dir, templates_dir, out, tmp = make_workdir()
+    try:
+        r = build_fixture(data_dir, templates_dir, out)
+        assert r.returncode == 0, r.stderr[-2000:]
+        html = (out / "cyborg.html").read_text(encoding="utf-8")
+        m = re.search(r'data-section="weapons".*?</section>', html, re.S)
+        assert m is not None
+        sec = m.group(0)
+        # 三件套：替代文本宽高 + 热链源 + 懒加载 + 失败移除。
+        assert 'class="sic"' in sec
+        assert 'loading="lazy"' in sec
+        assert 'referrerpolicy="no-referrer"' in sec
+        assert 'onerror="this.remove()"' in sec
+        # 无第二套图标 class。
+        assert "sic2" not in html and "wtip" not in html and "itip" not in html
+        # kv 行占满整行 grid（与 .th/.tm/.tf 同规则），悬浮自身不滚动。
+        tpl = (REPO / "templates" / "character.html").read_text(encoding="utf-8")
+        assert ".kv" in tpl, "hover kv rows must be styled"
+        assert "1 / -1" in tpl
+    finally:
+        tmp.cleanup()
 
 
 def test_dlc_badge_for_dlc_entry() -> None:
@@ -216,29 +234,33 @@ def test_invalid_dlc_value_fails() -> None:
 
 
 def test_weapon_hover_is_transposed_weapons_list() -> None:
-    """武器悬浮为 Weapons List 转置：行=属性列=Lv1-4，等级色加 scaling 对照。"""
-    r = run_build("--slug", "cyborg")
-    assert r.returncode == 0, f"build failed: {r.stderr[-2000:]}"
-    html = (REPO / "docs" / "cyborg.html").read_text(encoding="utf-8")
-    m = re.search(r'data-section="weapons".*?</section>', html, re.S)
-    assert m is not None
-    sec = m.group(0)
-    assert '<table class="wt">' in sec, "weapon hover must be a transposed table"
-    for lv in ("Lv1", "Lv2", "Lv3", "Lv4"):
-        assert lv in sec, f"transposed header must carry {lv}"
-    for cls in ('class="w1"', 'class="w2"', 'class="w3"', 'class="w4"'):
-        assert cls in sec, "levels must keep wiki white/blue/purple/red semantics"
-    # scaling 对照：3(50% 远程伤害 (Ranged Damage))。
-    assert "远程伤害" in sec and "(Ranged Damage)" in sec
-    # 缺级诚实空出：Minigun 一二级无数值。
-    assert "Minigun" in sec
-    assert '<span class="w1">—</span>' in sec
-    # 行列：Class 行与价格行、特效行与解锁行齐全。
-    assert "Base Price" in sec and "Special Effects" in sec and "Unlocked By" in sec
+    """武器悬浮为 Weapons List 转置：行=属性列=Lv1-4，等级色加 scaling 对照 (隔离)."""
+    data_dir, templates_dir, out, tmp = make_workdir()
+    try:
+        r = build_fixture(data_dir, templates_dir, out)
+        assert r.returncode == 0, f"build failed: {r.stderr[-2000:]}"
+        html = (out / "cyborg.html").read_text(encoding="utf-8")
+        m = re.search(r'data-section="weapons".*?</section>', html, re.S)
+        assert m is not None
+        sec = m.group(0)
+        assert '<table class="wt">' in sec, "weapon hover must be a transposed table"
+        for lv in ("Lv1", "Lv2", "Lv3", "Lv4"):
+            assert lv in sec, f"transposed header must carry {lv}"
+        for cls in ('class="w1"', 'class="w2"', 'class="w3"', 'class="w4"'):
+            assert cls in sec, "levels must keep wiki white/blue/purple/red semantics"
+        # scaling 对照：3(50% 远程伤害 (Ranged Damage))。
+        assert "远程伤害" in sec and "(Ranged Damage)" in sec
+        # 缺级诚实空出：Minigun 一二级无数值。
+        assert "Minigun" in sec
+        assert '<span class="w1">—</span>' in sec
+        # 行列：Class 行与价格行、特效行与解锁行齐全。
+        assert "Base Price" in sec and "Special Effects" in sec and "Unlocked By" in sec
+    finally:
+        tmp.cleanup()
 
 
 def test_gear_tips_share_attr_positioning() -> None:
-    """装备悬浮与属性同一套定位：单翻转规则，装备表 wrapper 不裁剪。"""
+    """装备悬浮与属性同一套定位：单翻转规则，装备表 wrapper 不裁剪 (隔离产物)."""
     tpl = (REPO / "templates" / "character.html").read_text(encoding="utf-8")
     # 只有共用翻转规则，无装备特例定位。
     assert "nth-last-child" in tpl, "shared bottom-flip rule must exist"
@@ -247,29 +269,37 @@ def test_gear_tips_share_attr_positioning() -> None:
     assert ".table-wrap.gear-wrap" in tpl
     gear_wrap = tpl.split(".table-wrap.gear-wrap")[1].split("}")[0]
     assert "overflow:visible" in gear_wrap.replace(" ", "")
-    r = run_build("--slug", "cyborg")
-    assert r.returncode == 0, r.stderr[-2000:]
-    html = (REPO / "docs" / "cyborg.html").read_text(encoding="utf-8")
-    for section in ("weapons", "items"):
-        m = re.search(rf'data-section="{section}".*?</section>', html, re.S)
-        assert m is not None
-        assert 'class="table-wrap gear-wrap"' in m.group(0), f"{section} tables must not clip tips"
-        assert 'class="has-tip"' in m.group(0), f"{section} names must carry hover"
+    data_dir, templates_dir, out, tmp = make_workdir()
+    try:
+        r = build_fixture(data_dir, templates_dir, out)
+        assert r.returncode == 0, r.stderr[-2000:]
+        html = (out / "cyborg.html").read_text(encoding="utf-8")
+        for section in ("weapons", "items"):
+            m = re.search(rf'data-section="{section}".*?</section>', html, re.S)
+            assert m is not None
+            assert 'class="table-wrap gear-wrap"' in m.group(0), f"{section} tables must not clip tips"
+            assert 'class="has-tip"' in m.group(0), f"{section} names must carry hover"
+    finally:
+        tmp.cleanup()
 
 
 def test_check_py_gates_weapon_item_hover() -> None:
-    """check.py 门禁：产物武器道具 hover 缺失即 fail。"""
-    r = run_build("--slug", "cyborg")
-    assert r.returncode == 0, r.stderr[-2000:]
-    html = (REPO / "docs" / "cyborg.html").read_text(encoding="utf-8")
-    with tempfile.TemporaryDirectory() as tmp:
-        good = Path(tmp) / "good.html"
-        good.write_text(html, encoding="utf-8")
-        r1 = subprocess.run([*CHECK, str(good)], cwd=REPO, capture_output=True, text=True)
-        assert r1.returncode == 0, f"check must pass built page: {r1.stderr[-2000:]}"
-        # 拔掉 hover（武器道具区随之失去悬浮）：门禁必须挂。
-        stripped = re.sub(r'<span class="has-tip[^"]*"[^>]*>', '<span>', html)
-        bad = Path(tmp) / "bad.html"
-        bad.write_text(stripped, encoding="utf-8")
-        r2 = subprocess.run([*CHECK, str(bad)], cwd=REPO, capture_output=True, text=True)
-        assert r2.returncode != 0, "hover-stripped page must fail check"
+    """check.py 门禁：产物武器道具 hover 缺失即 fail (隔离产物)."""
+    data_dir, templates_dir, out, tmp_iso = make_workdir()
+    try:
+        r = build_fixture(data_dir, templates_dir, out)
+        assert r.returncode == 0, r.stderr[-2000:]
+        html = (out / "cyborg.html").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as tmp:
+            good = Path(tmp) / "good.html"
+            good.write_text(html, encoding="utf-8")
+            r1 = subprocess.run([*CHECK, str(good)], cwd=REPO, capture_output=True, text=True)
+            assert r1.returncode == 0, f"check must pass built page: {r1.stderr[-2000:]}"
+            # 拔掉 hover（武器道具区随之失去悬浮）：门禁必须挂。
+            stripped = re.sub(r'<span class="has-tip[^"]*"[^>]*>', '<span>', html)
+            bad = Path(tmp) / "bad.html"
+            bad.write_text(stripped, encoding="utf-8")
+            r2 = subprocess.run([*CHECK, str(bad)], cwd=REPO, capture_output=True, text=True)
+            assert r2.returncode != 0, "hover-stripped page must fail check"
+    finally:
+        tmp_iso.cleanup()

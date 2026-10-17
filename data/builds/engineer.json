@@ -1,0 +1,395 @@
+{
+  "slug": "engineer",
+  "variants": [
+    {
+      "id": "ultimate",
+      "covers": [
+        "Ultimate"
+      ],
+      "label": "Ultimate",
+      "status": "ready",
+      "mechanism": "炮塔群养人：只拿扳手 (Wrench)，每把自带一座炮塔，站 6 座炮塔群中间吃收入，靠结构慢慢磨，工程 (Engineering) 只需少量，活下来即输出。（解锁条件与胜场奖励：作者未提及 — 待补口径）",
+      "ratings": {
+        "Engineering": {
+          "rating": "S",
+          "note": "观众点名工程流，开局 roll 到就拿，越堆炮塔越强，唯一主属性，原话“engineering builds in”"
+        },
+        "Harvesting": {
+          "rating": "A",
+          "note": "开局找收获或工程滚钱买扳手，中期顺手拿；经济发动机，仅次于工程，原话“looking for harvesting or”"
+        },
+        "Attack Speed": {
+          "rating": "A",
+          "note": "配时钟与改良工具质变，咖啡也拿，攻速给扳手更多击退，靠道具拿，原话“very good”"
+        },
+        "Armor": {
+          "rating": "A",
+          "note": "站撸承伤，roll 到就拿，与回血同为站桩续航，原话“take armor, that’s great”"
+        },
+        "Max HP": {
+          "rating": "B",
+          "note": "开局拿少量补血，中期是站撸本钱；要血但优先级在工程/收获之后，原话“really good max HP”"
+        },
+        "HP Regeneration": {
+          "rating": "B",
+          "note": "开局垫回血，中期靠食物堆续航，与护甲同为站桩续航，原话“We’ll take padding and then I’ll pick up four regen”"
+        },
+        "Life Steal": {
+          "rating": "D",
+          "note": "定性不好用，缺货不找；炮塔不吃吸血，原话“generally not very good”"
+        },
+        "Crit Chance": {
+          "rating": "D",
+          "note": "定性基本无用，结构能暴击只是附带；有联动也不主动堆，原话“not particularly useful”"
+        },
+        "Damage": {
+          "rating": "A",
+          "note": "核心论点：堆前伤少走位，工程伤害慢更要拉满，原话“maximizing upfront damage so you dodge less”"
+        },
+        "Melee Damage": {
+          "rating": "D",
+          "note": "近战加成无用，原话“losing a melee damage not a big deal”"
+        },
+        "Range": {
+          "rating": "D",
+          "note": "射程无用，原话“we’re not buying range damage”"
+        },
+        "Dodge": {
+          "rating": "D",
+          "note": "核心就是少走位，偶尔顺手，不堆，原话“dodge as little as possible”"
+        },
+        "Speed": {
+          "rating": "C",
+          "note": "靠道具联动补移速，够用就行，原话“don’t care capping at 9”"
+        },
+        "Luck": {
+          "rating": "C",
+          "note": "顺手拿，不追，原话“I’ll take the lucky charm”"
+        },
+        "Curse": {
+          "rating": "D",
+          "note": "深渊别吃诅咒，怪多即死，不要，原话“avoiding getting cursed”"
+        },
+        "Consumable Heal": {
+          "rating": "B",
+          "note": "回血即坦度，特定道具必拿，偶尔补，原话“heal and tank”"
+        },
+        "% Pickup Range": {
+          "rating": "B",
+          "note": "材料拾取是短板，靠拾取范围补，树远了靠它，原话“helps pick up materials”"
+        },
+        "% Explosion Damage": {
+          "rating": "C",
+          "note": "扳手高阶附带，有范围前提下顺带，原话“a little bit is fine”"
+        },
+        "% Explosion Size": {
+          "rating": "B",
+          "note": "扳手高阶吃范围，有质变，原话“much prefer explosion size”"
+        },
+        "Piercing": {
+          "rating": "C",
+          "note": "有联动时顺带，不主动堆，原话“extra piercing”"
+        },
+        "% Damage against Bosses": {
+          "rating": "C",
+          "note": "前伤够了首领自然过，无独立堆法，原话“enhanced mini bosses”"
+        },
+        "% Burning Speed": {
+          "rating": "C",
+          "note": "燃烧不叠层，机制说明，不堆，原话“doesn’t stack”"
+        },
+        "Knockback": {
+          "rating": "B",
+          "note": "攻速给扳手更多击退，跑图时靠击退保命，原话“very relevant”"
+        },
+        "Free Rerolls": {
+          "rating": "B",
+          "note": "留禁用位给重随，找关键牌手段，原话“I’ll save my last ban for a reroll”"
+        },
+        "Trees": {
+          "rating": "B",
+          "note": "树是经济与走位目标，顺路拿，原话“run off after that tree”"
+        },
+        "% Enemies": {
+          "rating": "D",
+          "note": "怪多即死，不碰，原话“avoid cursed enemies”"
+        },
+        "% Enemy Speed": {
+          "rating": "C",
+          "note": "只在算斩杀线时提及，无独立堆法，原话“to kill an enemy”"
+        }
+      },
+      "weapons_t1": [
+        {
+          "name_en": "Wrench",
+          "note": "只拿扳手开局即锁，凑数合高阶，每阶自带不同炮塔，站群中间吃收入，原话“we're using wrench of course”"
+        }
+      ],
+      "weapons_t2": [],
+      "items": [
+        {
+          "name_en": "Turret",
+          "reason": "结构数量即输出，有了就买，站群中间吃线，原话“play in the middle of our turrets”"
+        },
+        {
+          "name_en": "Coffee",
+          "reason": "攻速乘区，顺手拿，炮塔射速即清线，原话“I will take coffee and will lock a mushroom”"
+        },
+        {
+          "name_en": "Improved Tools",
+          "reason": "重要乘区，攻速叠起后质变，原话“improved tools, that's very”"
+        }
+      ],
+      "phases": [
+        {
+          "label": "开局",
+          "waves": "W1-5",
+          "body": "锁 1 把扳手升 tier，只 roll 收获 (Harvesting) / 工程 (Engineering)；站炮塔群中间吃收入，结构件先占 1-2 个，前半段靠扳手自己清。 出处：备选视频 chapters 早中晚分段与全程打法。",
+          "buy": "扳手 (Wrench) → 占 6 把，和平蜜蜂过渡收获"
+        },
+        {
+          "label": "中期",
+          "waves": "W6-12",
+          "body": "转向点：结构数量铺起来吃灯塔 tempo 红利，击退撑起安全壳；工程一件也别多直购，全靠扳手 tier 与新结构。 出处：备选视频 chapters 早中晚分段与全程打法。",
+          "buy": "补炮塔 + 灯塔 tempo，追护甲与回复"
+        },
+        {
+          "label": "后期",
+          "waves": "W13-20",
+          "body": "转向点：最大生命 (Max HP) + 护甲补坦度，乘区只认改良工具与时钟；绝不离巢乱跑，离巢即暴毙，拉怪穿炮塔群。 出处：备选视频 chapters 早中晚分段与全程打法。",
+          "buy": "T4 扳手 + 改良工具，堆血甲站住"
+        }
+      ],
+      "upgrade": "属性 Top3：收获 (Harvesting) / 工程 (Engineering) / 护甲 (Armor)；生命窃取与暴击出了也不拿；血量告急时保命优先。（两层：先 Top3 再点名） 出处：全程 roll 牌与视频描述。",
+      "shop": "属性 Top3：工程 (Engineering) / 攻击速度 (Attack Speed) / 最大生命 (Max HP)；必拿：炮塔 / 改良工具 / 和平蜜蜂；必刷：缺关键结构时点 1-2 次重随；工程直购永远只补少量。（两层：先 Top3 再点名，升级在前） 出处：全程商店与视频描述。",
+      "pitfalls": [
+        "别离巢乱跑：工程伤害慢，只能站炮塔群里慢慢磨，跑出去即被弹幕逼死。",
+        "别直买工程堆数值：线性堆工程不如多买一座结构，防御与数量才是输出。",
+        "别碰生命窃取 (Life Steal) / 暴击：作者明确不好用，拿了等于白板。"
+      ],
+      "hard": "高难特例：仅 Nightmare / Ultimate 成立——环境弹幕逼走位，贴边开局让怪同向来；W16 增强苍蝇与精英逼离巢，提前拉怪穿炮塔群，击退配燃烧炮塔造壳。",
+      "source": {
+        "title": "If You Build It, They Will Die - Engineer - Brotato Ultimate Nightmares Guide",
+        "url": "https://www.youtube.com/watch?v=Wge0_hd9Rt8",
+        "video_id": "Wge0_hd9Rt8",
+        "published": "2026-09-01",
+        "difficulty": "Ultimate",
+        "game_version": "Steam 1.1.15.1 (2026-09-01 + Steam)",
+        "has_captions": true,
+        "transcript": {
+          "captions": "auto",
+          "corrected": false
+        },
+        "candidates": [
+          {
+            "title": "If You Build It, They Will Die - Engineer - Brotato Ultimate Nightmares Guide",
+            "url": "https://www.youtube.com/watch?v=Wge0_hd9Rt8",
+            "video_id": "Wge0_hd9Rt8",
+            "published": "2026-09-01",
+            "difficulty": "Ultimate",
+            "has_captions": true
+          },
+          {
+            "title": "\"Engineer is Impossible In Nightmare\" - Engineer - Brotato Ultimate Nightmares Guide",
+            "url": "https://www.youtube.com/watch?v=QbKT2VHnqbc",
+            "video_id": "QbKT2VHnqbc",
+            "published": "2026-07-15",
+            "difficulty": "Ultimate",
+            "has_captions": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "danger-5",
+      "covers": [
+        "Danger 5"
+      ],
+      "label": "Danger 5",
+      "status": "ready",
+      "mechanism": "站撸流：开局自带扳手 (Wrench)，每级补扳手堆炮塔 (Turret) 数量，站炮塔群中间让怪来送，堆工程 (Engineering) 只加炮塔伤害，自己只管站定捡材料，前期别乱跑 (D5-dhQ67: basically just stand still in your little pod of turrets)。",
+      "ratings": {
+        "Engineering": {
+          "rating": "S",
+          "note": "开局自带扳手给工程，全程靠工程养炮塔，唯一核心，原话“You get extra engineering”"
+        },
+        "Harvesting": {
+          "rating": "A",
+          "note": "各职业通用经济牌，本职业也照拿，原话“harvesting, luck, everything”"
+        },
+        "Damage": {
+          "rating": "A",
+          "note": "炮塔分散缺集火，更要堆前伤，原话“can't focus damage on anything”"
+        },
+        "Armor": {
+          "rating": "A",
+          "note": "站撸必吃伤，roll 到就拿，原话“I'm just going to get armor”"
+        },
+        "HP Regeneration": {
+          "rating": "A",
+          "note": "首选回血手段，吸血无用，原话“I will grab HP regeneration”"
+        },
+        "Luck": {
+          "rating": "A",
+          "note": "通用经济牌，顺手拿，原话“harvesting, luck, everything”"
+        },
+        "Max HP": {
+          "rating": "B",
+          "note": "可卖血换工程，中期是站撸本钱，原话“really good even at the cost of some maximum HP”"
+        },
+        "Speed": {
+          "rating": "B",
+          "note": "花光钱打法下掉速也能接受，够用就行，原话“losing 5% speed is actually”"
+        },
+        "Consumable Heal": {
+          "rating": "C",
+          "note": "用回血不用嗑药，原话“use regeneration as your healing method”"
+        },
+        "% XP Gain": {
+          "rating": "B",
+          "note": "难清的精英靠经验拉级，特定牌可拿，原话“Definitely taking this uh 40% XP”"
+        },
+        "% Pickup Range": {
+          "rating": "C",
+          "note": "拾取一般，顺手补，原话“let's pick up this money”"
+        },
+        "% Explosion Damage": {
+          "rating": "C",
+          "note": "四级扳手带爆炸，与穿透二选，原话“Level four does an explosion rather than a pierce”"
+        },
+        "% Explosion Size": {
+          "rating": "C",
+          "note": "爆炸范围顺带，无独立堆法，原话“Explosion damage and explosion radius”"
+        },
+        "Bounces": {
+          "rating": "B",
+          "note": "穿透弹跳炮塔能吃，优先找，原话“piercing and bouncing shots because those do work”"
+        },
+        "Piercing": {
+          "rating": "B",
+          "note": "四级前靠穿透过渡，原话“does an explosion rather than a pierce”"
+        },
+        "% Piercing Damage": {
+          "rating": "C",
+          "note": "缺穿透时补一点，原话“we do need some piercing damage”"
+        },
+        "% Damage against Bosses": {
+          "rating": "C",
+          "note": "靠堆前伤硬灌首领，无独立堆法，原话“sheer damage to take down a boss”"
+        },
+        "% Burning Speed": {
+          "rating": "C",
+          "note": "炮塔自带燃烧，不用堆，原话“all your turrets will apply the burning effect”"
+        },
+        "Free Rerolls": {
+          "rating": "C",
+          "note": "省钱不乱刷，缺关键才点，原话“I don't want to reroll cuz I want to save”"
+        },
+        "Trees": {
+          "rating": "B",
+          "note": "炮塔群里顺手捡树，经济加走位，原话“in order to grab trees”"
+        },
+        "% Enemies": {
+          "rating": "C",
+          "note": "会走位就能打多怪，不主动加，原话“comfortable dodging enemies”"
+        },
+        "% Enemy Speed": {
+          "rating": "C",
+          "note": "站定打法下怪聚堆，移速无感，原话“all the enemy materials are stacked”"
+        },
+        "Dodge": {
+          "rating": "C",
+          "note": "会走位即可，不堆，原话“comfortable dodging”"
+        },
+        "Melee Damage": {
+          "rating": "C",
+          "note": "近战范围吃经验，顺带，原话“XP gain for melee range”"
+        },
+        "Life Steal": {
+          "rating": "D",
+          "note": "本职业无用，原话“Life steal is obviously worthless on this class”"
+        },
+        "Elemental Damage": {
+          "rating": "D",
+          "note": "炮塔不吃元素，不用，原话“we don't use elemental damage”"
+        },
+        "Attack Speed": {
+          "rating": "D",
+          "note": "可卖攻速换工程，作者明确拿减攻速，原话“I'll definitely take minus attack speed”"
+        },
+        "Range": {
+          "rating": "D",
+          "note": "完全不用，原话“we don't care about range at all”"
+        },
+        "Crit Chance": {
+          "rating": "D",
+          "note": "多属性里明确不用，原话“crit chance, engineering, and speed. We don't use”"
+        }
+      },
+      "weapons_t1": [
+        {
+          "name_en": "Wrench",
+          "note": "开局一把起步，全程凑数合阶，炮塔即输出，原话“You start with a wrench”"
+        }
+      ],
+      "weapons_t2": [],
+      "items": [
+        {
+          "name_en": "Turret",
+          "reason": "站炮塔群中间让怪来送，有了就补，原话“just stand still in your little pod of turrets”"
+        }
+      ],
+      "phases": [
+        {
+          "label": "开局",
+          "waves": "W1-5",
+          "body": "只买扳手凑数量，站炮塔群中间，roll 工程 (Engineering) / 收获 (Harvesting) / 幸运 (Luck)，拿护甲过渡，不管元素/射程/暴击。",
+          "buy": "扳手 (Wrench) 凑数 + 炮塔 (Turret) 落位"
+        },
+        {
+          "label": "中期",
+          "waves": "W6-12",
+          "body": "转折点：炮塔落位+经济/防御成型，补护甲和血量，精英靠炮塔集火+走位蹭，40% 经验可拿，省钱别乱 reroll。",
+          "buy": "工程/收获/护甲，追炮塔数量"
+        },
+        {
+          "label": "后期",
+          "waves": "W13-20",
+          "body": "转折点：血量+回血硬抗，Wave 19 提前站定摆炮塔阵，最终 boss 靠炮塔数量+回血磨，全程回血不用嗑药流。",
+          "buy": "T4 扳手 + 炮塔拉满，回血站撸"
+        }
+      ],
+      "upgrade": "升级 Top3：工程 (Engineering)／收获 (Harvesting)／护甲 (Armor)，幸运顺手拿；元素／射程／攻速／暴击／吸血不要，减攻速换血可拿。出处：视频描述与全程打法。",
+      "shop": "商店 Top3：扳手 (Wrench)／工程 (Engineering)／血量 (Max HP)；经验可拿，树必捡，省钱别乱刷，缺关键结构时锁格。出处：视频描述与全程打法。",
+      "pitfalls": [
+        "别拿吸血 (Life Steal)，原话“worthless on this class”，别浪费钱",
+        "别拿元素／射程／暴击，原话“we don't use elemental damage”，炮塔不吃，白板",
+        "别乱跑，站定材料才堆得起来，原话“just stand still in your little pod of turrets”"
+      ],
+      "hard": "Danger 5 特例：无 Nightmare／Ultimate 机制，站撸即可，Wave 19 提前落位，最终首领靠炮塔数量硬磨。出处：chapters 最终 boss 章节。",
+      "source": {
+        "title": "Brotato - Engineer Danger 5 Guide and Walkthrough",
+        "url": "https://www.youtube.com/watch?v=dhQ67IeBq0Q",
+        "video_id": "dhQ67IeBq0Q",
+        "published": "2023-07-21",
+        "difficulty": "Danger 5",
+        "game_version": "Steam 1.0 (2023-07-21 + Steam, 版本较老)",
+        "has_captions": true,
+        "transcript": {
+          "captions": "auto",
+          "corrected": false
+        },
+        "candidates": [
+          {
+            "title": "Brotato - Engineer Danger 5 Guide and Walkthrough",
+            "url": "https://www.youtube.com/watch?v=dhQ67IeBq0Q",
+            "video_id": "dhQ67IeBq0Q",
+            "published": "2023-07-21",
+            "difficulty": "Danger 5",
+            "has_captions": true
+          }
+        ]
+      }
+    }
+  ]
+}

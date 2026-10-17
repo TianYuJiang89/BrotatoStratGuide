@@ -51,10 +51,10 @@ def make_workdir() -> tuple[Path, tempfile.TemporaryDirectory[str]]:
     tmp = tempfile.TemporaryDirectory()
     work = Path(tmp.name) / "work"
     shutil.copytree(REPO / "data", work / "data")
-    # #19 clean slate: repo data/builds empty, restore fixture for isolated seam.
+    # #23: repo已有真数据，隔离缝一律用夹具覆盖。
     _fx = REPO / "tests" / "fixtures" / "cyborg.json"
     _bf = work / "data" / "builds" / "cyborg.json"
-    if not _bf.exists() and _fx.exists():
+    if _fx.exists():
         _bf.parent.mkdir(parents=True, exist_ok=True)
         _bf.write_text(_fx.read_text(encoding="utf-8"), encoding="utf-8")
     return (work / "data", tmp)

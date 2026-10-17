@@ -37,9 +37,8 @@ def make_isolated(tmp_path: Path, extra_args: list[str] | None = None) -> tuple[
     shutil.copytree(REPO / "data", work / "data")
     shutil.copytree(REPO / "templates", work / "templates")
     build_file = work / "data" / "builds" / "cyborg.json"
-    if not build_file.exists():
-        build_file.parent.mkdir(parents=True, exist_ok=True)
-        build_file.write_text(FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
+    build_file.parent.mkdir(parents=True, exist_ok=True)
+    build_file.write_text(FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
     out = tmp_path / "out"
     out.mkdir(parents=True, exist_ok=True)
     args = [sys.executable, str(REPO / "scripts" / "build.py"),

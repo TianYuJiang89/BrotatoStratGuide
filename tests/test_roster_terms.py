@@ -286,3 +286,24 @@ def test_append_rule_uncalibrated_not_published() -> None:
             cwd=REPO, capture_output=True, text=True,
         )
         assert r2.returncode != 0, "uncalibrated append must fail"
+
+
+def test_attr_tooltip_three_columns_and_flips_up_near_bottom() -> None:
+    """属性 hover：3 列排版 + 靠底向上，不滚。"""
+    r = run_build("--slug", "cyborg")
+    assert r.returncode == 0, r.stderr[-2000:]
+    tpl = (REPO / "templates" / "character.html").read_text(encoding="utf-8")
+    # 3 列：grid repeat(3, ...)。
+    assert "repeat(3" in tpl, "tooltip must use 3-column grid"
+    # 靠底向上：bottom:100% 且仅末几行（nth-last-child），非常驻向上。
+    assert "bottom:100%" in tpl, "bottom rows must flip upward"
+    assert "nth-last-child" in tpl, "only near-bottom rows flip upward"
+    # hover 自身不滚动：.tip 不得自带 overflow 滚动。
+    tip_blocks = re.findall(r"\.tip\s*\{[^}]*\}", tpl)
+    assert tip_blocks, "tooltip css must exist"
+    for block in tip_blocks:
+        assert "overflow" not in block or "visible" in block, f"tooltip must not scroll: {block}"
+    html = (REPO / "docs" / "cyborg.html").read_text(encoding="utf-8")
+    assert 'class="tip"' in html
+    # 3 列下“等共 N 件”须占满整行，否则挤占一格错位。
+    assert 'class="tm"' in html, "more-count line must span full grid row"

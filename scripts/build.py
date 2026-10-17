@@ -301,11 +301,11 @@ def tooltip_html(tips: list[dict[str, object]] | None, is_primary: bool) -> str:
     items = "".join(
         f"<span class=\"ti\"><img alt=\"\" src=\"{esc(t.get('thumb',''))}\" "
         f"loading=\"lazy\" referrerpolicy=\"no-referrer\" onerror=\"this.remove()\">"
-        f"{esc(t.get('en',''))}</span>"
+        f"<span class=\"tn\">{esc(t.get('en',''))}</span></span>"
         for t in shown
         if isinstance(t, dict)
     )
-    more_html = f"<span class=\"ti\">等共 {len(tips)} 件，详见 wiki</span>" if more > 0 else ""
+    more_html = f"<span class=\"tm\">等共 {len(tips)} 件，详见 wiki</span>" if more > 0 else ""
     title = "加该属性的道具（wiki，主属性为单属性页 Positive，次级为 Notable Items）"
     return (
         f"<span class=\"tip\"><span class=\"th\">{title}</span>"

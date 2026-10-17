@@ -37,12 +37,16 @@ td.rating-cell { width:2.6em; text-align:center; white-space:nowrap; }
 .sic { width:20px; height:20px; vertical-align:-4px; image-rendering:pixelated; background:#efe9d8; border-radius:6px; }
 .sic.none { display:inline-flex; width:20px; height:20px; vertical-align:-4px; align-items:center; justify-content:center; font-size:12px; color:var(--muted); background:#f2ecdd; border-radius:6px; }
 .has-tip { position:relative; border-bottom:1px dotted var(--muted); cursor:help; }
-.has-tip .tip { display:none; position:absolute; left:0; top:100%; z-index:30; background:#1f1b16; color:#fdf6e3; border-radius:10px; padding:8px 10px; font-size:12px; min-width:190px; max-width:250px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
-.has-tip:hover .tip, .has-tip:focus .tip { display:block; }
-.tip .th { display:block; font-weight:700; color:#ffd966; margin-bottom:4px; }
-.tip .ti { display:flex; gap:7px; align-items:center; margin:4px 0; }
-.tip .ti img { width:24px; height:24px; object-fit:contain; image-rendering:pixelated; background:rgba(255,255,255,.12); border-radius:6px; }
-.tip .tf { display:block; color:#b9ad93; margin-top:4px; font-size:11px; }
+.has-tip .tip { display:none; position:absolute; left:0; top:100%; margin-top:6px; z-index:30; background:#1f1b16; color:#fdf6e3; border-radius:10px; padding:8px 10px; font-size:12px; min-width:min(340px, 80vw); max-width:min(360px, 90vw); box-shadow:0 8px 24px rgba(0,0,0,.35); }
+.has-tip:hover .tip, .has-tip:focus .tip, .has-tip:focus-within .tip { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px 8px; }
+/* 靠底向上：仅末几行翻转，避免滚出裁剪；其余仍向下。 */
+.table-wrap tr:nth-last-child(-n+5) .has-tip .tip { top:auto; bottom:100%; margin-top:0; margin-bottom:6px; box-shadow:0 -8px 24px rgba(0,0,0,.35); }
+.tip .th { grid-column:1 / -1; display:block; font-weight:700; color:#ffd966; margin-bottom:2px; }
+.tip .ti { display:flex; gap:5px; align-items:center; margin:0; min-width:0; font-size:11px; line-height:1.35; overflow:hidden; }
+.tip .ti img { width:24px; height:24px; flex:0 0 24px; object-fit:contain; image-rendering:pixelated; background:rgba(255,255,255,.12); border-radius:6px; }
+.tip .tn { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.tip .tm { grid-column:1 / -1; color:#b9ad93; font-size:11px; }
+.tip .tf { grid-column:1 / -1; display:block; color:#b9ad93; margin-top:2px; font-size:11px; }
 .legend { font-size:12px; color:var(--muted); margin:0 0 10px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
 .toc { position:sticky; top:53px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 10px; display:flex; gap:8px; overflow-x:auto; font-size:13px; }
 .toc a { white-space:nowrap; text-decoration:none; background:#f2ecdd; border-radius:999px; padding:4px 10px; color:var(--ink); }

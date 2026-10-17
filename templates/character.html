@@ -51,6 +51,18 @@ td.rating-cell { width:2.6em; text-align:center; white-space:nowrap; }
 .tip .kx { text-align:right; min-width:0; overflow-wrap:anywhere; }
 .pos { color:rgb(0,255,0); font-weight:700; }
 .neg { color:rgb(244,0,0); font-weight:700; }
+.tip .tw { grid-column:1 / -1; min-width:0; }
+table.wt { width:100%; border-collapse:collapse; font-size:11px; line-height:1.45; }
+.wt th, .wt td { padding:3px 4px; vertical-align:top; border-bottom:1px solid rgba(255,255,255,.08); }
+.wt th { color:#b9ad93; font-weight:600; text-align:left; white-space:nowrap; }
+.wt td { text-align:center; overflow-wrap:anywhere; }
+.wt td.span { text-align:left; }
+.w1 { color:#e8e6df; font-weight:700; }
+.w2 { color:#5aa9ff; font-weight:700; }
+.w3 { color:#c77dff; font-weight:700; }
+.w4 { color:#ff6b6b; font-weight:700; }
+/* 装备悬浮恒向下：转置表高，向上翻必裁视口顶（#15 实测），属性翻转规则不动。 */
+.table-wrap tr .has-tip.gear .tip { top:100%; bottom:auto; margin-top:6px; margin-bottom:0; box-shadow:0 8px 24px rgba(0,0,0,.35); }
 .tip .tf { grid-column:1 / -1; display:block; color:#b9ad93; margin-top:2px; font-size:11px; }
 .legend { font-size:12px; color:var(--muted); margin:0 0 10px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
 .toc { position:sticky; top:53px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 10px; display:flex; gap:8px; overflow-x:auto; font-size:13px; }

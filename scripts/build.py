@@ -221,6 +221,19 @@ def validate_registry(reg: dict[str, object], terms: list[dict[str, str]]) -> li
             for field in required:
                 if field not in entry:
                     errors.append(f"registry {section} schema missing {field}: {en}")
+            if section == "weapons" and isinstance(entry, dict):
+                wstats = entry.get("stats")
+                stat_list: list[object] = wstats if isinstance(wstats, list) else []
+                for s in stat_list:
+                    lvs = s.get("lv") if isinstance(s, dict) else None
+                    lv_list: list[object] = lvs if isinstance(lvs, list) else []
+                    if len(lv_list) != 4:
+                        errors.append(f"registry weapons schema: {en} stat must have 4 levels")
+                        break
+                price = entry.get("price")
+                price_list: list[object] = price if isinstance(price, list) else []
+                if len(price_list) != 4:
+                    errors.append(f"registry weapons schema: {en} price must have 4 levels")
     for t in terms:
         en = t["en"]
         entry = stats.get(en)
@@ -336,23 +349,74 @@ def item_tip(en: str, entry: dict[str, object], terms_by_en: dict[str, dict[str,
     )
 
 
+def level_html(lv_entry: object) -> str:
+    """单等级值: 等级色 w1-w4 (对照 wiki 白/蓝/紫/红); scaling 依据见表下 legend 行。"""
+    if not isinstance(lv_entry, dict):
+        return "—"
+    try:
+        num = int(lv_entry.get("lv", 1))
+    except (TypeError, ValueError):
+        num = 1
+    if num not in (1, 2, 3, 4):
+        num = 1
+    if "t" in lv_entry:
+        inner = esc(lv_entry.get("t", "—"))
+    else:
+        inner = (
+            esc(lv_entry.get("b", ""))
+            + f"({esc(str(lv_entry.get('p', '')))})"
+            + esc(lv_entry.get("suf", ""))
+        )
+    return f"<span class=\"w{num}\">{inner}</span>"
+
+
+def stat_label(key_en: str, terms_by_en: dict[str, dict[str, str]]) -> str:
+    if key_en in terms_by_en:
+        return esc(term_text(key_en, terms_by_en))
+    return esc(key_en)
+
+
 def weapon_tip(en: str, entry: dict[str, object], terms_by_en: dict[str, dict[str, str]]) -> str:
-    """武器悬浮: Weapons 列原样 (职业/各级数值/特效/价格/解锁) 加对照。"""
+    """武器悬浮: Weapons List 转置 (行=属性, 列=Lv1-4) 加等级色与对照。"""
     stats = entry.get("stats")
     stat_list: list[object] = stats if isinstance(stats, list) else []
-    rows: list[str] = []
+    head = "<tr><th></th><th>Lv1</th><th>Lv2</th><th>Lv3</th><th>Lv4</th></tr>"
+    body: list[str] = []
+    scales: list[str] = []
     for s in stat_list:
         if not isinstance(s, dict):
             continue
-        key = str(s.get("k", ""))
-        val = str(s.get("v", "")).strip()
-        rows.append(kv_row(key, esc(val) if val else "—", terms_by_en))
-    rows.append(kv_row("Special Effects", esc(entry.get("special", "")) or "—", terms_by_en))
-    rows.append(kv_row("Base Price", esc(entry.get("price", "")) or "—", terms_by_en))
-    rows.append(kv_row("Unlocked By", esc(entry.get("unlock", "")) or "—", terms_by_en))
+        lvs = s.get("lv")
+        lv_list: list[object] = lvs if isinstance(lvs, list) else []
+        for v in lv_list:
+            if isinstance(v, dict) and v.get("s") and str(v.get("s")) not in scales:
+                scales.append(str(v.get("s")))
+        cells = [f"<td>{level_html(v)}</td>" for v in lv_list[:4]]
+        while len(cells) < 4:
+            cells.append("<td>—</td>")
+        body.append(f"<tr><th>{stat_label(str(s.get('k', '')), terms_by_en)}</th>{''.join(cells)}</tr>")
+    if scales:
+        scale_html = ", ".join(esc(term_text(s, terms_by_en)) for s in scales)
+        body.append(
+            "<tr><th>Scaling</th><td colspan=\"4\" class=\"span\">"
+            f"{scale_html}</td></tr>"
+        )
+    price = entry.get("price")
+    price_list: list[object] = price if isinstance(price, list) else []
+    pcells = [f"<td>{level_html(v)}</td>" for v in price_list[:4]]
+    while len(pcells) < 4:
+        pcells.append("<td>—</td>")
+    body.append(f"<tr><th>Base Price</th>{''.join(pcells)}</tr>")
+    for key in ("Special Effects", "Unlocked By"):
+        field = "special" if key == "Special Effects" else "unlock"
+        body.append(
+            f"<tr><th>{esc(key)}</th><td colspan=\"4\" class=\"span\">"
+            f"{esc(entry.get(field, '')) or '—'}</td></tr>"
+        )
+    table = f"<span class=\"tw\"><table class=\"wt\">{head}{''.join(body)}</table></span>"
     return (
         f"<span class=\"tip\"><span class=\"th\">{esc(str(entry.get('class', '')))}</span>"
-        f"{''.join(rows)}"
+        f"{table}"
         f"<span class=\"tf\">※ = 中文待客户端简中校对；英文为 wiki 原名</span></span>"
     )
 
@@ -384,7 +448,7 @@ def weapon_rows(
             '<span class="empty">作者未提及</span>'
         )
         name_html = (
-            f"<span class=\"has-tip\" tabindex=\"0\">{entry_name_html(name_en, entry)}"
+            f"<span class=\"has-tip gear\" tabindex=\"0\">{entry_name_html(name_en, entry)}"
             f"{weapon_tip(name_en, entry, terms_by_en)}</span>"
         )
         thumb = entry.get("thumb")
@@ -419,7 +483,7 @@ def item_rows(
             '<span class="empty">作者未提及</span>'
         )
         name_html = (
-            f"<span class=\"has-tip\" tabindex=\"0\">{entry_name_html(name_en, entry)}"
+            f"<span class=\"has-tip gear\" tabindex=\"0\">{entry_name_html(name_en, entry)}"
             f"{item_tip(name_en, entry, terms_by_en)}</span>"
         )
         thumb = entry.get("thumb")

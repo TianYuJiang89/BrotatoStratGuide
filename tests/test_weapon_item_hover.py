@@ -215,6 +215,45 @@ def test_invalid_dlc_value_fails() -> None:
         tmp.cleanup()
 
 
+def test_weapon_hover_is_transposed_weapons_list() -> None:
+    """武器悬浮为 Weapons List 转置：行=属性列=Lv1-4，等级色加 scaling 对照。"""
+    r = run_build("--slug", "cyborg")
+    assert r.returncode == 0, f"build failed: {r.stderr[-2000:]}"
+    html = (REPO / "docs" / "cyborg.html").read_text(encoding="utf-8")
+    m = re.search(r'data-section="weapons".*?</section>', html, re.S)
+    assert m is not None
+    sec = m.group(0)
+    assert '<table class="wt">' in sec, "weapon hover must be a transposed table"
+    for lv in ("Lv1", "Lv2", "Lv3", "Lv4"):
+        assert lv in sec, f"transposed header must carry {lv}"
+    for cls in ('class="w1"', 'class="w2"', 'class="w3"', 'class="w4"'):
+        assert cls in sec, "levels must keep wiki white/blue/purple/red semantics"
+    # scaling 对照：3(50% 远程伤害 (Ranged Damage))。
+    assert "远程伤害" in sec and "(Ranged Damage)" in sec
+    # 缺级诚实空出：Minigun 一二级无数值。
+    assert "Minigun" in sec
+    assert '<span class="w1">—</span>' in sec
+    # 行列：Class 行与价格行、特效行与解锁行齐全。
+    assert "Base Price" in sec and "Special Effects" in sec and "Unlocked By" in sec
+
+
+def test_gear_tips_open_downward() -> None:
+    """装备悬浮恒向下：高表向上翻必裁视口顶，属性翻转规则不动。"""
+    tpl = (REPO / "templates" / "character.html").read_text(encoding="utf-8")
+    assert ".has-tip.gear .tip" in tpl
+    gear_rule = tpl.split(".has-tip.gear .tip")[1].split("}")[0]
+    assert "top:100%" in gear_rule, "gear tips must drop downward"
+    # 属性翻转规则仍在（仅末几行）。
+    assert "nth-last-child" in tpl
+    r = run_build("--slug", "cyborg")
+    assert r.returncode == 0, r.stderr[-2000:]
+    html = (REPO / "docs" / "cyborg.html").read_text(encoding="utf-8")
+    for section in ("weapons", "items"):
+        m = re.search(rf'data-section="{section}".*?</section>', html, re.S)
+        assert m is not None
+        assert 'class="has-tip gear"' in m.group(0), f"{section} names must use gear tips"
+
+
 def test_check_py_gates_weapon_item_hover() -> None:
     """check.py 门禁：产物武器道具 hover 缺失即 fail。"""
     r = run_build("--slug", "cyborg")
@@ -226,7 +265,7 @@ def test_check_py_gates_weapon_item_hover() -> None:
         r1 = subprocess.run([*CHECK, str(good)], cwd=REPO, capture_output=True, text=True)
         assert r1.returncode == 0, f"check must pass built page: {r1.stderr[-2000:]}"
         # 拔掉 hover（武器道具区随之失去悬浮）：门禁必须挂。
-        stripped = re.sub(r'<span class="has-tip"[^>]*>', '<span>', html)
+        stripped = re.sub(r'<span class="has-tip[^"]*"[^>]*>', '<span>', html)
         bad = Path(tmp) / "bad.html"
         bad.write_text(stripped, encoding="utf-8")
         r2 = subprocess.run([*CHECK, str(bad)], cwd=REPO, capture_output=True, text=True)

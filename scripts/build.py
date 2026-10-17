@@ -340,7 +340,7 @@ def weapon_tip(en: str, entry: dict[str, object], terms_by_en: dict[str, dict[st
     """武器悬浮: Weapons 列原样 (职业/各级数值/特效/价格/解锁) 加对照。"""
     stats = entry.get("stats")
     stat_list: list[object] = stats if isinstance(stats, list) else []
-    rows = [kv_row("Class", esc(entry.get("class", "")) or "—", terms_by_en)]
+    rows: list[str] = []
     for s in stat_list:
         if not isinstance(s, dict):
             continue

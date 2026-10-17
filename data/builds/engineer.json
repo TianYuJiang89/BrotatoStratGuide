@@ -1,0 +1,395 @@
+{
+  "slug": "engineer",
+  "variants": [
+    {
+      "id": "ultimate",
+      "covers": [
+        "Ultimate"
+      ],
+      "label": "Ultimate",
+      "status": "ready",
+      "mechanism": "炮塔群养人：只拿扳手 (Wrench)，每把自带一座炮塔，站 6 座炮塔群中间吃收入，靠结构慢慢磨，工程 (Engineering) 只需少量，活下来即输出。（解锁条件与胜场奖励：作者未提及 — 待补口径）",
+      "ratings": {
+        "Engineering": {
+          "rating": "S",
+          "note": "越多越好，但别直购堆数值，靠扳手 tier 与结构数量"
+        },
+        "Harvesting": {
+          "rating": "A",
+          "note": "开局必 roll，钱即更多扳手与结构"
+        },
+        "Attack Speed": {
+          "rating": "A",
+          "note": "乘区稀缺，时钟 wasp 与改良工具最赚"
+        },
+        "Armor": {
+          "rating": "A",
+          "note": "标准 roll 牌，站桩必吃伤"
+        },
+        "Max HP": {
+          "rating": "B",
+          "note": "血够吃两下，W1 可拿 3 点过渡"
+        },
+        "HP Regeneration": {
+          "rating": "B",
+          "note": "与护甲同为站桩本钱"
+        },
+        "Life Steal": {
+          "rating": "D",
+          "note": "作者明确不好用，直接 ban"
+        },
+        "Crit Chance": {
+          "rating": "D",
+          "note": "不靠武器平砍，基本无用"
+        },
+        "Damage": {
+          "rating": "A",
+          "note": "UH-Wge0:mode. Nightmare mode is mostly just about maximizing upfront damage so that"
+        },
+        "Melee Damage": {
+          "rating": "D",
+          "note": "UH-Wge0:incendiary turrets. We'll lock peaceful bee. Losing a melee damage not a big"
+        },
+        "Range": {
+          "rating": "D",
+          "note": "UH-Wge0:does a very small amount of damage, and of course we're not buying range damage,"
+        },
+        "Dodge": {
+          "rating": "D",
+          "note": "UH-Wge0:about maximizing upfront damage so that you have to dodge as little as possible"
+        },
+        "Speed": {
+          "rating": "C",
+          "note": "UH-Wge0:speed can potentially result in uh more"
+        },
+        "Luck": {
+          "rating": "C",
+          "note": "UH-Wge0:we have pile of books, and then we'll re-roll here. I'll take the lucky charm"
+        },
+        "Curse": {
+          "rating": "D",
+          "note": "UH-Wge0:Also, we're playing on the abyss. I'm going to be avoiding getting cursed, at"
+        },
+        "Consumable Heal": {
+          "rating": "B",
+          "note": "UH-Wge0:that you can heal and tank"
+        },
+        "% Pickup Range": {
+          "rating": "B",
+          "note": "UH-Wge0:order to go kill trees anymore. Um and of course, it helps pick up materials,"
+        },
+        "% Explosion Damage": {
+          "rating": "C",
+          "note": "UH-Wge0:damage uh at half rate, so our explosion damage"
+        },
+        "% Explosion Size": {
+          "rating": "B",
+          "note": "UH-Wge0:level four wrenches benefit from that. We would much prefer explosion size, but"
+        },
+        "Piercing": {
+          "rating": "C",
+          "note": "UH-Wge0:does work with the crit chance from pile of books, so we can get extra piercing"
+        },
+        "% Damage against Bosses": {
+          "rating": "C",
+          "note": "UH-Wge0:much. Now, these enhanced mini bosses, which"
+        },
+        "% Burning Speed": {
+          "rating": "C",
+          "note": "UH-Wge0:multiple incendiary turrets is that the burning from them doesn't stack. And on"
+        },
+        "Knockback": {
+          "rating": "B",
+          "note": "UH-Wge0:is good because it gives us more knockback with with our wrenches, which"
+        },
+        "Free Rerolls": {
+          "rating": "B",
+          "note": "UH-Wge0:We'll ban fresh meat and I'll save my last ban for a reroll. We'll buy a"
+        },
+        "Trees": {
+          "rating": "B",
+          "note": "UH-Wge0:going to pass on for now and then we'll block a we'll buy a tree and now I will"
+        },
+        "% Enemies": {
+          "rating": "D",
+          "note": "UH-Wge0:going to be avoiding getting cursed, at least for a while. Uh cursed enemies are"
+        },
+        "% Enemy Speed": {
+          "rating": "C",
+          "note": "UH-Wge0:chance of reducing the number of attacks that it takes uh to kill an enemy cuz uh"
+        }
+      },
+      "weapons_t1": [
+        {
+          "name_en": "Wrench",
+          "note": "全程只拿扳手：W1 即锁，6 把合高 tier，每 tier 自带不同炮塔，站群中间吃收入，作者明确不用螺丝刀。"
+        }
+      ],
+      "weapons_t2": [],
+      "items": [
+        {
+          "name_en": "Turret",
+          "reason": "结构数量即输出：花园与医疗炮塔最优先，有了就买，6 座扳手炮塔远远不够"
+        },
+        {
+          "name_en": "Coffee",
+          "reason": "攻速乘区：15 点攻速也照拿，炮塔射速即清线"
+        },
+        {
+          "name_en": "Improved Tools",
+          "reason": "本局最重要乘区：攻速叠起来后质变，线性堆工程不如它"
+        }
+      ],
+      "phases": [
+        {
+          "label": "开局",
+          "waves": "W1-5",
+          "body": "锁 1 把扳手升 tier，只 roll 收获 (Harvesting) / 工程 (Engineering)；站炮塔群中间吃收入，结构件先占 1-2 个，前半段靠扳手自己清。",
+          "buy": "扳手 (Wrench) → 占 6 把，和平蜜蜂过渡收获"
+        },
+        {
+          "label": "中期",
+          "waves": "W6-12",
+          "body": "转向点：结构数量铺起来吃灯塔 tempo 红利，击退撑起安全壳；工程一件也别多直购，全靠扳手 tier 与新结构。",
+          "buy": "补炮塔 + 灯塔 tempo，追护甲与回复"
+        },
+        {
+          "label": "后期",
+          "waves": "W13-20",
+          "body": "转向点：最大生命 (Max HP) + 护甲补坦度，乘区只认改良工具与时钟；绝不离巢乱跑，离巢即暴毙，拉怪穿炮塔群。",
+          "buy": "T4 扳手 + 改良工具，堆血甲站住"
+        }
+      ],
+      "upgrade": "属性 Top3：收获 (Harvesting) / 工程 (Engineering) / 护甲 (Armor)；生命窃取与暴击出了也不拿；血量告急时保命优先。（两层：先 Top3 再点名）",
+      "shop": "属性 Top3：工程 (Engineering) / 攻击速度 (Attack Speed) / 最大生命 (Max HP)；必拿：炮塔 / 改良工具 / 和平蜜蜂；必刷：缺关键结构时点 1-2 次重随；工程直购永远只补少量。（两层：先 Top3 再点名，升级在前）",
+      "pitfalls": [
+        "别离巢乱跑：工程伤害慢，只能站炮塔群里慢慢磨，跑出去即被弹幕逼死。",
+        "别直买工程堆数值：线性堆工程不如多买一座结构，防御与数量才是输出。",
+        "别碰生命窃取 (Life Steal) / 暴击：作者明确不好用，拿了等于白板。"
+      ],
+      "hard": "高难特例：仅 Nightmare / Ultimate 成立——环境弹幕逼走位，贴边开局让怪同向来；W16 增强苍蝇与精英逼离巢，提前拉怪穿炮塔群，击退配燃烧炮塔造壳。",
+      "source": {
+        "title": "If You Build It, They Will Die - Engineer - Brotato Ultimate Nightmares Guide",
+        "url": "https://www.youtube.com/watch?v=Wge0_hd9Rt8",
+        "video_id": "Wge0_hd9Rt8",
+        "published": "2026-09-01",
+        "difficulty": "Ultimate",
+        "game_version": "Steam 1.1.15.1 (2026-09-01 + Steam)",
+        "has_captions": true,
+        "transcript": {
+          "captions": "auto",
+          "corrected": false
+        },
+        "candidates": [
+          {
+            "title": "If You Build It, They Will Die - Engineer - Brotato Ultimate Nightmares Guide",
+            "url": "https://www.youtube.com/watch?v=Wge0_hd9Rt8",
+            "video_id": "Wge0_hd9Rt8",
+            "published": "2026-09-01",
+            "difficulty": "Ultimate",
+            "has_captions": true
+          },
+          {
+            "title": "\"Engineer is Impossible In Nightmare\" - Engineer - Brotato Ultimate Nightmares Guide",
+            "url": "https://www.youtube.com/watch?v=QbKT2VHnqbc",
+            "video_id": "QbKT2VHnqbc",
+            "published": "2026-07-15",
+            "difficulty": "Ultimate",
+            "has_captions": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "danger-5",
+      "covers": [
+        "Danger 5"
+      ],
+      "label": "Danger 5",
+      "status": "ready",
+      "mechanism": "站撸流：开局自带扳手 (Wrench)，每级补扳手堆炮塔 (Turret) 数量，站炮塔群中间让怪来送，堆工程 (Engineering) 只加炮塔伤害，自己只管站定捡材料，前期别乱跑 (D5-dhQ67: basically just stand still in your little pod of turrets)。",
+      "ratings": {
+        "Engineering": {
+          "rating": "S",
+          "note": "D5-dhQ67:with a wrench. You get extra engineering. And we're going to, of"
+        },
+        "Harvesting": {
+          "rating": "A",
+          "note": "D5-dhQ67:that you want on every class on this class. Um, harvesting, luck, everything"
+        },
+        "Damage": {
+          "rating": "A",
+          "note": "D5-dhQ67:are all spread out and can't focus damage on anything. So, having them all"
+        },
+        "Armor": {
+          "rating": "A",
+          "note": "D5-dhQ67:used to just standing still. Uh, here I'm just going to get armor. We don't"
+        },
+        "HP Regeneration": {
+          "rating": "A",
+          "note": "D5-dhQ67:use any of these stats. So, I will grab HP regeneration. Life steal is obviously"
+        },
+        "Luck": {
+          "rating": "A",
+          "note": "D5-dhQ67:that you want on every class on this class. Um, harvesting, luck, everything"
+        },
+        "Max HP": {
+          "rating": "B",
+          "note": "D5-dhQ67:and engineering of course. really good even at the cost of some maximum HP."
+        },
+        "Speed": {
+          "rating": "B",
+          "note": "D5-dhQ67:because we're going to spend all of our money and losing 5% speed is actually"
+        },
+        "Consumable Heal": {
+          "rating": "C",
+          "note": "D5-dhQ67:going to use regeneration as your healing method of choice."
+        },
+        "% XP Gain": {
+          "rating": "B",
+          "note": "D5-dhQ67:harder for you to clear that type of elite. Definitely taking this uh 40% XP"
+        },
+        "% Pickup Range": {
+          "rating": "C",
+          "note": "D5-dhQ67:especially if it's a relatively cheap weapon. Here, let's pick up this money."
+        },
+        "% Explosion Damage": {
+          "rating": "C",
+          "note": "D5-dhQ67:than level three. Level four does an explosion rather than a pierce. So a mix"
+        },
+        "% Explosion Size": {
+          "rating": "C",
+          "note": "D5-dhQ67:Explosion damage and explosion radius"
+        },
+        "Bounces": {
+          "rating": "B",
+          "note": "D5-dhQ67:out for are of course piercing and bouncing shots because those do work on"
+        },
+        "Piercing": {
+          "rating": "B",
+          "note": "D5-dhQ67:than level three. Level four does an explosion rather than a pierce. So a mix"
+        },
+        "% Piercing Damage": {
+          "rating": "C",
+          "note": "D5-dhQ67:into me, though, cuz we do need some piercing damage or a"
+        },
+        "% Damage against Bosses": {
+          "rating": "C",
+          "note": "D5-dhQ67:just have sheer damage to take down a boss. some uh something along those"
+        },
+        "% Burning Speed": {
+          "rating": "C",
+          "note": "D5-dhQ67:elemental damage because all your turrets will apply the burning effect."
+        },
+        "Free Rerolls": {
+          "rating": "C",
+          "note": "D5-dhQ67:use any of these other stats, but I don't want to reroll cuz I want to save"
+        },
+        "Trees": {
+          "rating": "B",
+          "note": "D5-dhQ67:little pod of turrets in order to grab trees"
+        },
+        "% Enemies": {
+          "rating": "C",
+          "note": "D5-dhQ67:as long as you're comfortable dodging enemies, you should be able to do that."
+        },
+        "% Enemy Speed": {
+          "rating": "C",
+          "note": "D5-dhQ67:and mostly not move just because then all the enemy materials are stacked in"
+        },
+        "Dodge": {
+          "rating": "C",
+          "note": "D5-dhQ67:on this character. But as long as you're comfortable dodging"
+        },
+        "Melee Damage": {
+          "rating": "C",
+          "note": "D5-dhQ67:XP gain for melee range"
+        },
+        "Life Steal": {
+          "rating": "D",
+          "note": "D5-dhQ67:HP regeneration. Life steal is obviously worthless on this class. So, you're"
+        },
+        "Elemental Damage": {
+          "rating": "D",
+          "note": "D5-dhQ67:well, of course, cuz we don't use elemental damage. and 10 luck is really"
+        },
+        "Attack Speed": {
+          "rating": "D",
+          "note": "D5-dhQ67:more engineering here, of course. And I'll definitely take minus attack speed"
+        },
+        "Range": {
+          "rating": "D",
+          "note": "D5-dhQ67:XP gain because we don't care about range at all."
+        },
+        "Crit Chance": {
+          "rating": "D",
+          "note": "D5-dhQ67:regeneration, but armor, crit chance, engineering, and speed. We don't use the"
+        }
+      },
+      "weapons_t1": [
+        {
+          "name_en": "Wrench",
+          "note": "D5-dhQ67:you let them kill everything. You start with a wrench. You get extra"
+        }
+      ],
+      "weapons_t2": [],
+      "items": [
+        {
+          "name_en": "Turret",
+          "reason": "D5-dhQ67:really fun. You basically just stand still in your little pod of turrets and"
+        }
+      ],
+      "phases": [
+        {
+          "label": "开局",
+          "waves": "W1-5",
+          "body": "只买扳手凑数量，站炮塔群中间，roll 工程 (Engineering) / 收获 (Harvesting) / 幸运 (Luck)，拿护甲过渡，不管元素/射程/暴击。",
+          "buy": "扳手 (Wrench) 凑数 + 炮塔 (Turret) 落位"
+        },
+        {
+          "label": "中期",
+          "waves": "W6-12",
+          "body": "转折点：炮塔落位+经济/防御成型，补护甲和血量，精英靠炮塔集火+走位蹭，40% 经验可拿，省钱别乱 reroll。",
+          "buy": "工程/收获/护甲，追炮塔数量"
+        },
+        {
+          "label": "后期",
+          "waves": "W13-20",
+          "body": "转折点：血量+回血硬抗，Wave 19 提前站定摆炮塔阵，最终 boss 靠炮塔数量+回血磨，全程回血不用嗑药流。",
+          "buy": "T4 扳手 + 炮塔拉满，回血站撸"
+        }
+      ],
+      "upgrade": "升级 Top3：工程 (Engineering) / 收获 (Harvesting) / 护甲 (Armor)，幸运顺手拿；元素/射程/攻速/暴击/吸血不要，-攻速换血可拿。出处：D5-dhQ67 全程口径。",
+      "shop": "商店 Top3：扳手 (Wrench) / 工程 (Engineering) / 血量 (Max HP)；40% 经验可拿，树必捡，省钱别乱刷，缺关键结构时锁 1-2 格。出处：D5-dhQ67 全程口径。",
+      "pitfalls": [
+        "别拿吸血 (Life Steal)，作者原话 worthless on this class，别浪费钱",
+        "别拿元素/射程/暴击，炮塔不吃这些，白板",
+        "别乱跑，站定材料才堆得起来，乱跑等于丢经济"
+      ],
+      "hard": "Danger 5 特例 (版本较老 1.0)：无 Nightmare/Ultimate 机制，站撸即可，Wave 19 提前落位，最终 boss 靠炮塔数量硬磨。出处：D5-dhQ67 chapters。",
+      "source": {
+        "title": "Brotato - Engineer Danger 5 Guide and Walkthrough",
+        "url": "https://www.youtube.com/watch?v=dhQ67IeBq0Q",
+        "video_id": "dhQ67IeBq0Q",
+        "published": "2023-07-21",
+        "difficulty": "Danger 5",
+        "game_version": "Steam 1.0 (2023-07-21 + Steam, 版本较老)",
+        "has_captions": true,
+        "transcript": {
+          "captions": "auto",
+          "corrected": false
+        },
+        "candidates": [
+          {
+            "title": "Brotato - Engineer Danger 5 Guide and Walkthrough",
+            "url": "https://www.youtube.com/watch?v=dhQ67IeBq0Q",
+            "video_id": "dhQ67IeBq0Q",
+            "published": "2023-07-21",
+            "difficulty": "Danger 5",
+            "has_captions": true
+          }
+        ]
+      }
+    }
+  ]
+}

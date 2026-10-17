@@ -48,7 +48,7 @@ Order: 核心属性·主 → 核心属性·次级 → 武器分档 → 关键道
 
 Per-step completion: `build_mentions` + `check_mentions` + `python scripts/build.py --slug <slug>` green for that section.
 
-Note rule: every rating/weapon/item note is a viewpoint synthesis (how many times / when / with what / conflicts with what), never a single pasted quote. Single-quote padding counts as uncleared.
+Note rule: every rating/weapon/item note is a viewpoint synthesis (how many times / when / real synergies / real tradeoffs — write only what exists, never invent a conflict to fill a slot; a conflict counts only when the author explicitly chose one over the other). No counts (字幕N次) in notes/pages; counts live in mentions JSON + the issue. Never a single pasted quote. Single-quote padding counts as uncleared.
 
 ## 4. Machine chain (humans never hand-edit product)
 

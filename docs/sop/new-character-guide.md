@@ -50,7 +50,7 @@ Cookie 协作（单视频被风控 `Sign in to confirm you're not a bot` / `DPAP
 * 数据模型（#20 决议：A 胜出 + 动态诚实标签）：`data/builds/<slug>.json` 内 `variants` 数组，每变体自带 `covers` + 显示名 `label` + 独立 Top3+双标注+10段；tab 按数组渲染，有几个渲染几个；旧单层键与固定三 key 废除。排序按最高难度从高到低（Ultimate > Nightmare > Danger 5）；标签用全名（Danger 5，不用 D5）。同一视频合讲多档则合并为一个变体（如 Ultimate + Nightmare，内容/取材/交叉表只跑一份）；资料源只讲 Danger 5 就只出 Danger 5。单变体退化为覆盖徽章，不留单 tab 栏。tab 为 A 方案 sticky 分段独占切换（APG tablist：箭头/Home/End，44px 触区，横滑，vanilla JS 离线可用，页内首个 JS）。
 * 命令：`python scripts/build_mentions.py --slug <slug>` / `--all` 建全部分块（`--variant <id>` 单变体）；`python scripts/check_mentions.py --slug <slug>` / `--all` 机检（`--variant <id>` 单变体）。`check_mentions` 只 warn 不 fail，不动现有 `check.py` 门禁；缺表/缺 build 才 FAIL（gate 未跑必须补）。
 * 清零定义（drafter 自清，reviewer 复查）：① 提到未定级（count>0 但无 S–F/武器不在 T1+T2/道具不在列）→ 补定级；② 定级无命中（有定级但 count==0）须挂名注明出处是标题/描述/chapters（note/reason 含 标题/描述/出处/chapter/title/description 任一），否则疑为编 WARN。清零后 `check_mentions` 仍 warn 可发布，但必须逐条有交代，不许凭印象空出。
-* 一事一过（注意力回收）：填表按 §7 分步表逐段独立过，每段只做一件事——先把该段涉及的全部证据列全（交叉表该段全部 quotes + 标题/描述/chapters 相关处），再写小结定级，跑完本段机检（`build_mentions` + `check_mentions` + `build.py --slug`）再进下一段；不许全表一批过。note 必须是观点小结（多证据综合：拿几次/何时拿/配什么/与什么冲突），单句原话贴充数视为未清零，reviewer 打回。
+* 一事一过（注意力回收）：填表按 §7 分步表逐段独立过，每段只做一件事——先把该段涉及的全部证据列全（交叉表该段全部 quotes + 标题/描述/chapters 相关处），再写小结定级，跑完本段机检（`build_mentions` + `check_mentions` + `build.py --slug`）再进下一段；不许全表一批过。note 必须是观点小结（多证据综合：拿几次/何时拿/真搭配/真取舍），只写真实存在的搭配与取舍，没有就不写，禁止为填槽编造“与X冲突”；“冲突”仅当作者明确二选一（ban/卖掉/roll掉/明确说不要）才写。计数（字幕N次）只活在 mentions JSON 与 issue 交单，不进 note/页面；note 只留结论 + 一句人话理由 + 关键原句短引。单句原话贴充数、模具怪话（无依据的配/冲突、计数泄漏）均视为未清零，reviewer 打回。
 * 术语：档位=三档之一（Danger 5 / Nightmare / Ultimate）；变体=某角色某覆盖范围（单档或合讲多档）的整套打法（Top3+双标注+10段），同页不同源，tab 由证据驱动（动态诚实标签：有几份证据做几个变体，有证据才出 tab，无证据不占位；同一视频合讲多档则合并为一个变体如 Ultimate + Nightmare；单变体退化为覆盖徽章即 coverbadge，不留单 tab 栏；标签全名 Danger 5，排序按最高难度从高到低 Ultimate > Nightmare > Danger 5）；旧空档置灰废除，被动态诚实标签取代。
 
 ## 6. 开逐角色单（模板原样填）
@@ -73,7 +73,7 @@ Cookie 协作（单视频被风控 `Sign in to confirm you're not a bot` / `DPAP
 * 验收线：机制一句话 + 属性 S/A 有口径 + 武器 T1 ≥1 + 道具 ≥3 + 阶段转向点 + 商店/升级 Top3 + 原视频链接 + 版本双标注；缺项标 `待补口径` 但可发布。
 * 提过即算口径：视频里明确拿过/roll 过/ban 过的属性都算口径，必须定级；顺手拿一次、备选后放弃的给 C 并写明原话（如“拿过 9 点，评有点用”），不写 `—`；只有全程没出现过的才空出（`— / 作者未提及`）。
 * 分步表（一事一过，每步独立产出+验收，不许跳步）：
-  1. 核心属性·主→输入：交叉表 terms 主 17 全 quotes；产出：每项 rating+观点小结 note；验收：`check_mentions` 本段无提到未定级 + `build.py --slug` 绿。
+  1. 核心属性·主→输入：交叉表 terms 主 17 全 quotes；产出：段首 S/A 一览一句（drafter 填，不进机检）+ 每项 rating+观点小结 note；验收：`check_mentions` 本段无提到未定级 + `build.py --slug` 绿。
   2. 核心属性·次级→输入：terms 次级 22 全 quotes；产出/验收同上。
   3. 武器分档→输入：weapons 全 quotes + 把数/波次上下文；产出：T1/T2 表（每把 note 含为什么+何波拿换）；验收：T1 ≥1 有口径 + 机检绿。
   4. 关键道具→输入：items 全 quotes；产出：道具表（每件 reason 观点小结）；验收：≥3 件 + 机检绿。
@@ -81,7 +81,7 @@ Cookie 协作（单视频被风控 `Sign in to confirm you're not a bot` / `DPAP
   6. 升级优先级→输入：升级相关 quotes；产出：Top3 先行 + 点名；验收：Top3 有口径 + 机检绿。
   7. 商店优先级→输入：商店/reroll 相关 quotes；产出：Top3 + 2–3 件必拿；验收：同上 + 升级在前。
   8. 避坑/高难→输入：死亡/失误/变招 quotes；产出：避坑 1–3 + 高难变招；验收：只收通用会死人的错/只收高难成立招 + 机检绿。
-* 每条 rating 必须有出处：观点小结（多证据综合）+ 关键原句或标题/描述/chapters 注明；无出处 rating 视为疑为编，单句贴充数视为未清零，reviewer 块级必打回（详见 `docs/sop/reviewer-checklist.md`）。
+* 每条 rating 必须有出处：观点小结（多证据综合，真搭配/真取舍，无则不写）+ 关键原句短引或标题/描述/chapters 注明，不贴计数；无出处 rating 视为疑为编，单句贴充数/模具怪话视为未清零，reviewer 块级必打回（详见 `docs/sop/reviewer-checklist.md`）。
 
 ## 8. 单源与机器链（产物人不手改，机检全绿再分支）
 

@@ -1,7 +1,7 @@
 {
   "base": "https://brotato.wiki.spellsandguns.com",
   "updated": "2026-10-17",
-  "source": "spellsandguns wiki Stats 2026-10-17 + fandom Characters/Stats api 2026-10-16",
+  "source": "spellsandguns wiki Stats 2026-10-17 + fandom Characters/Stats api 2026-10-16 + Characters 60px 2026-10-17",
   "stats": {
     "Max HP": {
       "page": "https://brotato.wiki.spellsandguns.com/wiki/Max_HP",
@@ -2350,6 +2350,584 @@
         }
       ],
       "unlock": "Default"
+    }
+  },
+  "chars": {
+    "Brawler": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Brawler",
+      "file": "File:Brawler.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/fa/Brawler.png/60px-Brawler.png",
+      "width": 60,
+      "height": 60,
+      "size": 6673,
+      "updated": "2026-10-17"
+    },
+    "Bull": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Bull",
+      "file": "File:Bull.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/7a/Bull.png/60px-Bull.png",
+      "width": 60,
+      "height": 60,
+      "size": 8788,
+      "updated": "2026-10-17"
+    },
+    "Chunky": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Chunky",
+      "file": "File:Chunky.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/83/Chunky.png/60px-Chunky.png",
+      "width": 60,
+      "height": 60,
+      "size": 5308,
+      "updated": "2026-10-17"
+    },
+    "Crazy": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Crazy",
+      "file": "File:Crazy.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/10/Crazy.png/60px-Crazy.png",
+      "width": 60,
+      "height": 60,
+      "size": 5461,
+      "updated": "2026-10-17"
+    },
+    "Demon": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Demon",
+      "file": "File:Demon.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c4/Demon.png/60px-Demon.png",
+      "width": 60,
+      "height": 60,
+      "size": 8151,
+      "updated": "2026-10-17"
+    },
+    "Artificer": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Artificer",
+      "file": "File:Artificer.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/98/Artificer.png/60px-Artificer.png",
+      "width": 60,
+      "height": 60,
+      "size": 7461,
+      "updated": "2026-10-17"
+    },
+    "Cyborg": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Cyborg",
+      "file": "File:Cyborg.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a3/Cyborg.png/60px-Cyborg.png",
+      "width": 60,
+      "height": 60,
+      "size": 9132,
+      "updated": "2026-10-17"
+    },
+    "Arms Dealer": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Arms_Dealer",
+      "file": "File:Arms_Dealer.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/9e/Arms_Dealer.png/60px-Arms_Dealer.png",
+      "width": 60,
+      "height": 60,
+      "size": 6475,
+      "updated": "2026-10-17"
+    },
+    "Apprentice": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Apprentice",
+      "file": "File:Apprentice.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/66/Apprentice.png/60px-Apprentice.png",
+      "width": 60,
+      "height": 60,
+      "size": 7951,
+      "updated": "2026-10-17"
+    },
+    "Cryptid": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Cryptid",
+      "file": "File:Cryptid.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/52/Cryptid.png/60px-Cryptid.png",
+      "width": 60,
+      "height": 60,
+      "size": 6999,
+      "updated": "2026-10-17"
+    },
+    "Baby": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Baby",
+      "file": "File:Baby.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/62/Baby.png/60px-Baby.png",
+      "width": 60,
+      "height": 60,
+      "size": 7837,
+      "updated": "2026-10-17"
+    },
+    "Beast Master": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Beast_Master",
+      "file": "File:Beast_Master.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/04/Beast_Master.png/60px-Beast_Master.png",
+      "width": 60,
+      "height": 60,
+      "size": 11895,
+      "updated": "2026-10-17"
+    },
+    "Doctor": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Doctor",
+      "file": "File:Doctor.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/6c/Doctor.png/60px-Doctor.png",
+      "width": 60,
+      "height": 60,
+      "size": 8789,
+      "updated": "2026-10-17"
+    },
+    "Engineer": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Engineer",
+      "file": "File:Engineer.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/d/d8/Engineer.png/60px-Engineer.png",
+      "width": 60,
+      "height": 60,
+      "size": 6958,
+      "updated": "2026-10-17"
+    },
+    "Entrepreneur": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Entrepreneur",
+      "file": "File:Entrepreneur.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/4d/Entrepreneur.png/60px-Entrepreneur.png",
+      "width": 60,
+      "height": 60,
+      "size": 6578,
+      "updated": "2026-10-17"
+    },
+    "Explorer": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Explorer",
+      "file": "File:Explorer.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/ca/Explorer.png/60px-Explorer.png",
+      "width": 60,
+      "height": 60,
+      "size": 11719,
+      "updated": "2026-10-17"
+    },
+    "Farmer": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Farmer",
+      "file": "File:Farmer.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/3d/Farmer.png/60px-Farmer.png",
+      "width": 60,
+      "height": 60,
+      "size": 6781,
+      "updated": "2026-10-17"
+    },
+    "Generalist": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Generalist",
+      "file": "File:Generalist.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e3/Generalist.png/60px-Generalist.png",
+      "width": 60,
+      "height": 60,
+      "size": 7307,
+      "updated": "2026-10-17"
+    },
+    "Ghost": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Ghost",
+      "file": "File:Ghost.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/ab/Ghost.png/60px-Ghost.png",
+      "width": 60,
+      "height": 60,
+      "size": 6299,
+      "updated": "2026-10-17"
+    },
+    "Gladiator": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Gladiator",
+      "file": "File:Gladiator.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/44/Gladiator.png/60px-Gladiator.png",
+      "width": 60,
+      "height": 60,
+      "size": 6603,
+      "updated": "2026-10-17"
+    },
+    "Hunter": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Hunter",
+      "file": "File:Hunter.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/4b/Hunter.png/60px-Hunter.png",
+      "width": 60,
+      "height": 60,
+      "size": 8195,
+      "updated": "2026-10-17"
+    },
+    "Glutton": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Glutton",
+      "file": "File:Glutton.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/39/Glutton.png/60px-Glutton.png",
+      "width": 60,
+      "height": 60,
+      "size": 6141,
+      "updated": "2026-10-17"
+    },
+    "Fisherman": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Fisherman",
+      "file": "File:Fisherman.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f0/Fisherman.png/60px-Fisherman.png",
+      "width": 60,
+      "height": 60,
+      "size": 7463,
+      "updated": "2026-10-17"
+    },
+    "Golem": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Golem",
+      "file": "File:Golem.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/ce/Golem.png/60px-Golem.png",
+      "width": 60,
+      "height": 60,
+      "size": 6799,
+      "updated": "2026-10-17"
+    },
+    "Lucky": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Lucky",
+      "file": "File:Lucky.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a6/Lucky.png/60px-Lucky.png",
+      "width": 60,
+      "height": 60,
+      "size": 5205,
+      "updated": "2026-10-17"
+    },
+    "Knight": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Knight",
+      "file": "File:Knight.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/6b/Knight.png/60px-Knight.png",
+      "width": 60,
+      "height": 60,
+      "size": 6073,
+      "updated": "2026-10-17"
+    },
+    "Loud": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Loud",
+      "file": "File:Loud.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/00/Loud.png/60px-Loud.png",
+      "width": 60,
+      "height": 60,
+      "size": 7321,
+      "updated": "2026-10-17"
+    },
+    "Mage": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Mage",
+      "file": "File:Mage.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/20/Mage.png/60px-Mage.png",
+      "width": 60,
+      "height": 60,
+      "size": 7911,
+      "updated": "2026-10-17"
+    },
+    "Masochist": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Masochist",
+      "file": "File:Masochist.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/7b/Masochist.png/60px-Masochist.png",
+      "width": 60,
+      "height": 60,
+      "size": 5472,
+      "updated": "2026-10-17"
+    },
+    "Multitasker": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Multitasker",
+      "file": "File:Multitasker.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/fd/Multitasker.png/60px-Multitasker.png",
+      "width": 60,
+      "height": 60,
+      "size": 5718,
+      "updated": "2026-10-17"
+    },
+    "Mutant": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Mutant",
+      "file": "File:Mutant.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/58/Mutant.png/60px-Mutant.png",
+      "width": 60,
+      "height": 60,
+      "size": 7271,
+      "updated": "2026-10-17"
+    },
+    "Old": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Old",
+      "file": "File:Old.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/9a/Old.png/60px-Old.png",
+      "width": 60,
+      "height": 60,
+      "size": 6126,
+      "updated": "2026-10-17"
+    },
+    "One-Armed": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/One_Armed",
+      "file": "File:One_Armed.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/75/One_Armed.png/60px-One_Armed.png",
+      "width": 60,
+      "height": 60,
+      "size": 5136,
+      "updated": "2026-10-17"
+    },
+    "Jack": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Jack",
+      "file": "File:Jack.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/46/Jack.png/60px-Jack.png",
+      "width": 60,
+      "height": 60,
+      "size": 5655,
+      "updated": "2026-10-17"
+    },
+    "Lich": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Lich",
+      "file": "File:Lich.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/86/Lich.png/60px-Lich.png",
+      "width": 60,
+      "height": 60,
+      "size": 8841,
+      "updated": "2026-10-17"
+    },
+    "King": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/King",
+      "file": "File:King.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/1d/King.png/60px-King.png",
+      "width": 60,
+      "height": 60,
+      "size": 7141,
+      "updated": "2026-10-17"
+    },
+    "Pacifist": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Pacifist",
+      "file": "File:Pacifist.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/4a/Pacifist.png/60px-Pacifist.png",
+      "width": 60,
+      "height": 60,
+      "size": 6036,
+      "updated": "2026-10-17"
+    },
+    "Ranger": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Ranger",
+      "file": "File:Ranger.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e9/Ranger.png/60px-Ranger.png",
+      "width": 60,
+      "height": 60,
+      "size": 6776,
+      "updated": "2026-10-17"
+    },
+    "Saver": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Saver",
+      "file": "File:Saver.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/84/Saver.png/60px-Saver.png",
+      "width": 60,
+      "height": 60,
+      "size": 5135,
+      "updated": "2026-10-17"
+    },
+    "Sick": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Sick",
+      "file": "File:Sick.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b4/Sick.png/60px-Sick.png",
+      "width": 60,
+      "height": 60,
+      "size": 7400,
+      "updated": "2026-10-17"
+    },
+    "Soldier": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Soldier",
+      "file": "File:Soldier.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/7b/Soldier.png/60px-Soldier.png",
+      "width": 60,
+      "height": 60,
+      "size": 5999,
+      "updated": "2026-10-17"
+    },
+    "Speedy": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Speedy",
+      "file": "File:Speedy.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a5/Speedy.png/60px-Speedy.png",
+      "width": 60,
+      "height": 60,
+      "size": 6389,
+      "updated": "2026-10-17"
+    },
+    "Well-Rounded": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Well_Rounded",
+      "file": "File:Well_Rounded.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/32/Well_Rounded.png/60px-Well_Rounded.png",
+      "width": 60,
+      "height": 60,
+      "size": 5367,
+      "updated": "2026-10-17"
+    },
+    "Streamer": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Streamer",
+      "file": "File:Streamer.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/04/Streamer.png/60px-Streamer.png",
+      "width": 60,
+      "height": 60,
+      "size": 7685,
+      "updated": "2026-10-17"
+    },
+    "Renegade": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Renegade",
+      "file": "File:Renegade.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/17/Renegade.png/60px-Renegade.png",
+      "width": 60,
+      "height": 60,
+      "size": 8888,
+      "updated": "2026-10-17"
+    },
+    "Technomage": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Technomage",
+      "file": "File:Technomage.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/69/Technomage.png/60px-Technomage.png",
+      "width": 60,
+      "height": 60,
+      "size": 8705,
+      "updated": "2026-10-17"
+    },
+    "Vampire": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Vampire",
+      "file": "File:Vampire.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/4e/Vampire.png/60px-Vampire.png",
+      "width": 60,
+      "height": 60,
+      "size": 8174,
+      "updated": "2026-10-17"
+    },
+    "Vagabond": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Vagabond",
+      "file": "File:Vagabond.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e7/Vagabond.png/60px-Vagabond.png",
+      "width": 60,
+      "height": 60,
+      "size": 8338,
+      "updated": "2026-10-17"
+    },
+    "Wildling": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Wildling",
+      "file": "File:Wildling.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/bb/Wildling.png/60px-Wildling.png",
+      "width": 60,
+      "height": 60,
+      "size": 5298,
+      "updated": "2026-10-17"
+    },
+    "Buccaneer": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Buccaneer",
+      "file": "File:Buccaneer.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/d/de/Buccaneer.png/60px-Buccaneer.png",
+      "width": 60,
+      "height": 60,
+      "size": 11984,
+      "updated": "2026-10-17"
+    },
+    "Builder": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Builder",
+      "file": "File:Builder.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/14/Builder.png/60px-Builder.png",
+      "width": 60,
+      "height": 60,
+      "size": 9444,
+      "updated": "2026-10-17"
+    },
+    "Chef": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Chef",
+      "file": "File:Chef.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e5/Chef.png/60px-Chef.png",
+      "width": 60,
+      "height": 60,
+      "size": 7217,
+      "updated": "2026-10-17"
+    },
+    "Creature": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Creature",
+      "file": "File:Creature.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/d/d5/Creature.png/60px-Creature.png",
+      "width": 60,
+      "height": 60,
+      "size": 8536,
+      "updated": "2026-10-17"
+    },
+    "Captain": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Captain",
+      "file": "File:Captain.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a9/Captain.png/60px-Captain.png",
+      "width": 60,
+      "height": 60,
+      "size": 7871,
+      "updated": "2026-10-17"
+    },
+    "Curious": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Curious",
+      "file": "File:Curious.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/cf/Curious.png/60px-Curious.png",
+      "width": 60,
+      "height": 60,
+      "size": 7460,
+      "updated": "2026-10-17"
+    },
+    "Diver": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Diver",
+      "file": "File:Diver.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a2/Diver.png/60px-Diver.png",
+      "width": 60,
+      "height": 60,
+      "size": 9946,
+      "updated": "2026-10-17"
+    },
+    "Druid": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Druid",
+      "file": "File:Druid.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/9d/Druid.png/60px-Druid.png",
+      "width": 60,
+      "height": 60,
+      "size": 13118,
+      "updated": "2026-10-17"
+    },
+    "Dwarf": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Dwarf",
+      "file": "File:Dwarf.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/ed/Dwarf.png/60px-Dwarf.png",
+      "width": 60,
+      "height": 60,
+      "size": 9999,
+      "updated": "2026-10-17"
+    },
+    "Gangster": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Gangster",
+      "file": "File:Gangster.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/44/Gangster.png/60px-Gangster.png",
+      "width": 60,
+      "height": 60,
+      "size": 8721,
+      "updated": "2026-10-17"
+    },
+    "Wounded": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Wounded",
+      "file": "File:Wounded.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/27/Wounded.png/60px-Wounded.png",
+      "width": 60,
+      "height": 60,
+      "size": 8179,
+      "updated": "2026-10-17"
+    },
+    "Hiker": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Hiker",
+      "file": "File:Hiker.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a9/Hiker.png/60px-Hiker.png",
+      "width": 60,
+      "height": 60,
+      "size": 8412,
+      "updated": "2026-10-17"
+    },
+    "Ogre": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Ogre",
+      "file": "File:Ogre.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c5/Ogre.png/60px-Ogre.png",
+      "width": 60,
+      "height": 60,
+      "size": 7118,
+      "updated": "2026-10-17"
+    },
+    "Romantic": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Romantic",
+      "file": "File:Romantic.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b2/Romantic.png/60px-Romantic.png",
+      "width": 60,
+      "height": 60,
+      "size": 8184,
+      "updated": "2026-10-17"
+    },
+    "Sailor": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Sailor",
+      "file": "File:Sailor.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/ce/Sailor.png/60px-Sailor.png",
+      "width": 60,
+      "height": 60,
+      "size": 9801,
+      "updated": "2026-10-17"
     }
   }
 }

@@ -254,6 +254,56 @@ def validate_registry(reg: dict[str, object], terms: list[dict[str, str]]) -> li
     return errors
 
 
+def abbr_for_en(en: str) -> str:
+    """英文缩写 (#11): 首字母小写，空格/连字符/下划线切分。
+
+    Beast Master→bm，One-Armed→oa，Well-Rounded→wr，Cyborg→c。
+    缩写=英文首字母+slug 去分隔，与中文/英文同走 norm 子串模糊。
+    """
+    import re
+
+    parts = re.split(r"[\s\-_]+", en)
+    return "".join(p[0].lower() for p in parts if p)
+
+
+def char_thumb(en: str, reg: dict[str, object]) -> str:
+    """角色头像热链 (#11): 注册表 chars 唯一源，缺项回空由调用方占位。"""
+    chars = reg.get("chars")
+    if not isinstance(chars, dict):
+        return ""
+    entry = chars.get(en)
+    if not isinstance(entry, dict):
+        return ""
+    thumb = entry.get("thumb")
+    return thumb if isinstance(thumb, str) else ""
+
+
+def validate_chars(reg: dict[str, object], roster: list[dict[str, object]]) -> list[str]:
+    """头像注册表校验 (#11): 64 全量覆盖，热链 60px，否则 fail。"""
+    errors: list[str] = []
+    chars = reg.get("chars")
+    if not isinstance(chars, dict):
+        return ["wiki-cache.json chars must be a dict (头像唯一 URL 源)"]
+    if len(chars) != 64:
+        errors.append(f"chars must be 64, got {len(chars)} (头像覆盖 64)")
+        return errors
+    for r in roster:
+        en = str(r.get("en", ""))
+        entry = chars.get(en)
+        if not isinstance(entry, dict):
+            errors.append(f"registry missing avatar for char: {en}")
+            continue
+        thumb = entry.get("thumb")
+        page = entry.get("page")
+        if not isinstance(thumb, str) or WIKI_BASE not in thumb:
+            errors.append(f"registry missing avatar thumb for char: {en}")
+        elif "60px-" not in thumb:
+            errors.append(f"registry avatar must be 60px thumbnail for char: {en}")
+        if not isinstance(page, str) or WIKI_BASE not in page:
+            errors.append(f"registry missing avatar page for char: {en}")
+    return errors
+
+
 def icon_html(thumb: object, en: str) -> str:
     """图标三件套同一渲染路径 (#12 复用, #15 武器道具共用): 有图挂热链, 无图占位。"""
     if isinstance(thumb, str) and thumb:
@@ -803,35 +853,86 @@ def render_character(
     return out
 
 
+def index_card_html(
+    slug: str,
+    zh: str,
+    en: str,
+    dlc: object,
+    thumb: str,
+    playable: bool,
+) -> str:
+    """索引单卡 (#11): 头像热链+🥔占位回落，可点才有链，不点进空页。"""
+    dlc_label = "Abyssal Terrors DLC" if dlc == "abyssal" else "本体"
+    dlc_attr = "abyssal" if dlc == "abyssal" else ""
+    playable_attr = "1" if playable else "0"
+    if thumb:
+        ava = (
+            '<div class="ava"><span>🥔</span>'
+            f'<img loading="lazy" alt="{esc(en)}" src="{esc(thumb)}" '
+            'referrerpolicy="no-referrer" onerror="this.remove()">'
+            "</div>"
+        )
+    else:
+        ava = '<div class="ava"><span>🥔</span></div>'
+    if playable:
+        return (
+            f'<div class="card" data-slug="{esc(slug)}" '
+            f'data-dlc="{dlc_attr}" data-playable="{playable_attr}">'
+            f"{ava}"
+            f'<div class="nm">{esc(zh)} ({esc(en)})<small>{dlc_label} · 可点</small></div>'
+            '<div class="right"><span class="tag ok">● 可点</span>'
+            f'<div class="links"><a href="./{esc(slug)}.html">看攻略</a></div>'
+            "</div></div>"
+        )
+    return (
+        f'<div class="card" data-slug="{esc(slug)}" '
+        f'data-dlc="{dlc_attr}" data-playable="{playable_attr}">'
+        f"{ava}"
+        f'<div class="nm">{esc(zh)} ({esc(en)})<small>{dlc_label} · 待填充</small></div>'
+        '<div class="right"><span class="tag">待填充</span></div></div>'
+    )
+
+
 def render_index(
     roster: list[dict[str, object]],
     built_slugs: set[str],
     template: str,
+    reg: dict[str, object] | None = None,
 ) -> str:
+    """索引全能力 (#11): 搜索+筛选+仅看可点覆盖 64，计数+空状态，头像热链+占位。
+
+    file 双击可跑：ROSTER 内联，无 fetch；首屏服务端直出 64 卡，无 JS 仍可读。
+    搜索 norm：小写去空格/连字符/下划线子串，覆盖中文/英文/slug 去分隔/英文首字母缩写。
+    """
+    reg_map: dict[str, object] = reg if isinstance(reg, dict) else {}
+    roster_json: list[dict[str, object]] = []
     parts: list[str] = []
     for entry in roster:
         slug = str(entry.get("id", ""))
-        zh = esc(entry.get("zh", ""))
-        en = esc(entry.get("en", ""))
+        zh = str(entry.get("zh", ""))
+        en = str(entry.get("en", ""))
         dlc = entry.get("dlc")
-        dlc_label = "Abyssal Terrors DLC" if dlc == "abyssal" else "本体"
-        if slug in built_slugs:
-            parts.append(
-                '<div class="card"><div class="ava">🥔</div>'
-                f'<div class="nm">{zh} ({en})<small>{dlc_label} · 可点</small></div>'
-                f'<div class="right"><span class="tag ok">● 可点</span>'
-                f'<div class="links"><a href="./{esc(slug)}.html">看攻略</a></div>'
-                "</div></div>"
-            )
-        else:
-            parts.append(
-                '<div class="card"><div class="ava">🥔</div>'
-                f'<div class="nm">{zh} ({en})<small>{dlc_label} · 待填充</small></div>'
-                '<div class="right"><span class="tag">待填充</span></div></div>'
-            )
-    count_line = f"共 {len(roster)} 个角色，当前可点 {len(built_slugs)} 个"
+        thumb = char_thumb(en, reg_map) if reg_map else ""
+        playable = slug in built_slugs
+        roster_json.append(
+            {
+                "slug": slug,
+                "zh": zh,
+                "en": en,
+                "dlc": dlc,
+                "img": thumb,
+                "playable": playable,
+                "abbr": abbr_for_en(en),
+            }
+        )
+        parts.append(index_card_html(slug, zh, en, dlc, thumb, playable))
+    count_line = f"共 {len(roster)} 个角色，当前可点 {len(built_slugs)} 个，当前命中 {len(roster)} 个"
     out = template.replace("{{INDEX_ITEMS}}", "".join(parts))
-    return out.replace("{{INDEX_COUNT}}", esc(count_line))
+    out = out.replace("{{INDEX_COUNT}}", esc(count_line))
+    # ROSTER 内联 JSON：ensure_ascii=False 保中文可读，</ 转义防闭合 script。
+    raw_json = json.dumps(roster_json, ensure_ascii=False)
+    safe_json = raw_json.replace("</", "<\\/")
+    return out.replace("{{ROSTER_JSON}}", safe_json)
 
 
 def load_json(path: Path) -> object:
@@ -866,6 +967,9 @@ def build_slug(
     reg_errors = validate_registry(reg, terms)
     if reg_errors:
         return (reg_errors, [])
+    char_errors = validate_chars(reg, roster)
+    if char_errors:
+        return (char_errors, [])
     entry = next((r for r in roster if r.get("id") == slug), None)
     if entry is None:
         return ([f"unknown slug: {slug} (Mod 拒收: 无名录无 Steam App 无 wiki 主表)"], [])
@@ -929,17 +1033,35 @@ def build_index(
     data_dir: Path,
     templates_dir: Path,
     out_dir: Path,
-) -> None:
-    roster = load_roster(data_dir)
+) -> list[str]:
+    """构建索引页 (#11 全能力)。返回 errors，空即成功。"""
+    try:
+        roster = load_roster(data_dir)
+    except Exception as exc:
+        return [f"roster load fail: {exc}"]
+    roster_errors = validate_roster(roster)
+    if roster_errors:
+        return roster_errors
+    try:
+        reg = load_registry(data_dir)
+    except Exception as exc:
+        return [f"registry load fail: {exc}"]
+    # 索引头像单源：chars 缺项即 fail，不带图发不出去。
+    char_errors = validate_chars(reg, roster)
+    if char_errors:
+        return char_errors
     built = {
         p.stem
         for p in (data_dir / "builds").glob("*.json")
         if (p.stem in {str(r.get("id")) for r in roster})
     }
     template = (templates_dir / "index.html").read_text(encoding="utf-8")
-    rendered = render_index(roster, built, template)
+    if "{{ROSTER_JSON}}" not in template:
+        return ["index template missing {{ROSTER_JSON}} (全能力需内联 ROSTER)"]
+    rendered = render_index(roster, built, template, reg)
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "index.html").write_text(rendered, encoding="utf-8")
+    return []
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -973,7 +1095,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"WARN: {warn}")
         if warns:
             print("WARN: 待补口径/待校对徽标已注入, 仍可发布")
-        build_index(data_dir, templates_dir, out_dir)
+        index_errors = build_index(data_dir, templates_dir, out_dir)
+        if index_errors:
+            for err in index_errors:
+                print(f"FAIL: {err}", file=sys.stderr)
+            return 1
         print(f"built --slug {args.slug} -> {out_dir}")
         return 0
 
@@ -1008,7 +1134,11 @@ def main(argv: list[str] | None = None) -> int:
             failed = True
         for warn in warns:
             print(f"WARN [{slug}]: {warn}")
-    build_index(data_dir, templates_dir, out_dir)
+    index_errors = build_index(data_dir, templates_dir, out_dir)
+    if index_errors:
+        for err in index_errors:
+            print(f"FAIL: {err}", file=sys.stderr)
+        failed = True
     print(f"built --all -> {out_dir}")
     return 1 if failed else 0
 

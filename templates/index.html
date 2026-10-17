@@ -11,30 +11,98 @@ body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 -apple-s
 .wrap { max-width:720px; margin:0 auto; padding:16px 14px 80px; }
 header h1 { font-size:22px; margin:14px 0 4px; }
 header p { color:var(--muted); margin:0 0 12px; font-size:14px; }
+.filter { position:sticky; top:0; z-index:5; background:rgba(247,245,239,.96); padding:10px 0; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.filter input[type=search] { flex:1 1 160px; font-size:15px; padding:9px 12px; border:1px solid var(--line); border-radius:999px; background:#fff; }
+.filter select { font-size:14px; padding:9px 10px; border:1px solid var(--line); border-radius:999px; background:#fff; }
+.filter label.chk { font-size:13px; color:var(--muted); display:flex; gap:5px; align-items:center; background:#fff; border:1px solid var(--line); border-radius:999px; padding:8px 12px; }
+.count { font-size:13px; color:var(--muted); margin:8px 2px; }
 .grid { display:grid; gap:10px; }
 .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:flex; gap:12px; align-items:center; }
-.ava { width:52px; height:52px; flex:0 0 52px; border-radius:12px; background:#efe9d8; display:flex; align-items:center; justify-content:center; font-size:26px; }
+.ava { position:relative; width:52px; height:52px; flex:0 0 52px; border-radius:12px; background:#efe9d8; overflow:hidden; }
+.ava span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:26px; }
+.ava img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; image-rendering:pixelated; background:#efe9d8; }
 .card .nm { font-weight:700; }
 .card .nm small { display:block; font-weight:400; color:var(--muted); font-size:12px; }
 .card .right { margin-left:auto; text-align:right; }
 .tag { font-size:12px; border:1px solid var(--line); border-radius:999px; padding:2px 8px; color:var(--muted); white-space:nowrap; }
 .tag.ok { color:var(--acc); border-color:var(--acc); }
+.links { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; justify-content:flex-end; }
 .links a { font-size:13px; background:#1f1b16; color:#fff; border-radius:999px; padding:4px 10px; text-decoration:none; }
+.empty { background:#fff; border:1px dashed var(--line); border-radius:12px; padding:18px; text-align:center; color:var(--muted); font-size:14px; }
 .foot { margin-top:16px; font-size:13px; color:var(--muted); }
-@media (max-width:480px){ header h1{font-size:19px;} }
+@media (max-width:480px){ header h1{font-size:19px;} .ava{width:46px;height:46px;flex-basis:46px;} }
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
 <h1>土豆兄弟 (Brotato) · 角色攻略索引</h1>
-<p>单模板复用 · 一个角色一页 + 索引导航页 · 纯静态 · 双击可开 · 手机可读（骨架最小索引，全能力见后续票）</p>
+<p>单模板复用 · 一个角色一页 + 索引导航页 · 纯静态 · 双击可开 · 手机可读</p>
 </header>
-<div class="grid">
+<div class="filter" role="search">
+<input id="q" type="search" placeholder="搜索：赛博 / cyborg / ranger…" autocomplete="off">
+<select id="dlc" aria-label="DLC 筛选">
+<option value="all">全部（含 DLC）</option>
+<option value="base">仅本体</option>
+<option value="abyssal">仅 Abyssal Terrors DLC</option>
+</select>
+<label class="chk"><input id="playable" type="checkbox"> 仅看可点</label>
+</div>
+<div class="count" id="count">{{INDEX_COUNT}}</div>
+<div class="grid" id="grid">
 {{INDEX_ITEMS}}
 </div>
-<div class="foot"><p>构建产物，人不手改，只改源码重构建。{{INDEX_COUNT}}</p></div>
+<div class="foot"><p>构建产物，人不手改，只改源码重构建。{{INDEX_COUNT}}</p><p>头像来源：<a href="https://brotato.wiki.spellsandguns.com/wiki/Characters">Brotato Wiki (spellsandguns) Characters</a> 热链 60px 缩略图，注册表集中管理；断网时显示 🥔 占位，仍可读。</p></div>
 </div>
+<script>
+// 索引全能力 (#11)：搜索+筛选+仅看可点，同源 ROSTER 内联渲染，file:// 可跑，无 fetch。
+// 搜索 norm：小写去空格/连字符/下划线子串，覆盖中文/英文/slug 去分隔/英文首字母缩写。
+var ROSTER = {{ROSTER_JSON}};
+var q = document.getElementById("q"), dlc = document.getElementById("dlc"),
+    playable = document.getElementById("playable"),
+    grid = document.getElementById("grid"), count = document.getElementById("count");
+function norm(s){ return String(s).toLowerCase().replace(/[\s\-_]+/g,""); }
+function initials(en){
+  var parts = String(en).split(/[\s\-_]+/), a = "";
+  for (var i=0;i<parts.length;i++){ if(parts[i]) a += parts[i][0].toLowerCase(); }
+  return a;
+}
+function hay(r){
+  var ab = r.abbr || initials(r.en);
+  var nospace = String(r.slug).replace(/[-_]+/g,"");
+  return norm(String(r.zh)+" "+String(r.en)+" "+String(r.slug)+" "+nospace+" "+ab);
+}
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;"); }
+function card(r){
+  var dlcLabel = r.dlc ? "Abyssal Terrors DLC" : "本体";
+  var sub = dlcLabel + " · " + (r.playable ? "可点" : "待填充");
+  var ava = r.img
+    ? '<div class="ava"><span>🥔</span><img loading="lazy" alt="'+esc(r.en)+'" src="'+esc(r.img)+'" referrerpolicy="no-referrer" onerror="this.remove()"></div>'
+    : '<div class="ava"><span>🥔</span></div>';
+  var right = r.playable
+    ? '<span class="tag ok">● 可点</span><div class="links"><a href="./'+esc(r.slug)+'.html">看攻略</a></div>'
+    : '<span class="tag">待填充</span>';
+  return '<div class="card" data-slug="'+esc(r.slug)+'" data-dlc="'+(r.dlc ? "abyssal" : "")+'" data-playable="'+(r.playable ? "1" : "0")+'">'
+    + ava
+    + '<div class="nm">'+esc(r.zh)+" ("+esc(r.en)+")<small>"+esc(sub)+"</small></div>"
+    + '<div class="right">'+right+"</div></div>";
+}
+function render(){
+  var kw = norm(q.value.trim()), list = ROSTER.filter(function(r){
+    if (dlc.value === "base" && r.dlc) return false;
+    if (dlc.value === "abyssal" && r.dlc !== "abyssal") return false;
+    if (playable.checked && !r.playable) return false;
+    if (kw && hay(r).indexOf(kw) < 0) return false;
+    return true;
+  });
+  var playableCount = ROSTER.filter(function(r){ return r.playable; }).length;
+  count.textContent = "共 " + ROSTER.length + " 个角色，当前可点 " + playableCount + " 个，当前命中 " + list.length + " 个";
+  if (!list.length) { grid.innerHTML = '<div class="empty">没有命中，换个关键词或把筛选放宽（如选“全部”）。</div>'; return; }
+  grid.innerHTML = list.map(card).join("");
+}
+q.addEventListener("input", render); dlc.addEventListener("change", render); playable.addEventListener("change", render);
+render();
+</script>
 <!-- GENERATED by scripts/build.py: do not edit, rebuild from data/ + templates/ -->
 </body>
 </html>

@@ -98,7 +98,7 @@ Cookie 协作（单视频被风控 `Sign in to confirm you're not a bot` / `DPAP
 
 ## 9. 三道闸：机器 gate + reviewer 块级审 + 人验三问（人只做三件事之三：验收三问）
 
-* 三道闸顺序锁死：① drafter 按 §5 自清零（交叉表机器 gate）；② reviewer 按 `docs/sop/reviewer-checklist.md` 块级审（10段×变体逐块查，输出意见清单给 drafter 改）；③ 人才看三问：选片对不对、转述忠不忠实、评级违不违手感。reviewer 是第二道闸，人三问退为第三道闸、最后一道闸。
+* 三道闸顺序锁死：① drafter 按 §5 自清零（交叉表机器 gate）；② reviewer 按 `docs/sop/reviewer-checklist.md` 块级审（第 ⓪ 件事先对版本：旧版执行的填表整体打回重填，不逐条看；10段×变体逐块查，输出意见清单给 drafter 改）；③ 人才看三问：选片对不对、转述忠不忠实、评级违不违手感。reviewer 是第二道闸，人三问退为第三道闸、最后一道闸。
 * drafter 不审己稿（写稿与审稿必须两人/两角色分离，单人执行时隔日重审亦视为自审，仍须换人）；降级（放松 gate）须另开票，本 SOP 不直接放宽。
 * 三问全过 = 发布（去草稿标记，索引置可点，关 issue）；任一不过 = 在 issue 里批注具体段，执行 agent 按批改，不开新 issue。
 * 带待补照发，排版不重验（A 版式已冻结，手机可读不重验）。

@@ -18,7 +18,7 @@ Completion: role fixed, template loaded.
 ### 2. Open the issue, then stop
 
 ```bash
-gh issue create --title "角色攻略：<角色名> (<EN>)" --label "wayfinder:task" --body-file <filled-template>
+gh issue create --title "角色攻略：<角色名> (<EN>)" --label "ready-for-agent" --body-file <filled-template>
 ```
 
 Body rules (single source of truth stays in the repo; the ticket only points):

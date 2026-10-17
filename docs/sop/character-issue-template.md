@@ -26,7 +26,7 @@ Part of #16
 
 1. 入库字幕到 `data/subs/<slug>__<variant-id>.en-orig.vtt`（每变体独立）；专名对照 wiki 纠拼写（Brotato/武器/道具以 wiki 为准）。
 2. 跑交叉表并清零：`python scripts/build_mentions.py --slug <slug>` 建 `data/mentions/<slug>__<variant-id>.json`（每变体独立跑），再 `python scripts/check_mentions.py --slug <slug>` 自清（提到未定级补定级、定级无命中挂名注明标题/描述/chapters，否则疑为编；只 warn 不 fail，缺表才 FAIL 必须补）。
-3. 只基于字幕 + 标题/描述/chapters + 交叉表写骨架：属性优先级、武器 T1/T2（把数不限，每把一句话只认视频口径）、道具（三组：必拿分档/提过未拿说原因/ban 说依据，拿取动作全收不设上限）、转向、商店/升级 Top3（两层：先 Top3 再点名，升级在前）、避坑 1–3（只收通用会死人的错）、高难特例（只收 Nightmare / Ultimate 变招）。不复述流水账、不翻原文、不搬截图。
+3. 只基于字幕 + 标题/描述/chapters + 交叉表写骨架：属性优先级、武器 T1/T2（把数不限，每把一句话只认视频口径）、道具（三组：先扫拿取/拒绝动词建清单再分组，必拿分档/提过未拿说原因/ban 说依据，拿取清单全收不设上限）、转向、商店/升级 Top3（两层：先 Top3 再点名，升级在前）、避坑 1–3（只收通用会死人的错）、高难特例（只收 Nightmare / Ultimate 变招）。不复述流水账、不翻原文、不搬截图。
 4. 按 10 段模板诚实填 `data/builds/<slug>.json` 内 `variants` 数组（每变体 `covers` + `label` + 独立 Top3+双标注+10段，动态诚实标签：有几份证据做几个变体，合讲合并，单变体退覆盖徽章；旧单层键废除）：提过即算口径（顺手拿给 C 写明原话，全程未出现才空出 `— / 作者未提及`）；每条 rating 必须有出处（字幕原句或标题/描述/chapters 注明，无出处视为疑为编）；`中文 (English)`；DLC 角标；S–F 上色。不编、不藏段。
 5. 跑 `python scripts/build.py --slug <slug>`；绝不手改 `docs/`。机检全绿（`check.py` + `check_updates.py` + `check_resources.py` + `check_mentions.py` 只 warn）再送 reviewer 块级审（drafter 不审己稿，见 `docs/sop/reviewer-checklist.md`），改完再送人三问。
 

@@ -1,0 +1,63 @@
+{
+  "$comment": "PROTOTYPE 数据模型提案（分支 prototype/tabs-20，不进 main）。推荐方案，待人拍板。对应子票「多难度 tab 原型」。旧单层键废除，交叉表格式沿用已关的「交叉表脚本与机检」。",
+  "proposal": "builds/<slug>.json 内按档位分块：variants: { Danger 5 | Nightmare | Ultimate }，每变体独立 Top3+双标注+10段；空档 { status: missing } 置灰待补。交叉表 data/mentions/<slug>__<difficulty>.json 每变体独立跑。",
+  "slug": "engineer",
+  "variants": {
+    "Danger 5": {
+      "status": "missing",
+      "reason": "暂无可用主引用 — 待补口径，不编造娱乐局。"
+    },
+    "Nightmare": {
+      "status": "ready",
+      "mechanism": "…（本变体独立）",
+      "ratings": {
+        "Ranged Damage": { "rating": "A", "note": "先保清线（出处：字幕原句/标题）" }
+      },
+      "weapons_t1": [{ "name_en": "SMG", "note": "…（本变体独立）" }],
+      "weapons_t2": [{ "name_en": "Pistol", "note": "…" }],
+      "items": [{ "name_en": "Turret", "reason": "…" }],
+      "phases": [{ "label": "开局", "waves": "W1-5", "body": "…", "buy": "…" }],
+      "upgrade": "…（本变体独立 Top3）",
+      "shop": "…（本变体独立 Top3）",
+      "pitfalls": ["…"],
+      "hard": "…（只收 Nightmare/Ultimate 变招）",
+      "source": {
+        "title": "…",
+        "url": "https://www.youtube.com/watch?v=…",
+        "video_id": "…",
+        "published": "2026-08-10",
+        "difficulty": "Nightmare",
+        "game_version": "1.1.15.1",
+        "has_captions": true,
+        "candidates": [],
+        "transcript": { "captions": "auto", "corrected": true }
+      }
+    },
+    "Ultimate": {
+      "status": "ready",
+      "mechanism": "…（本变体独立）",
+      "ratings": {
+        "Ranged Damage": { "rating": "S", "note": "唯一核心（出处：字幕原句）" }
+      },
+      "weapons_t1": [{ "name_en": "Wrench", "note": "…（本变体独立）" }],
+      "weapons_t2": [{ "name_en": "Hammer", "note": "…" }],
+      "items": [{ "name_en": "Turret", "reason": "…" }],
+      "phases": [{ "label": "开局", "waves": "W1-5", "body": "…", "buy": "…" }],
+      "upgrade": "…（本变体独立 Top3）",
+      "shop": "…（本变体独立 Top3）",
+      "pitfalls": ["…"],
+      "hard": "…",
+      "source": {
+        "title": "…",
+        "url": "https://www.youtube.com/watch?v=…",
+        "video_id": "…",
+        "published": "2026-09-01",
+        "difficulty": "Ultimate",
+        "game_version": "1.1.15.1",
+        "has_captions": true,
+        "candidates": [],
+        "transcript": { "captions": "auto", "corrected": true }
+      }
+    }
+  }
+}

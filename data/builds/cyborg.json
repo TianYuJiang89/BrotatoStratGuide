@@ -73,7 +73,11 @@
     "published": "2026-10-17",
     "title": "赛博格演示占位（按取材规范待补真片，选片后替换）",
     "url": "https://www.youtube.com/@Cephalopocalypse",
-    "video_id": "demo-placeholder"
+    "video_id": "demo-placeholder",
+    "has_captions": false,
+    "candidates": [],
+    "transcript": {"captions": "none", "corrected": false},
+    "resource_review": false
   },
   "upgrade": "远程伤害 (Ranged Damage) > 攻击速度 (Attack Speed) > 最大生命 (Max HP)；工程 / 近战 / 元素出了也不拿；血量告急时保命优先。（演示口径，选片后替换）",
   "weapons_t1": [

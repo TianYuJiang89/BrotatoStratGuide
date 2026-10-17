@@ -25,7 +25,7 @@ STEAM_DLC_BASELINE = [2868390, 3281080, 4498220]
 FANDOM_BT_DLC_BASELINE = 14
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build import EXPECTED_PRIMARY, EXPECTED_SECONDARY  # noqa: E402
+from build import EXPECTED_PRIMARY, EXPECTED_SECONDARY, LAST_MAJOR_UPDATE  # noqa: E402
 
 
 def load_roster(data_dir: Path) -> list[dict[str, object]]:
@@ -87,6 +87,39 @@ def check_baseline(data_dir: Path) -> tuple[list[str], list[str]]:
         # Mod 永不进入: 追加 dlc 非法或 id 非法即拒。
         if not r.get("id") or not r.get("en"):
             errors.append(f"追加规则: Mod 拒收 {r}")
+    # #13 取材巡检:各 build 取材日期早于大更新即 warn 待重审 (人工触发复核)。
+    # 离线可跑, 无网络断言;缺日期/占位即待补 warn, 非法难度等门禁由 build 报 fail。
+    builds_dir = data_dir / "builds"
+    if builds_dir.is_dir():
+        for build_file in sorted(builds_dir.glob("*.json")):
+            try:
+                payload = json.loads(build_file.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if not isinstance(payload, dict):
+                continue
+            source = payload.get("source")
+            if not isinstance(source, dict):
+                continue
+            published = source.get("published")
+            game_version = source.get("game_version")
+            slug = build_file.stem
+            if not isinstance(published, str) or not published.strip():
+                warns.append(f"取材待补 {slug}: 发布日期缺项 (双标注须齐全)")
+                continue
+            import re as _re
+
+            if not _re.fullmatch(r"\d{4}-\d{2}-\d{2}", published.strip()):
+                # 占位文案 (待补/占位) 走待补 warn, 其余非法格式同样 warn (fail 由 build 门禁报)。
+                warns.append(f"取材待补 {slug}: 发布日期 {published!r} 非 YYYY-MM-DD")
+                continue
+            if published.strip() < LAST_MAJOR_UPDATE:
+                warns.append(
+                    f"取材待重审 {slug}: 发布 {published.strip()} 早于大更新 {LAST_MAJOR_UPDATE} "
+                    f"(双标注复核, 命中待重审)"
+                )
+            if not isinstance(game_version, str) or not game_version.strip():
+                warns.append(f"取材待补 {slug}: 游戏版本缺项 (双标注须齐全)")
     return (errors, warns)
 
 

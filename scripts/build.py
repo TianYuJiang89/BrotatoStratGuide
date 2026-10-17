@@ -52,6 +52,33 @@ REQUIRED_KEYS: list[str] = [
 
 EXPECTED_WAVES: list[str] = ["W1-5", "W6-12", "W13-20"]
 
+# #13 取材与巡检徽标:Top3 加双标注检查。
+# 难度只认三档;娱乐局 (综述/花活) 永不作主候选;低于保底线永不作主引用。
+ALLOWED_DIFFICULTIES: tuple[str, ...] = ("Danger 5", "Nightmare", "Ultimate")
+# 娱乐/综述 markers (小写子串):标题命中即视为娱乐局, 进 Top3 即 fail。
+# Tier List 综述 + Challenge/Random/Batomon 花活只作上限补充, 不作主引用。
+ENTERTAINMENT_MARKERS: tuple[str, ...] = (
+    "tier list",
+    "tier-list",
+    "challenge",
+    "batomon",
+    "random-random",
+    "random random",
+)
+# 抽取只做两件 (元数据 + 自动字幕):出现以下键即重转写/画面多模态, fail。
+FORBIDDEN_EXTRACTION_KEYS: tuple[str, ...] = (
+    "frames",
+    "multimodal",
+    "full_text",
+    "full-transcript",
+    "manual_transcript",
+)
+# 版本漂移锚点 (#13):取材发布日期早于此即挂待重审 (人工触发复核)。
+# 2026-09-01 早于 demo 2026-10-15/17 (干净), 晚于 2025 夹具 (待重审)。
+LAST_MAJOR_UPDATE: str = "2026-09-01"
+# 占位标记:值含任一即视为待补 (诚实空出, warn 不 fail)。
+PLACEHOLDER_MARKERS: tuple[str, ...] = ("占位", "待补", "待写", "demo-placeholder", "TODO")
+
 # 单源基线: 主 17 + 次级 22, wiki 原序, 旧次级 3 口径作废。
 EXPECTED_PRIMARY: list[str] = [
     "Max HP",
@@ -606,9 +633,210 @@ def phases_block(phases: list[dict[str, object]]) -> str:
     return "".join(parts)
 
 
+def _parse_iso_date(value: object) -> str | None:
+    """严格 YYYY-MM-DD, 非法返回 None (门禁由调用方判 fail)。"""
+    import re
+
+    if not isinstance(value, str):
+        return None
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value.strip()):
+        return None
+    return value.strip()
+
+
+def _is_placeholder(value: object) -> bool:
+    """占位/待补/待写/demo 标记即视为诚实空出 (warn, 不 fail)。"""
+    if not isinstance(value, str) or not value.strip():
+        return True
+    lowered = value.strip().lower()
+    return any(m in str(value) or m.lower() in lowered for m in PLACEHOLDER_MARKERS)
+
+
+def _is_guide_title(title: object) -> bool:
+    """有 Guide 后缀才算教学局, 否则注明实况复盘非教学局。"""
+    return isinstance(title, str) and "guide" in title.lower()
+
+
+def _has_entertainment(title: object) -> str | None:
+    """标题命中娱乐/综述 marker 即返回命中词, 否则 None。"""
+    if not isinstance(title, str):
+        return None
+    lowered = title.lower()
+    for marker in ENTERTAINMENT_MARKERS:
+        if marker in lowered:
+            return marker
+    return None
+
+
+def _is_youtube_url(url: object) -> bool:
+    return isinstance(url, str) and (
+        url.startswith("https://www.youtube.com/")
+        or url.startswith("https://youtube.com/")
+        or url.startswith("https://youtu.be/")
+    )
+
+
+def check_source(source: object) -> tuple[list[str], list[str]]:
+    """#13 取材门禁 (fail) + 验收线 (warn)。
+
+    FAIL (门禁错即 fail, 烂页发不出去):
+    - candidates > 3 (1 主 + 不超 2 补充)
+    - 主/候选难度不在三档 (Danger 5/Nightmare/Ultimate)
+    - 主/候选标题命中娱乐局 (Tier List/Challenge/Random/Batomon)
+    - 主/候选缺链接 (非 YouTube) / 缺 video_id / 日期非法
+    - 主候选不一致 (candidates 非空时 candidates[0] 须等于主五元组)
+    - 抽取含 frames/multimodal 等重转写键
+    WARN (缺项 warn 加徽标可发布):
+    - candidates 空 (零命中诚实空缺待补)
+    - 无字幕/未纠专名 (降级或待补, 不猜测)
+    - 双标注缺项 (发布日期/游戏版本缺一)
+    - 旧日期 (早于 LAST_MAJOR_UPDATE 即待重审)
+    - resource_review 真 (资源待重审)
+    """
+    errors: list[str] = []
+    warns: list[str] = []
+    if not isinstance(source, dict):
+        # 缺 source 键由结构机检报 fail, 此处仅验收 warn (双保险不重复 fail)。
+        return (errors, ["acceptance: 取材版本缺项"])
+    title = source.get("title")
+    url = source.get("url")
+    video_id = source.get("video_id")
+    published = source.get("published")
+    difficulty = source.get("difficulty")
+    game_version = source.get("game_version")
+    # --- 门禁:主引用 ---
+    if difficulty not in ALLOWED_DIFFICULTIES:
+        # 诚实空缺 (待补标题 + 占位 id) 允许 warn, 不 fail;其余非法难度 fail。
+        honest_empty = _is_placeholder(video_id) or (isinstance(title, str) and "暂无可用主引用" in title)
+        if not honest_empty:
+            errors.append(f"取材难度只认三档即 fail: {difficulty!r} (须 Danger 5/Nightmare/Ultimate)")
+    hit = _has_entertainment(title)
+    if hit:
+        errors.append(f"娱乐局永不作主引用即 fail: 标题命中 {hit!r}")
+    if not _is_youtube_url(url):
+        # 诚实空缺允许频道页占位, 其余非 YouTube 链接 fail。
+        honest_channel = isinstance(url, str) and url.startswith("https://www.youtube.com/@")
+        if not honest_channel:
+            errors.append(f"取材链接错即 fail: {url!r} (须 YouTube watch/频道)")
+    if not isinstance(video_id, str) or not video_id.strip():
+        errors.append("取材 video_id 缺失即 fail")
+    if _parse_iso_date(published) is None:
+        # 非法日期为门禁错;但纯占位空值走验收 warn (与旧 check_acceptance 一致)。
+        if isinstance(published, str) and published.strip() and not _is_placeholder(published):
+            errors.append(f"取材发布日期非法即 fail: {published!r} (须 YYYY-MM-DD)")
+    # --- 门禁:Top3 ---
+    candidates = source.get("candidates")
+    if candidates is None:
+        # 旧数据无 candidates:走单主引用路径, 仅验收 warn (向后兼容 demo)。
+        pass
+    elif not isinstance(candidates, list):
+        errors.append("取材 candidates 须为数组即 fail")
+    else:
+        if len(candidates) > 3:
+            errors.append(f"取材 Top3 即 fail: 1 主 + 不超 2 补充, got {len(candidates)}")
+        for idx, cand in enumerate(candidates):
+            if not isinstance(cand, dict):
+                errors.append(f"取材候选结构错即 fail: candidates[{idx}] need dict")
+                continue
+            c_title = cand.get("title")
+            c_url = cand.get("url")
+            c_vid = cand.get("video_id")
+            c_pub = cand.get("published")
+            c_diff = cand.get("difficulty")
+            if c_diff not in ALLOWED_DIFFICULTIES:
+                errors.append(f"取材候选难度只认三档即 fail: candidates[{idx}] {c_diff!r}")
+            c_hit = _has_entertainment(c_title)
+            if c_hit:
+                errors.append(f"娱乐局不进候选即 fail: candidates[{idx}] 命中 {c_hit!r}")
+            if not _is_youtube_url(c_url):
+                errors.append(f"取材候选链接错即 fail: candidates[{idx}] {c_url!r}")
+            if not isinstance(c_vid, str) or not c_vid.strip():
+                errors.append(f"取材候选 video_id 缺失即 fail: candidates[{idx}]")
+            if _parse_iso_date(c_pub) is None:
+                errors.append(f"取材候选日期非法即 fail: candidates[{idx}] {c_pub!r}")
+            for field in ("title", "url", "video_id", "published", "difficulty"):
+                if cand.get(field) is None:
+                    errors.append(f"取材候选缺 {field} 即 fail: candidates[{idx}]")
+        # 主候选一致:非空时 candidates[0] 五元组须等于主。
+        if candidates and isinstance(candidates[0], dict):
+            top = candidates[0]
+            for field in ("title", "url", "video_id", "published", "difficulty"):
+                if top.get(field) != source.get(field):
+                    errors.append(f"取材主候选不一致即 fail: {field} 主 != candidates[0]")
+                    break
+    # --- 门禁:抽取只做两件 ---
+    transcript = source.get("transcript")
+    if isinstance(transcript, dict):
+        for key in FORBIDDEN_EXTRACTION_KEYS:
+            if key in transcript:
+                errors.append(f"禁重转写画面多模态即 fail: transcript 含 {key!r}")
+                break
+    if errors:
+        return (errors, warns)
+    # --- 验收线 (warn 加徽标, 可发布) ---
+    if isinstance(candidates, list) and len(candidates) == 0:
+        warns.append("acceptance: Top3 零命中诚实空缺待补 (不降级引用娱乐局)")
+    # 字幕有无:主 has_captions + transcript.captions 双看, 缺一即降级/待补。
+    has_caps = source.get("has_captions")
+    caps_status: object = transcript.get("captions") if isinstance(transcript, dict) else None
+    if has_caps is not True or caps_status in (None, "none", "missing", False):
+        # 旧 demo 无 transcript:同样 warn (与待补口径一致)。
+        if has_caps is not True or caps_status != "auto":
+            warns.append("acceptance: 无字幕降级/待补 (抽取仅元数据 + 自动字幕, 不猜测)")
+    if isinstance(transcript, dict) and transcript.get("corrected") is not True:
+        warns.append("acceptance: 专名未对照纠正待补 (须对照 Wiki 纠拼写)")
+    elif not isinstance(transcript, dict):
+        warns.append("acceptance: 抽取两件缺转写标注待补 (元数据 + 自动字幕 + 纠专名)")
+    # 双标注:发布日期 + 游戏版本齐全, 占位即待补。
+    if _is_placeholder(published) or _is_placeholder(game_version):
+        warns.append("acceptance: 双标注缺项待补 (发布日期 + 游戏版本须齐全)")
+    # 旧日期:早于大更新即待重审。
+    parsed = _parse_iso_date(published)
+    if parsed is not None and parsed < LAST_MAJOR_UPDATE:
+        warns.append(f"acceptance: 取材日期 {parsed} 早于大更新 {LAST_MAJOR_UPDATE}, 命中待重审")
+    # 资源 flag:人工触发 HEAD 失效后置 flag, 渲染资源待重审。
+    if source.get("resource_review") is True:
+        warns.append("acceptance: 资源失效命中资源待重审")
+    return (errors, warns)
+
+
+def source_badges(source: dict[str, object], warns: list[str]) -> str:
+    """取材徽标 (#13):缺项待补 + 旧日期待重审 + 资源待重审。"""
+    badges = ""
+    needs_pending = any(
+        kw in w for w in warns for kw in ("待补", "无字幕", "双标注", "零命中", "转写", "纠")
+    )
+    if needs_pending:
+        badges += ' <span class="badge-pending">待补口径</span>'
+    if any("待重审" in w and "资源" not in w for w in warns):
+        badges += ' <span class="badge-recheck">待重审</span>'
+    if isinstance(source.get("resource_review"), bool) and source.get("resource_review") is True:
+        badges += ' <span class="badge-resource">资源待重审</span>'
+    elif any("资源待重审" in w for w in warns):
+        badges += ' <span class="badge-resource">资源待重审</span>'
+    return badges
+
+
+def candidate_row_html(cand: dict[str, object], label: str) -> str:
+    """单候选行:标题链接 + 标识 + 日期 + 难度 + 字幕有无 + 教学局/实况。"""
+    title = str(cand.get("title", "待补"))
+    url = str(cand.get("url", "#"))
+    video_id = str(cand.get("video_id", "待补"))
+    published = str(cand.get("published", "待补"))
+    difficulty = str(cand.get("difficulty", "待补"))
+    has_caps = cand.get("has_captions")
+    caps_text = "有自动字幕" if has_caps is True else "无字幕降级/待补"
+    kind = "教学局" if _is_guide_title(title) else "实况复盘非教学局"
+    return (
+        f"<li data-candidate=\"{esc(label)}\">"
+        f"{esc(label)}：<a href=\"{esc(url)}\">{esc(title)}</a> "
+        f"<code>{esc(video_id)}</code> / 发布：{esc(published)} / 难度：{esc(difficulty)} / "
+        f"{esc(caps_text)} / {esc(kind)}</li>"
+    )
+
+
 def source_block(source: dict[str, object]) -> str:
     title = esc(source.get("title", "待补"))
-    url = esc(source.get("url", "#"))
     video_id = esc(source.get("video_id", "待补"))
     published = esc(source.get("published", "待补"))
     difficulty = esc(source.get("difficulty", "待补"))
@@ -618,11 +846,39 @@ def source_block(source: dict[str, object]) -> str:
     else:
         raw_url = str(source.get("url"))
         url_display = f'<a href="{esc(raw_url)}">{title}</a>'
+    # 主引用标注:教学局 vs 实况 + 字幕有无 + 双标注。
+    main_kind = "教学局" if _is_guide_title(source.get("title")) else "实况复盘非教学局"
+    main_caps = source.get("has_captions")
+    main_caps_text = "有自动字幕" if main_caps is True else "无字幕降级/待补"
+    candidates = source.get("candidates")
+    if isinstance(candidates, list) and len(candidates) == 0:
+        top_html = "<p>暂无可用主引用 — 待补口径，不编造娱乐局。</p>"
+    elif isinstance(candidates, list) and candidates:
+        items: list[str] = []
+        for idx, cand in enumerate(candidates):
+            if not isinstance(cand, dict):
+                continue
+            label = "主引用" if idx == 0 else f"补充{idx}"
+            items.append(candidate_row_html(cand, label))
+        top_html = f"<p>主取材：{url_display}</p><ul>{''.join(items)}</ul>"
+    else:
+        top_html = f"<p>主取材：{url_display}</p>"
+    # 徽标:基于 warns 计算, source_block 无 warns 上下文时按数据直算。
+    _, _warns = check_source(source)
+    badges = source_badges(source if isinstance(source, dict) else {}, _warns)
+    # 抽取说明:只做两件 + 纠专名状态。
+    transcript = source.get("transcript") if isinstance(source, dict) else None
+    if isinstance(transcript, dict) and transcript.get("captions") == "auto" \
+            and transcript.get("corrected") is True:
+        extract_line = "<p>抽取仅元数据 + 自动字幕，已对照 Wiki 纠专名；转述非搬运，只留可复现骨架。</p>"
+    else:
+        extract_line = "<p>抽取待补：仅元数据 + 自动字幕并对照纠专名，无字幕降级/待补，不猜测。</p>"
     return (
-        f"<p>主取材：{url_display}</p>"
-        f"<p>视频 ID：<code>{video_id}</code> / 发布：{published} / 难度：{difficulty}</p>"
+        f"{top_html}"
+        f"<p>视频 ID：<code>{video_id}</code> / 发布：{published} / 难度：{difficulty} / "
+        f"{esc(main_caps_text)} / {esc(main_kind)}{badges}</p>"
         f"<p>适用版本：{game_version}（发布日期 + 游戏版本双标注）</p>"
-        "<p>转述非搬运，只留可复现骨架。</p>"
+        f"{extract_line}"
     )
 
 
@@ -805,10 +1061,16 @@ def check_acceptance(data: dict[str, object]) -> list[str]:
     if not isinstance(source, dict):
         warns.append("acceptance: 取材版本缺项")
     else:
+        # #13:双标注/字幕/Top3 验收线由 check_source 统一判 warn。
+        _, source_warns = check_source(source)
+        warns.extend(source_warns)
+        # 旧字段缺项仍直报 (向后兼容, 与 source_warns 去重由调用方合并)。
         for field in ("url", "video_id", "published", "difficulty", "game_version"):
             value = source.get(field)
             if not isinstance(value, str) or not value.strip():
-                warns.append(f"acceptance: 取材 {field} 缺项")
+                legacy = f"acceptance: 取材 {field} 缺项"
+                if legacy not in warns:
+                    warns.append(legacy)
                 break
     return warns
 
@@ -1082,6 +1344,11 @@ def build_slug(
     gear_errors = w1_errors + w2_errors + item_errors
     if gear_errors:
         return (gear_errors, [])
+    # #13 取材门禁:难度/娱乐/链接/Top3/抽取错即 fail。
+    raw_source = data.get("source")
+    src_errors, src_warns = check_source(raw_source)
+    if src_errors:
+        return (src_errors, src_warns)
     warns = check_acceptance(data)
     warns.extend(term_warns)
     warns.extend(w1_warns + w2_warns + item_warns)

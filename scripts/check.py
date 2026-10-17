@@ -12,7 +12,13 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build import EXPECTED_PRIMARY, EXPECTED_SECONDARY, SECTION_ORDER  # noqa: E402
+from build import (  # noqa: E402
+    ALLOWED_DIFFICULTIES,
+    ENTERTAINMENT_MARKERS,
+    EXPECTED_PRIMARY,
+    EXPECTED_SECONDARY,
+    SECTION_ORDER,
+)
 
 
 def check_file(path: Path) -> tuple[list[str], list[str]]:
@@ -117,6 +123,34 @@ def check_file(path: Path) -> tuple[list[str], list[str]]:
         errors.append("页脚缺失即 fail: 缺转述非搬运/不搬截图原片声明")
     if "后续合规票" in html_text:
         errors.append("页脚缺失即 fail: 骨架占位文案未替换为合规署名")
+    # #13 取材门禁:难度三档 + 娱乐局不进候选 + Top3 不超 3 + 链接齐全。
+    m_source = re.search(r'data-section="source".*?</section>', html_text, re.S)
+    if m_source:
+        sec = m_source.group(0)
+        lowered = sec.lower()
+        for marker in ENTERTAINMENT_MARKERS:
+            if marker in lowered:
+                errors.append(f"取材娱乐局即 fail: source 区命中 {marker!r} (永不作主引用/不进候选)")
+                break
+        cand_count = len(re.findall(r'data-candidate="', sec))
+        if cand_count > 3:
+            errors.append(f"取材 Top3 即 fail: 1 主 + 不超 2 补充, got {cand_count}")
+        for diff in re.findall(r"难度：([^<\/]+)", sec):
+            diff_text = diff.strip()
+            if not diff_text or "待补" in diff_text or "占位" in diff_text or diff_text == "—":
+                continue
+            if diff_text not in ALLOWED_DIFFICULTIES:
+                errors.append(f"取材难度只认三档即 fail: {diff_text!r}")
+                break
+        if "youtube.com" not in sec and "youtu.be" not in sec and "待补" not in sec:
+            errors.append("取材链接错即 fail: source 区缺 YouTube 链接且无待补徽标")
+        # 巡检徽标只 warn (可发布):待补/待重审/资源待重审。
+        if "待重审" in sec:
+            warns.append("取材待重审 (版本漂移/旧日期, 人工触发复核)")
+        if "资源待重审" in sec:
+            warns.append("资源待重审 (HEAD 失效, 切应急前人工复核)")
+        if "待补口径" in sec or "暂无可用主引用" in sec:
+            warns.append("取材待补 (Top3/双标注/字幕缺项, 仍可发布)")
     # 待校对只 warn。
     if "※" in html_text or "待校对" in html_text:
         warns.append("术语待校对 (※)，中文以客户端简中为准")

@@ -142,6 +142,18 @@ def test_engineer_source_top3_supplement_and_captions() -> None:
     assert "frames" not in transcript and "multimodal" not in transcript
 
 
+def test_mentioned_attributes_count_as_ratings_not_empty() -> None:
+    """提过即算口径：顺手拿一次、备选后放弃的给 C 写明原话，全程未出现才空出。"""
+    guide = (REPO / "docs" / "sop" / "new-character-guide.md").read_text(encoding="utf-8")
+    assert "提过" in guide, "SOP must state mentioned-counts-as-rating rule"
+    data = json.loads((REPO / "data" / "builds" / "engineer.json").read_text(encoding="utf-8"))
+    ratings = data.get("ratings", {})
+    assert isinstance(ratings, dict)
+    for en in ("Speed", "Luck", "Dodge"):
+        assert en in ratings, f"mentioned {en} must carry a rating, not empty"
+        assert ratings[en].get("rating") == "C", f"{en} must be C (顺手拿)"
+
+
 def test_index_clickable_after_first_batch_no_draft() -> None:
     """三问全过即去草稿索引可点：engineer + cyborg 均可点，无死链，搜索筛选仍全能力。"""
     r = run_build("--all")

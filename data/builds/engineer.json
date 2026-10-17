@@ -33,6 +33,18 @@
     "Crit Chance": {
       "rating": "D",
       "note": "不靠武器平砍，基本无用"
+    },
+    "Speed": {
+      "rating": "C",
+      "note": "拿过 9 点，评有点用；顺手拿，不专门 roll"
+    },
+    "Luck": {
+      "rating": "C",
+      "note": "考虑过 15 点但最终 roll 护甲；后期称还行但帽子太贵，顺手拿"
+    },
+    "Dodge": {
+      "rating": "C",
+      "note": "拿过 9 点，称可以堆一点；顺手拿，不专门 roll"
     }
   },
   "weapons_t1": [

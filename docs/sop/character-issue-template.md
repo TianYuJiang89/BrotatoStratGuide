@@ -26,7 +26,7 @@ Part of #8
 
 1. 入库字幕到 `data/subs/<slug>.en-orig.vtt`；专名对照 wiki 纠拼写（Brotato/武器/道具以 wiki 为准）。
 2. 只基于字幕 + 标题/描述/chapters 写骨架：属性优先级、武器 T1/T2（把数不限，每把一句话只认视频口径）、道具（下限弹性，至少 3 件够复现）、转向、商店/升级 Top3（两层：先 Top3 再点名，升级在前）、避坑 1–3（只收通用会死人的错）、高难特例（只收 Nightmare / Ultimate 变招）。不复述流水账、不翻原文、不搬截图。
-3. 按 10 段模板诚实填 `data/builds/<slug>.json`：无口径 `— / 作者未提及`；`中文 (English)`；DLC 角标；S–F 上色。不编、不藏段。
+3. 按 10 段模板诚实填 `data/builds/<slug>.json`：提过即算口径（顺手拿给 C 写明原话，全程未出现才空出 `— / 作者未提及`）；`中文 (English)`；DLC 角标；S–F 上色。不编、不藏段。
 4. 跑 `python scripts/build.py --slug <slug>`；绝不手改 `docs/`。机检全绿（`check.py` + `check_updates.py` + `check_resources.py`）再提 PR/推分支。
 
 ## 禁止

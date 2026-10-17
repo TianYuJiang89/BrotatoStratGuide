@@ -3,3 +3,5 @@ __pycache__/
 .mypy_cache/
 cookies.txt
 cookies.*.txt
+*_cookies.txt
+www.youtube.com_cookies.txt

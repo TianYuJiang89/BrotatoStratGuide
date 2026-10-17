@@ -78,12 +78,23 @@ def _old_to_variant(old: dict, covers: list[str], label: str = "") -> dict:
     }
 
 
+def _current_sop_version() -> str:
+    try:
+        raw = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        ver = raw.get("sop_version")
+        if isinstance(ver, str) and ver.strip():
+            return ver.strip()
+    except Exception:
+        pass
+    return ""
+
+
 def _make_workdir_with_variants(variants: list[dict]) -> tuple[Path, Path, Path, tempfile.TemporaryDirectory[str]]:
     tmp = tempfile.TemporaryDirectory()
     work = Path(tmp.name) / "work"
     shutil.copytree(REPO / "data", work / "data")
     shutil.copytree(REPO / "templates", work / "templates")
-    payload = {"slug": "cyborg", "variants": variants}
+    payload = {"slug": "cyborg", "sop_version": _current_sop_version(), "variants": variants}
     bf = work / "data" / "builds" / "cyborg.json"
     bf.parent.mkdir(parents=True, exist_ok=True)
     bf.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
@@ -181,6 +192,8 @@ def test_old_single_layer_keys_rejected() -> None:
         flat.pop("id", None); flat.pop("covers", None); flat.pop("label", None); flat.pop("status", None)
     else:
         flat = dict(old_flat)
+    flat["slug"] = "cyborg"
+    flat["sop_version"] = _current_sop_version()
     bf = work / "data" / "builds" / "cyborg.json"
     bf.parent.mkdir(parents=True, exist_ok=True)
     bf.write_text(json.dumps(flat, ensure_ascii=False), encoding="utf-8")

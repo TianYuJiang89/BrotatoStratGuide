@@ -15,6 +15,7 @@ import argparse
 import csv
 import html
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -36,6 +37,7 @@ SECTION_ORDER: list[str] = [
 
 # 构建数据必填顶层键: 缺键即结构 fail (缺段)。
 # #10 起 attrs_primary/secondary 由集中数据重渲染, 单角色包只给 ratings 口径。
+# #30 SOP 版本锁: 顶层 sop_version 必填, 与主 SOP 锚点一致才放行。
 REQUIRED_KEYS: list[str] = [
     "mechanism",
     "ratings",
@@ -49,6 +51,12 @@ REQUIRED_KEYS: list[str] = [
     "hard",
     "source",
 ]
+
+# SOP 版本锁 (#30): builds 自带规则版本戳, 不一致 build 直接 fail。
+# 统一锚点: docs/sop/new-character-guide.md 最新 commit 完整 40 位 SHA。
+# 三件同改历史验证: 三 SOP 文件同 commit 齐动, 主 SOP 驱动填表口径, 故单锚点足够。
+# 短 SHA (>=7 位前缀) 兼容人工手填, 缺字段/不匹配即 fail, 不生成产物。
+SOP_GUIDE_REL = "docs/sop/new-character-guide.md"
 
 EXPECTED_WAVES: list[str] = ["W1-5", "W6-12", "W13-20"]
 
@@ -82,6 +90,44 @@ PLACEHOLDER_MARKERS: tuple[str, ...] = ("占位", "待补", "待写", "demo-plac
 # 覆盖制 (#20 决议: A 胜出 + 动态诚实标签, #21 先改后做).
 # variants 数组内每变体 covers+label, tab 由证据驱动, 旧单层键与固定三 key 废除.
 DIFFICULTY_RANK: dict[str, int] = {"Danger 5": 1, "Nightmare": 2, "Ultimate": 3}
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
+def expected_sop_version() -> str:
+    repo = _repo_root()
+    sop_path = repo / "docs" / "sop" / "new-character-guide.md"
+    try:
+        proc = subprocess.run(
+            ["git", "log", "-1", "--format=%H", "--", str(sop_path)],
+            cwd=str(repo),
+            capture_output=True,
+            text=True,
+        )
+        ver = proc.stdout.strip()
+        if proc.returncode == 0 and ver:
+            return ver
+    except Exception:
+        pass
+    return ""
+
+
+def check_sop_version(data: dict[str, object], slug: str) -> list[str]:
+    """SOP 版本锁: 缺字段/不一致即 fail, 不生成产物, 报错指明期望版本."""
+    expected = expected_sop_version()
+    if not expected:
+        return [f"sop_version check unavailable: cannot determine expected SOP version (need git log {SOP_GUIDE_REL})"]
+    raw = data.get("sop_version")
+    if not isinstance(raw, str) or not raw.strip():
+        return [f"sop_version 缺失即 fail: builds/{slug}.json 缺 sop_version, want {expected} ({SOP_GUIDE_REL} @ {expected[:7]})"]
+    got = raw.strip()
+    if got == expected:
+        return []
+    if len(got) >= 7 and expected.startswith(got):
+        return []
+    return [f"sop_version 不一致即 fail: builds/{slug}.json got {got!r}, want {expected} ({SOP_GUIDE_REL} @ {expected[:7]})"]
 
 
 def _slugify_difficulty(value: str) -> str:
@@ -1564,6 +1610,9 @@ def build_slug(
         return ([f"missing build data: {build_path}"], [])
     data_raw = load_json(build_path)
     data: dict[str, object] = data_raw if isinstance(data_raw, dict) else {}
+    sop_errors = check_sop_version(data, slug)
+    if sop_errors:
+        return (sop_errors, [])
     errors = check_structure_data(data)
     if errors:
         return (errors, [])

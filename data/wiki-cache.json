@@ -1,0 +1,1627 @@
+{
+  "base": "https://brotato.wiki.spellsandguns.com",
+  "updated": "2026-10-17",
+  "source": "spellsandguns wiki Stats 2026-10-17 + fandom Characters/Stats api 2026-10-16",
+  "stats": {
+    "Max HP": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Max_HP",
+      "file": "File:Max_HP.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/3b/Max_HP.png/20px-Max_HP.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Acid",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/18/Acid.png/60px-Acid.png"
+        },
+        {
+          "en": "Alien Baby",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/ea/Alien_Baby.png/60px-Alien_Baby.png"
+        },
+        {
+          "en": "Alien Magic",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/67/Alien_Magic.png/60px-Alien_Magic.png"
+        },
+        {
+          "en": "Alien Worm",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/40/Alien_Worm.png/60px-Alien_Worm.png"
+        },
+        {
+          "en": "Broken Mouth",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f1/Broken_Mouth.png/60px-Broken_Mouth.png"
+        },
+        {
+          "en": "Cake",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f0/Cake.png/60px-Cake.png"
+        },
+        {
+          "en": "Defective Steroids",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/54/Defective_Steroids.png/60px-Defective_Steroids.png"
+        },
+        {
+          "en": "Esty's Couch",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/2c/Esty%27s_Couch.png/60px-Esty%27s_Couch.png"
+        },
+        {
+          "en": "Extra Stomach",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c4/Extra_Stomach.png/60px-Extra_Stomach.png"
+        },
+        {
+          "en": "Grind's Magical Leaf",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/ab/Grind%27s_Magical_Leaf.png/60px-Grind%27s_Magical_Leaf.png"
+        },
+        {
+          "en": "Gentle Alien",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/22/Gentle_Alien.png/60px-Gentle_Alien.png"
+        },
+        {
+          "en": "Jelly",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/05/Jelly.png/60px-Jelly.png"
+        },
+        {
+          "en": "Knot",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/00/Knot.png/60px-Knot.png"
+        },
+        {
+          "en": "Kraken's Eye",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/72/Kraken%27s_Eye.png/60px-Kraken%27s_Eye.png"
+        },
+        {
+          "en": "Little Muscley Dude",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/79/Little_Muscley_Dude.png/60px-Little_Muscley_Dude.png"
+        },
+        {
+          "en": "Medal",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b7/Medal.png/60px-Medal.png"
+        },
+        {
+          "en": "Octopus",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/5a/Octopus.png/60px-Octopus.png"
+        },
+        {
+          "en": "Padding",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/d/d6/Padding.png/60px-Padding.png"
+        },
+        {
+          "en": "Panda",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/00/Panda.png/60px-Panda.png"
+        },
+        {
+          "en": "Potato",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c2/Potato.png/60px-Potato.png"
+        },
+        {
+          "en": "Shmoop",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/87/Shmoop.png/60px-Shmoop.png"
+        },
+        {
+          "en": "Spicy Sauce",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/8b/Spicy_Sauce.png/60px-Spicy_Sauce.png"
+        },
+        {
+          "en": "Stone Skin",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/2d/Stone_Skin.png/60px-Stone_Skin.png"
+        },
+        {
+          "en": "Torture",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e7/Torture.png/60px-Torture.png"
+        },
+        {
+          "en": "Warrior Helmet",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/68/Warrior_Helmet.png/60px-Warrior_Helmet.png"
+        },
+        {
+          "en": "Weird Ghost",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/4f/Weird_Ghost.png/60px-Weird_Ghost.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "HP Regeneration": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/HP_Regeneration",
+      "file": "File:HP_Regeneration.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/8d/HP_Regeneration.png/20px-HP_Regeneration.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Alien Magic",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/67/Alien_Magic.png/60px-Alien_Magic.png"
+        },
+        {
+          "en": "Alien Worm",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/40/Alien_Worm.png/60px-Alien_Worm.png"
+        },
+        {
+          "en": "Baby Squid",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/69/Baby_Squid.png/60px-Baby_Squid.png"
+        },
+        {
+          "en": "Blood Leech",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/78/Blood_Leech.png/60px-Blood_Leech.png"
+        },
+        {
+          "en": "Campfire",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/01/Campfire.png/60px-Campfire.png"
+        },
+        {
+          "en": "Candle",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/30/Candle.png/60px-Candle.png"
+        },
+        {
+          "en": "Coral",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b1/Coral.png/60px-Coral.png"
+        },
+        {
+          "en": "Fairy",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/43/Fairy.png/60px-Fairy.png"
+        },
+        {
+          "en": "Fried Rice",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/61/Fried_Rice.png/60px-Fried_Rice.png"
+        },
+        {
+          "en": "Grind's Magical Leaf",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/ab/Grind%27s_Magical_Leaf.png/60px-Grind%27s_Magical_Leaf.png"
+        },
+        {
+          "en": "Lure",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/11/Lure.png/60px-Lure.png"
+        },
+        {
+          "en": "Mammoth",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a5/Mammoth.png/60px-Mammoth.png"
+        },
+        {
+          "en": "Medikit",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a3/Medikit.png/60px-Medikit.png"
+        },
+        {
+          "en": "Mushroom",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/8c/Mushroom.png/60px-Mushroom.png"
+        },
+        {
+          "en": "Octopus",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/5a/Octopus.png/60px-Octopus.png"
+        },
+        {
+          "en": "Penguin",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/97/Penguin.png/60px-Penguin.png"
+        },
+        {
+          "en": "Plant",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/d/d1/Plant.png/60px-Plant.png"
+        },
+        {
+          "en": "Potato",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c2/Potato.png/60px-Potato.png"
+        },
+        {
+          "en": "Regeneration Potion",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/2d/Regeneration_Potion.png/60px-Regeneration_Potion.png"
+        },
+        {
+          "en": "Sad Tomato",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/69/Sad_Tomato.png/60px-Sad_Tomato.png"
+        },
+        {
+          "en": "Scarf",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/56/Scarf.png/60px-Scarf.png"
+        },
+        {
+          "en": "Shackles",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b7/Shackles.png/60px-Shackles.png"
+        },
+        {
+          "en": "Shmoop",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/87/Shmoop.png/60px-Shmoop.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Life Steal": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Life_Steal",
+      "file": "File:Life_Steal.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b5/Life_Steal.png/20px-Life_Steal.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Bat",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/ad/Bat.png/60px-Bat.png"
+        },
+        {
+          "en": "Blood Leech",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/78/Blood_Leech.png/60px-Blood_Leech.png"
+        },
+        {
+          "en": "Bloody Hand",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/11/Bloody_Hand.png/60px-Bloody_Hand.png"
+        },
+        {
+          "en": "Butterfly",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/10/Butterfly.png/60px-Butterfly.png"
+        },
+        {
+          "en": "Cape",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/6e/Cape.png/60px-Cape.png"
+        },
+        {
+          "en": "Decomposing Flesh",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a8/Decomposing_Flesh.png/60px-Decomposing_Flesh.png"
+        },
+        {
+          "en": "Fin",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/82/Fin.png/60px-Fin.png"
+        },
+        {
+          "en": "Fresh Meat",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/ec/Fresh_Meat.png/60px-Fresh_Meat.png"
+        },
+        {
+          "en": "Mouse",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/5c/Mouse.png/60px-Mouse.png"
+        },
+        {
+          "en": "Octopus",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/5a/Octopus.png/60px-Octopus.png"
+        },
+        {
+          "en": "Ritual",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/70/Ritual.png/60px-Ritual.png"
+        },
+        {
+          "en": "Whetstone",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/9f/Whetstone.png/60px-Whetstone.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Damage": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Damage",
+      "file": "File:Damage.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/6a/Damage.png/20px-Damage.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Ashes",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f9/Ashes.png/60px-Ashes.png"
+        },
+        {
+          "en": "Bait",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/ff/Bait.png/60px-Bait.png"
+        },
+        {
+          "en": "Ball and Chain",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/60/Ball_and_Chain.png/60px-Ball_and_Chain.png"
+        },
+        {
+          "en": "Bone Dice",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/bb/Bone_Dice.png/60px-Bone_Dice.png"
+        },
+        {
+          "en": "Bloody Hand",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/11/Bloody_Hand.png/60px-Bloody_Hand.png"
+        },
+        {
+          "en": "Cauldron",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/37/Cauldron.png/60px-Cauldron.png"
+        },
+        {
+          "en": "Coil",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e4/Coil.png/60px-Coil.png"
+        },
+        {
+          "en": "Corrupted Shard",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e4/Corrupted_Shard.png/60px-Corrupted_Shard.png"
+        },
+        {
+          "en": "Cyclops Worm",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/51/Cyclops_Worm.png/60px-Cyclops_Worm.png"
+        },
+        {
+          "en": "Focus",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/37/Focus.png/60px-Focus.png"
+        },
+        {
+          "en": "Gentle Alien",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/22/Gentle_Alien.png/60px-Gentle_Alien.png"
+        },
+        {
+          "en": "Glass Cannon",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/6e/Glass_Cannon.png/60px-Glass_Cannon.png"
+        },
+        {
+          "en": "Head Injury",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/49/Head_Injury.png/60px-Head_Injury.png"
+        },
+        {
+          "en": "Heavy Bullets",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/71/Heavy_Bullets.png/60px-Heavy_Bullets.png"
+        },
+        {
+          "en": "Injection",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/44/Injection.png/60px-Injection.png"
+        },
+        {
+          "en": "Knot",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/00/Knot.png/60px-Knot.png"
+        },
+        {
+          "en": "Lantern",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f5/Lantern.png/60px-Lantern.png"
+        },
+        {
+          "en": "Medal",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b7/Medal.png/60px-Medal.png"
+        },
+        {
+          "en": "Pearl",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/73/Pearl.png/60px-Pearl.png"
+        },
+        {
+          "en": "Power Generator",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/2e/Power_Generator.png/60px-Power_Generator.png"
+        },
+        {
+          "en": "Missile",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/fc/Missile.png/60px-Missile.png"
+        },
+        {
+          "en": "Potato",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c2/Potato.png/60px-Potato.png"
+        },
+        {
+          "en": "Ritual",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/70/Ritual.png/60px-Ritual.png"
+        },
+        {
+          "en": "Spider",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/84/Spider.png/60px-Spider.png"
+        },
+        {
+          "en": "Triangle of Power",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/37/Triangle_of_Power.png/60px-Triangle_of_Power.png"
+        },
+        {
+          "en": "Vigilante Ring",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/80/Vigilante_Ring.png/60px-Vigilante_Ring.png"
+        },
+        {
+          "en": "Wisdom",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/8a/Wisdom.png/60px-Wisdom.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Melee Damage": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Melee_Damage",
+      "file": "File:Melee_Damage.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/01/Melee_Damage.png/20px-Melee_Damage.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Alloy",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/9a/Alloy.png/60px-Alloy.png"
+        },
+        {
+          "en": "Big Arms",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/0c/Big_Arms.png/60px-Big_Arms.png"
+        },
+        {
+          "en": "Black Belt",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f4/Black_Belt.png/60px-Black_Belt.png"
+        },
+        {
+          "en": "Boxing Glove",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e1/Boxing_Glove.png/60px-Boxing_Glove.png"
+        },
+        {
+          "en": "Charcoal",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/4f/Charcoal.png/60px-Charcoal.png"
+        },
+        {
+          "en": "Claw Tree",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f7/Claw_Tree.png/60px-Claw_Tree.png"
+        },
+        {
+          "en": "Defective Steroids",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/54/Defective_Steroids.png/60px-Defective_Steroids.png"
+        },
+        {
+          "en": "Gnome",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/78/Gnome.png/60px-Gnome.png"
+        },
+        {
+          "en": "Goat Skull",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/39/Goat_Skull.png/60px-Goat_Skull.png"
+        },
+        {
+          "en": "Handcuffs",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/14/Handcuffs.png/60px-Handcuffs.png"
+        },
+        {
+          "en": "Hedgehog",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c4/Hedgehog.png/60px-Hedgehog.png"
+        },
+        {
+          "en": "Little Muscley Dude",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/79/Little_Muscley_Dude.png/60px-Little_Muscley_Dude.png"
+        },
+        {
+          "en": "Mammoth",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a5/Mammoth.png/60px-Mammoth.png"
+        },
+        {
+          "en": "Mastery",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/58/Mastery.png/60px-Mastery.png"
+        },
+        {
+          "en": "Robot Arm",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b5/Robot_Arm.png/60px-Robot_Arm.png"
+        },
+        {
+          "en": "Riposte",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/d/de/Riposte.png/60px-Riposte.png"
+        },
+        {
+          "en": "Saltwater",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a1/Saltwater.png/60px-Saltwater.png"
+        },
+        {
+          "en": "Scarf",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/56/Scarf.png/60px-Scarf.png"
+        },
+        {
+          "en": "Wheat",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e2/Wheat.png/60px-Wheat.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Ranged Damage": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Ranged_Damage",
+      "file": "File:Ranged_Damage.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/cb/Ranged_Damage.png/20px-Ranged_Damage.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Alloy",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/9a/Alloy.png/60px-Alloy.png"
+        },
+        {
+          "en": "Big Arms",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/0c/Big_Arms.png/60px-Big_Arms.png"
+        },
+        {
+          "en": "Feather",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/33/Feather.png/60px-Feather.png"
+        },
+        {
+          "en": "Handcuffs",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/14/Handcuffs.png/60px-Handcuffs.png"
+        },
+        {
+          "en": "Heavy Bullets",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/71/Heavy_Bullets.png/60px-Heavy_Bullets.png"
+        },
+        {
+          "en": "Hedgehog",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c4/Hedgehog.png/60px-Hedgehog.png"
+        },
+        {
+          "en": "Honey",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c6/Honey.png/60px-Honey.png"
+        },
+        {
+          "en": "Lens",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/ae/Lens.png/60px-Lens.png"
+        },
+        {
+          "en": "Mutation",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e5/Mutation.png/60px-Mutation.png"
+        },
+        {
+          "en": "Reinforced Steel",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/6b/Reinforced_Steel.png/60px-Reinforced_Steel.png"
+        },
+        {
+          "en": "Scope",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/74/Scope.png/60px-Scope.png"
+        },
+        {
+          "en": "Small Magazine",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/06/Small_Magazine.png/60px-Small_Magazine.png"
+        },
+        {
+          "en": "Wheat",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e2/Wheat.png/60px-Wheat.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Elemental Damage": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Elemental_Damage",
+      "file": "File:Elemental_Damage.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/82/Elemental_Damage.png/20px-Elemental_Damage.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Alloy",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/9a/Alloy.png/60px-Alloy.png"
+        },
+        {
+          "en": "Boiling Water",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/85/Boiling_Water.png/60px-Boiling_Water.png"
+        },
+        {
+          "en": "Campfire",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/01/Campfire.png/60px-Campfire.png"
+        },
+        {
+          "en": "Candle",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/30/Candle.png/60px-Candle.png"
+        },
+        {
+          "en": "Charcoal",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/4f/Charcoal.png/60px-Charcoal.png"
+        },
+        {
+          "en": "Energy Bracelet",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/cc/Energy_Bracelet.png/60px-Energy_Bracelet.png"
+        },
+        {
+          "en": "Eyes Surgery",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/26/Eyes_Surgery.png/60px-Eyes_Surgery.png"
+        },
+        {
+          "en": "Frozen Heart",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/18/Frozen_Heart.png/60px-Frozen_Heart.png"
+        },
+        {
+          "en": "Fuel Tank",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/bb/Fuel_Tank.png/60px-Fuel_Tank.png"
+        },
+        {
+          "en": "Gnome",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/78/Gnome.png/60px-Gnome.png"
+        },
+        {
+          "en": "Handcuffs",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/14/Handcuffs.png/60px-Handcuffs.png"
+        },
+        {
+          "en": "Ice Cube",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f9/Ice_Cube.png/60px-Ice_Cube.png"
+        },
+        {
+          "en": "Mutation",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e5/Mutation.png/60px-Mutation.png"
+        },
+        {
+          "en": "Toxic Sludge",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/38/Toxic_Sludge.png/60px-Toxic_Sludge.png"
+        },
+        {
+          "en": "Wolf Helmet",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/35/Wolf_Helmet.png/60px-Wolf_Helmet.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Attack Speed": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Attack_Speed",
+      "file": "File:Attack_Speed.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/6e/Attack_Speed.png/20px-Attack_Speed.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Ashes",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f9/Ashes.png/60px-Ashes.png"
+        },
+        {
+          "en": "Banner",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/87/Banner.png/60px-Banner.png"
+        },
+        {
+          "en": "Coffee",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e9/Coffee.png/60px-Coffee.png"
+        },
+        {
+          "en": "Community Support",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/0e/Community_Support.png/60px-Community_Support.png"
+        },
+        {
+          "en": "Crystal",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/31/Crystal.png/60px-Crystal.png"
+        },
+        {
+          "en": "Gummy Berserker",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/16/Gummy_Berserker.png/60px-Gummy_Berserker.png"
+        },
+        {
+          "en": "Improved Tools",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/31/Improved_Tools.png/60px-Improved_Tools.png"
+        },
+        {
+          "en": "Poisonous Tonic",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/22/Poisonous_Tonic.png/60px-Poisonous_Tonic.png"
+        },
+        {
+          "en": "Potato",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c2/Potato.png/60px-Potato.png"
+        },
+        {
+          "en": "Retromation's Hoodie",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/86/Retromation%27s_Hoodie.png/60px-Retromation%27s_Hoodie.png"
+        },
+        {
+          "en": "Saltwater",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a1/Saltwater.png/60px-Saltwater.png"
+        },
+        {
+          "en": "Small Magazine",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/06/Small_Magazine.png/60px-Small_Magazine.png"
+        },
+        {
+          "en": "Spider",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/84/Spider.png/60px-Spider.png"
+        },
+        {
+          "en": "Statue",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/ba/Statue.png/60px-Statue.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Crit Chance": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Crit_Chance",
+      "file": "File:Crit_Chance.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/41/Crit_Chance.png/20px-Crit_Chance.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Alloy",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/9a/Alloy.png/60px-Alloy.png"
+        },
+        {
+          "en": "Blindfold",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/18/Blindfold.png/60px-Blindfold.png"
+        },
+        {
+          "en": "Claw Tree",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f7/Claw_Tree.png/60px-Claw_Tree.png"
+        },
+        {
+          "en": "Energy Bracelet",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/cc/Energy_Bracelet.png/60px-Energy_Bracelet.png"
+        },
+        {
+          "en": "Exoskeleton",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/15/Exoskeleton.png/60px-Exoskeleton.png"
+        },
+        {
+          "en": "Eyepatch",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b7/Eyepatch.png/60px-Eyepatch.png"
+        },
+        {
+          "en": "Frozen Heart",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/18/Frozen_Heart.png/60px-Frozen_Heart.png"
+        },
+        {
+          "en": "Insanity",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/aa/Insanity.png/60px-Insanity.png"
+        },
+        {
+          "en": "Night Goggles",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/d/d5/Night_Goggles.png/60px-Night_Goggles.png"
+        },
+        {
+          "en": "Pile of Books",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/0f/Pile_of_Books.png/60px-Pile_of_Books.png"
+        },
+        {
+          "en": "Poisonous Tonic",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/22/Poisonous_Tonic.png/60px-Poisonous_Tonic.png"
+        },
+        {
+          "en": "Sunglasses",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/92/Sunglasses.png/60px-Sunglasses.png"
+        },
+        {
+          "en": "Tentacle",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/54/Tentacle.png/60px-Tentacle.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Engineering": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Engineering",
+      "file": "File:Engineering_Stat.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/28/Engineering_Stat.png/20px-Engineering_Stat.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Alloy",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/9a/Alloy.png/60px-Alloy.png"
+        },
+        {
+          "en": "Book",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f3/Book.png/60px-Book.png"
+        },
+        {
+          "en": "Cog",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/ed/Cog.png/60px-Cog.png"
+        },
+        {
+          "en": "Compass",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/92/Compass.png/60px-Compass.png"
+        },
+        {
+          "en": "Diploma",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/49/Diploma.png/60px-Diploma.png"
+        },
+        {
+          "en": "Duct Tape",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/4e/Duct_Tape.png/60px-Duct_Tape.png"
+        },
+        {
+          "en": "Exoskeleton",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/15/Exoskeleton.png/60px-Exoskeleton.png"
+        },
+        {
+          "en": "Lighthouse",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/be/Lighthouse.png/60px-Lighthouse.png"
+        },
+        {
+          "en": "Metal Detector",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/35/Metal_Detector.png/60px-Metal_Detector.png"
+        },
+        {
+          "en": "Nail",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/40/Nail.png/60px-Nail.png"
+        },
+        {
+          "en": "Pencil",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/ea/Pencil.png/60px-Pencil.png"
+        },
+        {
+          "en": "Pile of Books",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/0f/Pile_of_Books.png/60px-Pile_of_Books.png"
+        },
+        {
+          "en": "Pocket Factory",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e5/Pocket_Factory.png/60px-Pocket_Factory.png"
+        },
+        {
+          "en": "Reinforced Steel",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/6b/Reinforced_Steel.png/60px-Reinforced_Steel.png"
+        },
+        {
+          "en": "Robot Arm",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b5/Robot_Arm.png/60px-Robot_Arm.png"
+        },
+        {
+          "en": "Shackles",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b7/Shackles.png/60px-Shackles.png"
+        },
+        {
+          "en": "Strange Book",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/78/Strange_Book.png/60px-Strange_Book.png"
+        },
+        {
+          "en": "Toolbox",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/46/Toolbox.png/60px-Toolbox.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Range": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Range",
+      "file": "File:Range_Stat.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/21/Range_Stat.png/20px-Range_Stat.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Ashes",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f9/Ashes.png/60px-Ashes.png"
+        },
+        {
+          "en": "Baby Gecko",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/3b/Baby_Gecko.png/60px-Baby_Gecko.png"
+        },
+        {
+          "en": "Banner",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/87/Banner.png/60px-Banner.png"
+        },
+        {
+          "en": "Glasses",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b4/Glasses.png/60px-Glasses.png"
+        },
+        {
+          "en": "Gummy Berserker",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/16/Gummy_Berserker.png/60px-Gummy_Berserker.png"
+        },
+        {
+          "en": "Lantern",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f5/Lantern.png/60px-Lantern.png"
+        },
+        {
+          "en": "Night Goggles",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/d/d5/Night_Goggles.png/60px-Night_Goggles.png"
+        },
+        {
+          "en": "Poisonous Tonic",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/22/Poisonous_Tonic.png/60px-Poisonous_Tonic.png"
+        },
+        {
+          "en": "Shackles",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b7/Shackles.png/60px-Shackles.png"
+        },
+        {
+          "en": "Spyglass",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c1/Spyglass.png/60px-Spyglass.png"
+        },
+        {
+          "en": "Wings",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a8/Wings.png/60px-Wings.png"
+        },
+        {
+          "en": "Scope",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/74/Scope.png/60px-Scope.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Armor": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Armor",
+      "file": "File:Armor.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/06/Armor.png/20px-Armor.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Ball and Chain",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/60/Ball_and_Chain.png/60px-Ball_and_Chain.png"
+        },
+        {
+          "en": "Barricade",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/12/Barricade.png/60px-Barricade.png"
+        },
+        {
+          "en": "Duct Tape",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/4e/Duct_Tape.png/60px-Duct_Tape.png"
+        },
+        {
+          "en": "Exoskeleton",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/15/Exoskeleton.png/60px-Exoskeleton.png"
+        },
+        {
+          "en": "Helmet",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/37/Helmet.png/60px-Helmet.png"
+        },
+        {
+          "en": "Leather Vest",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b6/Leather_Vest.png/60px-Leather_Vest.png"
+        },
+        {
+          "en": "Medal",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b7/Medal.png/60px-Medal.png"
+        },
+        {
+          "en": "Metal Plate",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a7/Metal_Plate.png/60px-Metal_Plate.png"
+        },
+        {
+          "en": "Sifd's Relic",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/84/Sifd%27s_Relic.png/60px-Sifd%27s_Relic.png"
+        },
+        {
+          "en": "Triangle of Power",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/37/Triangle_of_Power.png/60px-Triangle_of_Power.png"
+        },
+        {
+          "en": "Warrior Helmet",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/68/Warrior_Helmet.png/60px-Warrior_Helmet.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Dodge": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Dodge",
+      "file": "File:Dodge_Stat.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/72/Dodge_Stat.png/20px-Dodge_Stat.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Adrenaline",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e3/Adrenaline.png/60px-Adrenaline.png"
+        },
+        {
+          "en": "Blindfold",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/18/Blindfold.png/60px-Blindfold.png"
+        },
+        {
+          "en": "Cape",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/6e/Cape.png/60px-Cape.png"
+        },
+        {
+          "en": "Chameleon",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f5/Chameleon.png/60px-Chameleon.png"
+        },
+        {
+          "en": "Clover",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c4/Clover.png/60px-Clover.png"
+        },
+        {
+          "en": "Feather",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/33/Feather.png/60px-Feather.png"
+        },
+        {
+          "en": "Gambling Token",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/d/df/Gambling_Token.png/60px-Gambling_Token.png"
+        },
+        {
+          "en": "Ghost Outfit",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/22/Ghost_Outfit.png/60px-Ghost_Outfit.png"
+        },
+        {
+          "en": "Jet Pack",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/4b/Jet_Pack.png/60px-Jet_Pack.png"
+        },
+        {
+          "en": "Leather Vest",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b6/Leather_Vest.png/60px-Leather_Vest.png"
+        },
+        {
+          "en": "Peaceful Bee",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/cb/Peaceful_Bee.png/60px-Peaceful_Bee.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Speed": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Speed",
+      "file": "File:Speed_Stat.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e0/Speed_Stat.png/20px-Speed_Stat.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Beanie",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/51/Beanie.png/60px-Beanie.png"
+        },
+        {
+          "en": "Clockwork Wasp",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/8a/Clockwork_Wasp.png/60px-Clockwork_Wasp.png"
+        },
+        {
+          "en": "Compass",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/92/Compass.png/60px-Compass.png"
+        },
+        {
+          "en": "Exoskeleton",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/15/Exoskeleton.png/60px-Exoskeleton.png"
+        },
+        {
+          "en": "Fin",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/82/Fin.png/60px-Fin.png"
+        },
+        {
+          "en": "Jet Pack",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/4b/Jet_Pack.png/60px-Jet_Pack.png"
+        },
+        {
+          "en": "Medal",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b7/Medal.png/60px-Medal.png"
+        },
+        {
+          "en": "Potato",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c2/Potato.png/60px-Potato.png"
+        },
+        {
+          "en": "Saltwater",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a1/Saltwater.png/60px-Saltwater.png"
+        },
+        {
+          "en": "Scarf",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/56/Scarf.png/60px-Scarf.png"
+        },
+        {
+          "en": "Terrified Onion",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/11/Terrified_Onion.png/60px-Terrified_Onion.png"
+        },
+        {
+          "en": "Wings",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a8/Wings.png/60px-Wings.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Luck": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Luck",
+      "file": "File:Luck.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f0/Luck.png/20px-Luck.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Bowler Hat",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e1/Bowler_Hat.png/60px-Bowler_Hat.png"
+        },
+        {
+          "en": "Clover",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c4/Clover.png/60px-Clover.png"
+        },
+        {
+          "en": "Lost Duck",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/84/Lost_Duck.png/60px-Lost_Duck.png"
+        },
+        {
+          "en": "Lucky Charm",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/01/Lucky_Charm.png/60px-Lucky_Charm.png"
+        },
+        {
+          "en": "Lucky Coin",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a3/Lucky_Coin.png/60px-Lucky_Coin.png"
+        },
+        {
+          "en": "Metal Detector",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/35/Metal_Detector.png/60px-Metal_Detector.png"
+        },
+        {
+          "en": "Panda",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/00/Panda.png/60px-Panda.png"
+        },
+        {
+          "en": "Potato",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c2/Potato.png/60px-Potato.png"
+        },
+        {
+          "en": "Propeller Hat",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/96/Propeller_Hat.png/60px-Propeller_Hat.png"
+        },
+        {
+          "en": "Shady Potion",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/9/9a/Shady_Potion.png/60px-Shady_Potion.png"
+        },
+        {
+          "en": "Wolf Helmet",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/35/Wolf_Helmet.png/60px-Wolf_Helmet.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Harvesting": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Harvesting",
+      "file": "File:Harvesting.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/bb/Harvesting.png/20px-Harvesting.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": [
+        {
+          "en": "Blood Donation",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/3f/Blood_Donation.png/60px-Blood_Donation.png"
+        },
+        {
+          "en": "Bowler Hat",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e1/Bowler_Hat.png/60px-Bowler_Hat.png"
+        },
+        {
+          "en": "Crown",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f3/Crown.png/60px-Crown.png"
+        },
+        {
+          "en": "Fertilizer",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/25/Fertilizer.png/60px-Fertilizer.png"
+        },
+        {
+          "en": "Little Frog",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b2/Little_Frog.png/60px-Little_Frog.png"
+        },
+        {
+          "en": "Peaceful Bee",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/cb/Peaceful_Bee.png/60px-Peaceful_Bee.png"
+        },
+        {
+          "en": "Starfish",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/52/Starfish.png/60px-Starfish.png"
+        },
+        {
+          "en": "Tractor",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/7a/Tractor.png/60px-Tractor.png"
+        },
+        {
+          "en": "Wheat",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e2/Wheat.png/60px-Wheat.png"
+        },
+        {
+          "en": "Wheelbarrow",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/4a/Wheelbarrow.png/60px-Wheelbarrow.png"
+        },
+        {
+          "en": "White Flag",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/43/White_Flag.png/60px-White_Flag.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Curse": {
+      "page": "https://brotato.wiki.spellsandguns.com/wiki/Curse",
+      "file": "File:Curse.png",
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/85/Curse.png/20px-Curse.png",
+      "width": 20,
+      "height": 20,
+      "missing": false,
+      "tooltip": null,
+      "updated": "2026-10-17"
+    },
+    "Consumable Heal": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Alien Worm",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/40/Alien_Worm.png/30px-Alien_Worm.png"
+        },
+        {
+          "en": "Jerky",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/68/Jerky.png/30px-Jerky.png"
+        },
+        {
+          "en": "Lemonade",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/2a/Lemonade.png/30px-Lemonade.png"
+        },
+        {
+          "en": "Weird Food",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/bb/Weird_Food.png/30px-Weird_Food.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "% Materials Healing": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Cute Monkey",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/83/Cute_Monkey.png/30px-Cute_Monkey.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "% XP Gain": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Bean Teacher",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/88/Bean_Teacher.png/30px-Bean_Teacher.png"
+        },
+        {
+          "en": "Black Belt",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f4/Black_Belt.png/30px-Black_Belt.png"
+        },
+        {
+          "en": "Celery Tea",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/4a/Celery_Tea.png/30px-Celery_Tea.png"
+        },
+        {
+          "en": "Diploma",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/49/Diploma.png/30px-Diploma.png"
+        },
+        {
+          "en": "Feather",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/33/Feather.png/30px-Feather.png"
+        },
+        {
+          "en": "Peacock",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/61/Peacock.png/30px-Peacock.png"
+        },
+        {
+          "en": "Scar",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c7/Scar.png/30px-Scar.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "% Pickup Range": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Alien Tongue",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a7/Alien_Tongue.png/30px-Alien_Tongue.png"
+        },
+        {
+          "en": "Cauldron",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/37/Cauldron.png/30px-Cauldron.png"
+        },
+        {
+          "en": "Gnome",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/78/Gnome.png/30px-Gnome.png"
+        },
+        {
+          "en": "Little Frog",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/b2/Little_Frog.png/30px-Little_Frog.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "% Items Price": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Coupon",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c5/Coupon.png/30px-Coupon.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "% Explosion Damage": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Dynamite",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/fc/Dynamite.png/30px-Dynamite.png"
+        },
+        {
+          "en": "Explosive Shells",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/fb/Explosive_Shells.png/30px-Explosive_Shells.png"
+        },
+        {
+          "en": "Honey",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c6/Honey.png/30px-Honey.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "% Explosion Size": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Explosive Shells",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/fb/Explosive_Shells.png/30px-Explosive_Shells.png"
+        },
+        {
+          "en": "Honey",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c6/Honey.png/30px-Honey.png"
+        },
+        {
+          "en": "Plastic Explosive",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/b/bb/Plastic_Explosive.png/30px-Plastic_Explosive.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Bounces": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Ricochet",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/87/Ricochet.png/30px-Ricochet.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Piercing": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Bandana",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/0d/Bandana.png/30px-Bandana.png"
+        },
+        {
+          "en": "Sharp Bullet",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/6b/Sharp_Bullet.png/30px-Sharp_Bullet.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "% Piercing Damage": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Pumpkin",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/64/Pumpkin.png/30px-Pumpkin.png"
+        },
+        {
+          "en": "Sharp Bullet",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/6b/Sharp_Bullet.png/30px-Sharp_Bullet.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "% Damage against Bosses": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Silver Bullet",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/0/0f/Silver_Bullet.png/30px-Silver_Bullet.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "% Structure Attack Speed": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Clockwork Wasp",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/8a/Clockwork_Wasp.png/30px-Clockwork_Wasp.png"
+        },
+        {
+          "en": "Improved Tools",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/31/Improved_Tools.png/30px-Improved_Tools.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Structure Range": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Builder",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/14/Builder.png/30px-Builder.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "% Burning Speed": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Eyes Surgery",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/26/Eyes_Surgery.png/30px-Eyes_Surgery.png"
+        },
+        {
+          "en": "Frozen Heart",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/1/18/Frozen_Heart.png/30px-Frozen_Heart.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Burning Spread": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Snake",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/5a/Snake.png/30px-Snake.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Knockback": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Ball and Chain",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/6/60/Ball_and_Chain.png/30px-Ball_and_Chain.png"
+        },
+        {
+          "en": "Banner",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/8/87/Banner.png/30px-Banner.png"
+        },
+        {
+          "en": "Coil",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e4/Coil.png/30px-Coil.png"
+        },
+        {
+          "en": "Black Belt",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/f/f4/Black_Belt.png/30px-Black_Belt.png"
+        },
+        {
+          "en": "Boxing Glove",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e1/Boxing_Glove.png/30px-Boxing_Glove.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "% Double Material Chance": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Metal Detector",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/35/Metal_Detector.png/30px-Metal_Detector.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Free Rerolls": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Dangerous Bunny",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/79/Dangerous_Bunny.png/30px-Dangerous_Bunny.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "Trees": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Tree",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/ac/Tree.png/30px-Tree.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "% Enemies": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Black Flag",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a7/Black_Flag.png/30px-Black_Flag.png"
+        },
+        {
+          "en": "Candle",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/3/30/Candle.png/30px-Candle.png"
+        },
+        {
+          "en": "Gentle Alien",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/2/22/Gentle_Alien.png/30px-Gentle_Alien.png"
+        },
+        {
+          "en": "Mouse",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/5/5c/Mouse.png/30px-Mouse.png"
+        },
+        {
+          "en": "White Flag",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/4/43/White_Flag.png/30px-White_Flag.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "% Enemy Speed": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Snail",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/d/d2/Snail.png/30px-Snail.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    },
+    "% Reroll Price": {
+      "page": null,
+      "file": null,
+      "thumb": null,
+      "width": null,
+      "height": null,
+      "missing": true,
+      "tooltip": [
+        {
+          "en": "Spyglass",
+          "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/c/c1/Spyglass.png/30px-Spyglass.png"
+        }
+      ],
+      "updated": "2026-10-17"
+    }
+  }
+}

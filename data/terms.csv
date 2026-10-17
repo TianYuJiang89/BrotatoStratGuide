@@ -1,0 +1,40 @@
+en,zh,type,dlc,source_version,needs_review
+Max HP,最大生命,primary,,wiki-2026-10-16; client-pending,TRUE
+HP Regeneration,生命回复,primary,,wiki-2026-10-16; client-pending,TRUE
+Life Steal,生命窃取,primary,,wiki-2026-10-16; client-pending,FALSE
+Damage,伤害,primary,,wiki-2026-10-16; client-pending,TRUE
+Melee Damage,近战伤害,primary,,wiki-2026-10-16; client-pending,TRUE
+Ranged Damage,远程伤害,primary,,wiki-2026-10-16; client-pending,TRUE
+Elemental Damage,元素伤害,primary,,wiki-2026-10-16; client-pending,TRUE
+Attack Speed,攻击速度,primary,,wiki-2026-10-16; client-pending,TRUE
+Crit Chance,暴击率,primary,,wiki-2026-10-16; client-pending,TRUE
+Engineering,工程,primary,,wiki-2026-10-16; client-pending,TRUE
+Range,攻击范围,primary,,wiki-2026-10-16; client-pending,TRUE
+Armor,护甲,primary,,wiki-2026-10-16; client-pending,TRUE
+Dodge,闪避,primary,,wiki-2026-10-16; client-pending,TRUE
+Speed,移动速度,primary,,wiki-2026-10-16; client-pending,TRUE
+Luck,幸运,primary,,wiki-2026-10-16; client-pending,TRUE
+Harvesting,收获,primary,,wiki-2026-10-16; client-pending,TRUE
+Curse,诅咒,primary,abyssal,wiki-2026-10-16; client-pending,TRUE
+Consumable Heal,消耗品治疗,secondary,,wiki-2026-10-16; client-pending,TRUE
+% Materials Healing,材料回血,secondary,,wiki-2026-10-16; client-pending,TRUE
+% XP Gain,经验获取,secondary,,wiki-2026-10-16; client-pending,TRUE
+% Pickup Range,拾取范围,secondary,,wiki-2026-10-16; client-pending,TRUE
+% Items Price,道具价格,secondary,,wiki-2026-10-16; client-pending,TRUE
+% Explosion Damage,爆炸伤害,secondary,,wiki-2026-10-16; client-pending,TRUE
+% Explosion Size,爆炸范围,secondary,,wiki-2026-10-16; client-pending,TRUE
+Bounces,弹跳,secondary,,wiki-2026-10-16; client-pending,TRUE
+Piercing,穿透,secondary,,wiki-2026-10-16; client-pending,TRUE
+% Piercing Damage,穿透伤害,secondary,,wiki-2026-10-16; client-pending,TRUE
+% Damage against Bosses,对首领伤害,secondary,,wiki-2026-10-16; client-pending,TRUE
+% Structure Attack Speed,结构攻速,secondary,,wiki-2026-10-16; client-pending,TRUE
+Structure Range,结构射程,secondary,,wiki-2026-10-16; client-pending,TRUE
+% Burning Speed,燃烧速度,secondary,,wiki-2026-10-16; client-pending,TRUE
+Burning Spread,燃烧蔓延,secondary,,wiki-2026-10-16; client-pending,TRUE
+Knockback,击退,secondary,,wiki-2026-10-16; client-pending,TRUE
+% Double Material Chance,双倍材料率,secondary,,wiki-2026-10-16; client-pending,TRUE
+Free Rerolls,免费重随,secondary,,wiki-2026-10-16; client-pending,TRUE
+Trees,树木,secondary,,wiki-2026-10-16; client-pending,TRUE
+% Enemies,敌人数量,secondary,,wiki-2026-10-16; client-pending,TRUE
+% Enemy Speed,敌方速度,secondary,,wiki-2026-10-16; client-pending,TRUE
+% Reroll Price,重随价格,secondary,abyssal,wiki-2026-10-16; client-pending,TRUE

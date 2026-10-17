@@ -32,6 +32,17 @@ td.rating-cell { width:2.6em; text-align:center; white-space:nowrap; }
 .rating-none { color:#9e9e9e; border:1px dashed #bdbdbd; background:transparent; font-weight:400; }
 .empty { color:#9e9e9e; }
 .badge-pending { display:inline-block; font-size:12px; border:1px solid #9a3412; color:#9a3412; border-radius:999px; padding:2px 9px; margin-left:8px; }
+.badge-dlc { display:inline-block; font-size:11px; border:1px solid #9a3412; color:#fff; background:#9a3412; border-radius:999px; padding:1px 7px; margin-left:6px; vertical-align:1px; }
+.badge-review { display:inline-block; font-size:11px; border:1px dashed #9a3412; color:#9a3412; border-radius:999px; padding:1px 7px; margin-left:6px; vertical-align:1px; }
+.sic { width:20px; height:20px; vertical-align:-4px; image-rendering:pixelated; background:#efe9d8; border-radius:6px; }
+.sic.none { display:inline-flex; width:20px; height:20px; vertical-align:-4px; align-items:center; justify-content:center; font-size:12px; color:var(--muted); background:#f2ecdd; border-radius:6px; }
+.has-tip { position:relative; border-bottom:1px dotted var(--muted); cursor:help; }
+.has-tip .tip { display:none; position:absolute; left:0; top:100%; z-index:30; background:#1f1b16; color:#fdf6e3; border-radius:10px; padding:8px 10px; font-size:12px; min-width:190px; max-width:250px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
+.has-tip:hover .tip, .has-tip:focus .tip { display:block; }
+.tip .th { display:block; font-weight:700; color:#ffd966; margin-bottom:4px; }
+.tip .ti { display:flex; gap:7px; align-items:center; margin:4px 0; }
+.tip .ti img { width:24px; height:24px; object-fit:contain; image-rendering:pixelated; background:rgba(255,255,255,.12); border-radius:6px; }
+.tip .tf { display:block; color:#b9ad93; margin-top:4px; font-size:11px; }
 .legend { font-size:12px; color:var(--muted); margin:0 0 10px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
 .toc { position:sticky; top:53px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 10px; display:flex; gap:8px; overflow-x:auto; font-size:13px; }
 .toc a { white-space:nowrap; text-decoration:none; background:#f2ecdd; border-radius:999px; padding:4px 10px; color:var(--ink); }
@@ -50,8 +61,8 @@ td.rating-cell { width:2.6em; text-align:center; white-space:nowrap; }
 <a href="#s-mechanism">机制一句话</a><a href="#s-attrs-primary">核心属性·主表</a><a href="#s-attrs-secondary">核心属性·次级表</a><a href="#s-weapons">武器分档</a><a href="#s-items">关键道具</a><a href="#s-phases">开局/中期/后期</a><a href="#s-upgrade">升级优先级</a><a href="#s-shop">商店优先级</a><a href="#s-pitfalls">避坑</a><a href="#s-hard">高难特例</a><a href="#s-source">取材与版本</a>
 </nav>
 <section class="card" id="s-mechanism" data-section="mechanism"><h2>机制一句话</h2><p>{{MECHANISM}}</p></section>
-<section class="card" id="s-attrs-primary" data-section="attrs-primary"><h2>核心属性·主表</h2><p class="legend">图例：<span class="rating rating-S">S</span><span class="rating rating-A">A</span><span class="rating rating-B">B</span><span class="rating rating-C">C</span><span class="rating rating-D">D</span><span class="rating rating-F">F</span><span class="rating rating-none">— 未提及</span> · 评级只认视频作者口径，未提诚实空出</p><div class="table-wrap"><table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>{{ATTRS_PRIMARY_ROWS}}</table></div></section>
-<section class="card" id="s-attrs-secondary" data-section="attrs-secondary"><h2>核心属性·次级表</h2><p class="legend">次级全量拆表，规则同主表，未提诚实空出</p><div class="table-wrap"><table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>{{ATTRS_SECONDARY_ROWS}}</table></div></section>
+<section class="card" id="s-attrs-primary" data-section="attrs-primary"><h2>核心属性·主表</h2><p class="legend">图例：<span class="rating rating-S">S</span><span class="rating rating-A">A</span><span class="rating rating-B">B</span><span class="rating rating-C">C</span><span class="rating rating-D">D</span><span class="rating rating-F">F</span><span class="rating rating-none">— 未提及</span> · 评级只认视频作者口径，未提诚实空出 · 排序图标随 wiki Stats 原序 · <span class="badge-dlc">DLC</span>=深渊魔物专属 · ※=中文待客户端简中校对</p><div class="table-wrap"><table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>{{ATTRS_PRIMARY_ROWS}}</table></div></section>
+<section class="card" id="s-attrs-secondary" data-section="attrs-secondary"><h2>核心属性·次级表</h2><p class="legend">次级 22 全量随 wiki 次级表原序（消耗品治疗到重随价格） · wiki 本无专用图标统一 ◆ 占位 · 悬浮为 wiki Notable Items 热链 · ※待校对只 warn 加标</p><div class="table-wrap"><table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>{{ATTRS_SECONDARY_ROWS}}</table></div></section>
 <section class="card" id="s-weapons" data-section="weapons"><h2>武器分档</h2><h3>T1 主选</h3><div class="table-wrap"><table><tr><th>武器</th><th>为什么 / 何时拿换</th></tr>{{WEAPONS_T1_ROWS}}</table></div><h3>T2 备选过渡</h3><div class="table-wrap"><table><tr><th>武器</th><th>为什么 / 何时拿换</th></tr>{{WEAPONS_T2_ROWS}}</table></div></section>
 <section class="card" id="s-items" data-section="items"><h2>关键道具</h2><div class="table-wrap"><table><tr><th>道具</th><th>推荐理由</th></tr>{{ITEMS_ROWS}}</table></div></section>
 <section class="card" id="s-phases" data-section="phases"><h2>开局 / 中期 / 后期</h2>{{PHASES_BLOCK}}</section>

@@ -1,14 +1,514 @@
 [
   {
+    "id": "apprentice",
+    "en": "Apprentice",
+    "zh": "学徒",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "arms-dealer",
+    "en": "Arms Dealer",
+    "zh": "军火商",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "artificer",
+    "en": "Artificer",
+    "zh": "工匠",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "baby",
+    "en": "Baby",
+    "zh": "婴儿",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "beast-master",
+    "en": "Beast Master",
+    "zh": "驯兽师",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "brawler",
+    "en": "Brawler",
+    "zh": "格斗家",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "bull",
+    "en": "Bull",
+    "zh": "蛮牛",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "chunky",
+    "en": "Chunky",
+    "zh": "肉墩",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "crazy",
+    "en": "Crazy",
+    "zh": "狂人",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "cryptid",
+    "en": "Cryptid",
+    "zh": "隐兽",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
     "id": "cyborg",
     "en": "Cyborg",
     "zh": "赛博格",
-    "dlc": null
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "demon",
+    "en": "Demon",
+    "zh": "恶魔",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "doctor",
+    "en": "Doctor",
+    "zh": "医生",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
   },
   {
     "id": "engineer",
     "en": "Engineer",
     "zh": "工程师",
-    "dlc": null
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "entrepreneur",
+    "en": "Entrepreneur",
+    "zh": "企业家",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "explorer",
+    "en": "Explorer",
+    "zh": "探险家",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "farmer",
+    "en": "Farmer",
+    "zh": "农民",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "fisherman",
+    "en": "Fisherman",
+    "zh": "渔夫",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "generalist",
+    "en": "Generalist",
+    "zh": "通才",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "ghost",
+    "en": "Ghost",
+    "zh": "幽灵",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "gladiator",
+    "en": "Gladiator",
+    "zh": "角斗士",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "glutton",
+    "en": "Glutton",
+    "zh": "暴食者",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "golem",
+    "en": "Golem",
+    "zh": "魔像",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "hunter",
+    "en": "Hunter",
+    "zh": "猎人",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "jack",
+    "en": "Jack",
+    "zh": "杰克",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "king",
+    "en": "King",
+    "zh": "国王",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "knight",
+    "en": "Knight",
+    "zh": "骑士",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "lich",
+    "en": "Lich",
+    "zh": "巫妖",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "loud",
+    "en": "Loud",
+    "zh": "大嗓门",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "lucky",
+    "en": "Lucky",
+    "zh": "幸运儿",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "mage",
+    "en": "Mage",
+    "zh": "法师",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "masochist",
+    "en": "Masochist",
+    "zh": "受虐狂",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "multitasker",
+    "en": "Multitasker",
+    "zh": "多面手",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "mutant",
+    "en": "Mutant",
+    "zh": "变异体",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "old",
+    "en": "Old",
+    "zh": "老人",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "one-armed",
+    "en": "One-Armed",
+    "zh": "独臂",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "pacifist",
+    "en": "Pacifist",
+    "zh": "和平主义者",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "ranger",
+    "en": "Ranger",
+    "zh": "游侠",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "renegade",
+    "en": "Renegade",
+    "zh": "叛节者",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "saver",
+    "en": "Saver",
+    "zh": "节俭者",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "sick",
+    "en": "Sick",
+    "zh": "病号",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "soldier",
+    "en": "Soldier",
+    "zh": "士兵",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "speedy",
+    "en": "Speedy",
+    "zh": "疾速者",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "streamer",
+    "en": "Streamer",
+    "zh": "主播",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "technomage",
+    "en": "Technomage",
+    "zh": "科技法师",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "vagabond",
+    "en": "Vagabond",
+    "zh": "流浪者",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "vampire",
+    "en": "Vampire",
+    "zh": "吸血鬼",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "well-rounded",
+    "en": "Well-Rounded",
+    "zh": "万金油",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "wildling",
+    "en": "Wildling",
+    "zh": "野人",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "wounded",
+    "en": "Wounded",
+    "zh": "伤员",
+    "dlc": null,
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "buccaneer",
+    "en": "Buccaneer",
+    "zh": "海盗",
+    "dlc": "abyssal",
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "builder",
+    "en": "Builder",
+    "zh": "建造者",
+    "dlc": "abyssal",
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "captain",
+    "en": "Captain",
+    "zh": "船长",
+    "dlc": "abyssal",
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "chef",
+    "en": "Chef",
+    "zh": "厨师",
+    "dlc": "abyssal",
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "creature",
+    "en": "Creature",
+    "zh": "异兽",
+    "dlc": "abyssal",
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "curious",
+    "en": "Curious",
+    "zh": "好奇者",
+    "dlc": "abyssal",
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "diver",
+    "en": "Diver",
+    "zh": "潜水员",
+    "dlc": "abyssal",
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "druid",
+    "en": "Druid",
+    "zh": "德鲁伊",
+    "dlc": "abyssal",
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "dwarf",
+    "en": "Dwarf",
+    "zh": "矮人",
+    "dlc": "abyssal",
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "gangster",
+    "en": "Gangster",
+    "zh": "歹徒",
+    "dlc": "abyssal",
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "hiker",
+    "en": "Hiker",
+    "zh": "徒步者",
+    "dlc": "abyssal",
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "ogre",
+    "en": "Ogre",
+    "zh": "食人魔",
+    "dlc": "abyssal",
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "romantic",
+    "en": "Romantic",
+    "zh": "浪漫者",
+    "dlc": "abyssal",
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
+  },
+  {
+    "id": "sailor",
+    "en": "Sailor",
+    "zh": "水手",
+    "dlc": "abyssal",
+    "needs_review": true,
+    "source_version": "wiki-2026-10-16; client-pending"
   }
 ]

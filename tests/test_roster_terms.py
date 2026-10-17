@@ -89,8 +89,7 @@ def run_build(*args: str, cwd: Path = REPO) -> subprocess.CompletedProcess[str]:
 
 def ensure_fixture(work: Path) -> None:
     _bf = work / "data" / "builds" / "cyborg.json"
-    # #23: repo已有真数据，隔离缝一律用夹具覆盖。
-    if FIXTURE.exists():
+    if not _bf.exists() and FIXTURE.exists():
         _bf.parent.mkdir(parents=True, exist_ok=True)
         _bf.write_text(FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
 

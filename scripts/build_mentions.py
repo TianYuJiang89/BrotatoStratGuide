@@ -19,10 +19,11 @@
   python scripts/build_mentions.py --all
   --data-dir / --subs-dir / --mentions-dir 供测试隔离 (默认 data/ data/subs/ data/mentions/).
 
-匹配注意 (#14 回归):
+匹配注意 (#14 回归 + #28 精度):
 - Speed 只认移动速度, `attack speed` 不得污染 (负向前瞻排除 attack/structure/enemy/burning).
 - Engineering 只认 `engineering`, 不认角色名 `engineer`.
 - Range 用词边界, 不吞 `ranged`.
+- Scar 只认道具 `Scar/scars`, 不吞 `scared/scary/scarf` (#28: 注册表兜底不用 \\w*, 只允常见复数 s/es/ies/ves; Fin/Acid/Bag/Tree 同理).
 - 宁可多 warn 不可漏: 通用词 (damage/speed/range) 按词边界计, 复合提及双计.
 """
 
@@ -59,74 +60,94 @@ def load_registry_names(data_dir: Path) -> tuple[list[str], list[str]]:
 
 
 def _wordnames_to_pattern(name: str) -> str:
-    """注册表名兜底 pattern: 空格转 \\s+, 首尾词边界, 尾允复数."""
-    esc = re.escape(name.strip().lower())
-    esc = esc.replace(r"\ ", r"\s+")
-    return r"\b" + esc + r"\w*\b"
+    """注册表名兜底 pattern: 空格转 \\s+, 首尾词界, 尾只允常见复数 (s/es/ies/ves), 不用 \\w* (#28 scared/scary 误算 Scar)."""
+    clean = name.strip().lower()
+    if not clean:
+        return r"\b\b"
+    parts = clean.split()
+    prefix = [re.escape(p) for p in parts[:-1]]
+    last = parts[-1]
+    vowels = set("aeiou")
+    if last.endswith("s"):
+        last_pat = re.escape(last) + r"(?:es)?"
+    elif last.endswith("x") or last.endswith("z") or last.endswith("ch") or last.endswith("sh"):
+        last_pat = re.escape(last) + r"(?:es)?"
+    elif last.endswith("y") and len(last) > 1 and last[-2] not in vowels:
+        last_pat = re.escape(last[:-1]) + r"(?:y|ies)"
+    elif last.endswith("fe"):
+        last_pat = re.escape(last[:-2]) + r"(?:fe|ves)"
+    elif last.endswith("f") and not last.endswith("ff"):
+        last_pat = re.escape(last[:-1]) + r"(?:f|ves)"
+    elif last.endswith("o"):
+        last_pat = re.escape(last) + r"(?:s|es)?"
+    else:
+        last_pat = re.escape(last) + r"(?:s)?"
+    esc = (r"\s+".join(prefix) + r"\s+" + last_pat) if prefix else last_pat
+    return r"\b" + esc + r"\b"
 
 
 # 39 术语别名 (小写正则, IGNORECASE 编译).
 # 设计原则: 高召回 (漏检=重演 #14), 精度只在已证误报处收紧
 # (Speed 排 attack/structure/enemy/burning, Range 不吞 ranged).
 TERM_PATTERNS: dict[str, list[str]] = {
-    "Max HP": [r"\bmax\s*hp\b", r"\bmax\s*health\b", r"\bmaximum\s*hp\b", r"\bmaximum\s*health\b"],
-    "HP Regeneration": [r"\bhp\s*regen\w*\b", r"\bhealth\s*regen\w*\b", r"\bregen\b", r"\bregeneration\b"],
-    "Life Steal": [r"\blife\s*steal\b", r"\blifesteal\b", r"\blife[\s\-]*steal\b"],
-    "Damage": [r"\bdamage\b"],
-    "Melee Damage": [r"\bmelee\b"],
+    "Max HP": [r"\bmax\s*hps?\b", r"\bmax\s*healths?\b", r"\bmaximum\s*hps?\b", r"\bmaximum\s*healths?\b"],
+    "HP Regeneration": [r"\bhp\s*regen(?:eration)?s?\b", r"\bhealth\s*regen(?:eration)?s?\b", r"\bregens?\b", r"\bregenerations?\b"],
+    "Life Steal": [r"\blife\s*steals?\b", r"\blifesteals?\b", r"\blife[\s\-]*steals?\b"],
+    "Damage": [r"\bdamages?\b"],
+    "Melee Damage": [r"\bmelees?\b"],
     "Ranged Damage": [r"\branged\b"],
     "Elemental Damage": [r"\belemental\b"],
-    "Attack Speed": [r"\battack\s*speed\b"],
-    "Crit Chance": [r"\bcrit\b", r"\bcritical\b", r"\bcrit\s*chance\b", r"\bcrit\s*rate\b"],
-    "Engineering": [r"\bengineering\b"],
-    "Range": [r"\brange\b"],
-    "Armor": [r"\barmor\b", r"\barmour\b"],
-    "Dodge": [r"\bdodg\w*\b"],
+    "Attack Speed": [r"\battack\s*speeds?\b"],
+    "Crit Chance": [r"\bcrits?\b", r"\bcriticals?\b", r"\bcrit\s*chances?\b", r"\bcrit\s*rates?\b"],
+    "Engineering": [r"\bengineerings?\b"],
+    "Range": [r"\branges?\b"],
+    "Armor": [r"\barmors?\b", r"\barmours?\b"],
+    "Dodge": [r"\bdodg(?:e(?:s|d)?|ing|y)\b"],
     "Speed": [
-        r"\bmovespeed\b",
-        r"\bmove\s*speed\b",
-        r"\bmovement\s*speed\b",
-        r"(?<!attack )(?<!structure )(?<!enemy )(?<!burning )\bspeed\b",
+        r"\bmovespeeds?\b",
+        r"\bmove\s*speeds?\b",
+        r"\bmovement\s*speeds?\b",
+        r"(?<!attack )(?<!structure )(?<!enemy )(?<!burning )\bspeeds?\b",
     ],
-    "Luck": [r"\bluck\b", r"\blucky\b"],
-    "Harvesting": [r"\bharvest\w*\b"],
-    "Curse": [r"\bcurse\w*\b"],
-    "Consumable Heal": [r"\bconsumable\b", r"\bheal\b", r"\bhealing\b"],
-    "% Materials Healing": [r"\bmaterials?\s*healing\b", r"\bmats\s*healing\b"],
-    "% XP Gain": [r"\bxp\b", r"\bexperience\b", r"\bxp\s*gain\b"],
-    "% Pickup Range": [r"\bpickup\b", r"\bpick[\s\-]*up\b"],
-    "% Items Price": [r"\bitems?\s*price\b"],
-    "% Explosion Damage": [r"\bexplosion\s*damage\b", r"\bexplosion\b"],
-    "% Explosion Size": [r"\bexplosion\s*size\b", r"\bexplosion\s*radius\b", r"\bexplosion\s*range\b"],
-    "Bounces": [r"\bbounc\w*\b"],
-    "Piercing": [r"\bpierc\w*\b"],
-    "% Piercing Damage": [r"\bpiercing\s*damage\b"],
+    "Luck": [r"\blucks?\b", r"\blucky\b"],
+    "Harvesting": [r"\bharvest(?:s|ed|ing)?\b"],
+    "Curse": [r"\bcurs(?:e(?:s|d)?|ing)\b"],
+    "Consumable Heal": [r"\bconsumables?\b", r"\bheal(?:s|ed|ing)?\b"],
+    "% Materials Healing": [r"\bmaterials?\s*healings?\b", r"\bmats?\s*healings?\b"],
+    "% XP Gain": [r"\bxps?\b", r"\bexperiences?\b", r"\bxp\s*gains?\b"],
+    "% Pickup Range": [r"\bpickups?\b", r"\bpick[\s\-]*ups?\b"],
+    "% Items Price": [r"\bitems?\s*prices?\b"],
+    "% Explosion Damage": [r"\bexplosions?\s*damages?\b", r"\bexplosions?\b"],
+    "% Explosion Size": [r"\bexplosions?\s*sizes?\b", r"\bexplosions?\s*radius\b", r"\bexplosions?\s*ranges?\b"],
+    "Bounces": [r"\bbounc(?:e(?:s|d)?|ing)\b"],
+    "Piercing": [r"\bpierc(?:e(?:s|d)?|ing)\b"],
+    "% Piercing Damage": [r"\bpierc(?:e|ing)\s*damages?\b"],
     "% Damage against Bosses": [r"\bboss\b", r"\bbosses\b"],
-    "% Structure Attack Speed": [r"\bstructure\s*attack\b"],
-    "Structure Range": [r"\bstructure\s*range\b"],
-    "% Burning Speed": [r"\bburning\s*speed\b", r"\bburning\b"],
-    "Burning Spread": [r"\bburning\s*spread\b", r"\bburn\s*spread\b"],
-    "Knockback": [r"\bknockback\b", r"\bknock\s*back\b", r"\bknock\b"],
-    "% Double Material Chance": [r"\bdouble\s*mats?\b", r"\bdouble\s*material\b"],
-    "Free Rerolls": [r"\breroll\w*\b", r"\bfree\s*reroll\w*\b"],
+    "% Structure Attack Speed": [r"\bstructures?\s*attacks?\b"],
+    "Structure Range": [r"\bstructures?\s*ranges?\b"],
+    "% Burning Speed": [r"\bburnings?\s*speeds?\b", r"\bburnings?\b"],
+    "Burning Spread": [r"\bburnings?\s*spreads?\b", r"\bburns?\s*spreads?\b"],
+    "Knockback": [r"\bknockbacks?\b", r"\bknock\s*backs?\b", r"\bknock(?:s|ed|ing)?\b"],
+    "% Double Material Chance": [r"\bdouble\s*mats?\b", r"\bdouble\s*materials?\b"],
+    "Free Rerolls": [r"\breroll(?:s|ed|ing)?\b", r"\bfree\s*reroll(?:s|ed|ing)?\b"],
     "Trees": [r"\btrees?\b"],
-    "% Enemies": [r"\benemies\b"],
-    "% Enemy Speed": [r"\benemy\s*speed\b", r"\benemy\b"],
-    "% Reroll Price": [r"\breroll\s*price\b"],
+    "% Enemies": [r"\benem(?:y|ies)\b"],
+    "% Enemy Speed": [r"\benem(?:y|ies)\s*speeds?\b", r"\benem(?:y|ies)\b"],
+    "% Reroll Price": [r"\brerolls?\s*prices?\b"],
 }
 
 WEAPON_PATTERNS: dict[str, list[str]] = {
-    "SMG": [r"\bsmg\b"],
-    "Pistol": [r"\bpistol\w*\b"],
-    "Minigun": [r"\bminigun\b", r"\bmini\s*gun\b"],
-    "Wrench": [r"\bwrench\w*\b"],
+    "SMG": [r"\bsmgs?\b"],
+    "Pistol": [r"\bpistols?\b"],
+    "Minigun": [r"\bminiguns?\b", r"\bmini\s*guns?\b"],
+    "Wrench": [r"\bwrench(?:es)?\b"],
 }
 
 ITEM_PATTERNS: dict[str, list[str]] = {
-    "Big Arms": [r"\bbig\s*arms\b"],
-    "Improved Tools": [r"\bimproved\s*tools\b"],
-    "Turret": [r"\bturret\w*\b"],
-    "Coffee": [r"\bcoffee\b"],
+    "Big Arms": [r"\bbig\s*arms?\b"],
+    "Improved Tools": [r"\bimproved\s*tools?\b"],
+    "Turret": [r"\bturrets?\b"],
+    "Coffee": [r"\bcoffees?\b"],
 }
 
 

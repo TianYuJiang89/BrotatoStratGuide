@@ -448,7 +448,7 @@ def weapon_rows(
             '<span class="empty">作者未提及</span>'
         )
         name_html = (
-            f"<span class=\"has-tip gear\" tabindex=\"0\">{entry_name_html(name_en, entry)}"
+            f"<span class=\"has-tip\" tabindex=\"0\">{entry_name_html(name_en, entry)}"
             f"{weapon_tip(name_en, entry, terms_by_en)}</span>"
         )
         thumb = entry.get("thumb")
@@ -483,7 +483,7 @@ def item_rows(
             '<span class="empty">作者未提及</span>'
         )
         name_html = (
-            f"<span class=\"has-tip gear\" tabindex=\"0\">{entry_name_html(name_en, entry)}"
+            f"<span class=\"has-tip\" tabindex=\"0\">{entry_name_html(name_en, entry)}"
             f"{item_tip(name_en, entry, terms_by_en)}</span>"
         )
         thumb = entry.get("thumb")

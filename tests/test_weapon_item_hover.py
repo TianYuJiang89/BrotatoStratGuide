@@ -237,21 +237,24 @@ def test_weapon_hover_is_transposed_weapons_list() -> None:
     assert "Base Price" in sec and "Special Effects" in sec and "Unlocked By" in sec
 
 
-def test_gear_tips_open_downward() -> None:
-    """装备悬浮恒向下：高表向上翻必裁视口顶，属性翻转规则不动。"""
+def test_gear_tips_share_attr_positioning() -> None:
+    """装备悬浮与属性同一套定位：单翻转规则，装备表 wrapper 不裁剪。"""
     tpl = (REPO / "templates" / "character.html").read_text(encoding="utf-8")
-    assert ".has-tip.gear .tip" in tpl
-    gear_rule = tpl.split(".has-tip.gear .tip")[1].split("}")[0]
-    assert "top:100%" in gear_rule, "gear tips must drop downward"
-    # 属性翻转规则仍在（仅末几行）。
-    assert "nth-last-child" in tpl
+    # 只有共用翻转规则，无装备特例定位。
+    assert "nth-last-child" in tpl, "shared bottom-flip rule must exist"
+    assert ".gear .tip" not in tpl, "no gear-specific tip positioning"
+    # 装备表 wrapper 不裁剪：短表装不下高 tip，滚动容器会拦腰截断。
+    assert ".table-wrap.gear-wrap" in tpl
+    gear_wrap = tpl.split(".table-wrap.gear-wrap")[1].split("}")[0]
+    assert "overflow:visible" in gear_wrap.replace(" ", "")
     r = run_build("--slug", "cyborg")
     assert r.returncode == 0, r.stderr[-2000:]
     html = (REPO / "docs" / "cyborg.html").read_text(encoding="utf-8")
     for section in ("weapons", "items"):
         m = re.search(rf'data-section="{section}".*?</section>', html, re.S)
         assert m is not None
-        assert 'class="has-tip gear"' in m.group(0), f"{section} names must use gear tips"
+        assert 'class="table-wrap gear-wrap"' in m.group(0), f"{section} tables must not clip tips"
+        assert 'class="has-tip"' in m.group(0), f"{section} names must carry hover"
 
 
 def test_check_py_gates_weapon_item_hover() -> None:

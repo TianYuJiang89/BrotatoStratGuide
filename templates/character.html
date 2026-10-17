@@ -61,8 +61,10 @@ table.wt { width:100%; border-collapse:collapse; font-size:11px; line-height:1.4
 .w2 { color:#5aa9ff; font-weight:700; }
 .w3 { color:#c77dff; font-weight:700; }
 .w4 { color:#ff6b6b; font-weight:700; }
-/* 装备悬浮恒向下：转置表高，向上翻必裁视口顶（#15 实测），属性翻转规则不动。 */
-.table-wrap tr .has-tip.gear .tip { top:100%; bottom:auto; margin-top:6px; margin-bottom:0; box-shadow:0 8px 24px rgba(0,0,0,.35); }
+/* 装备表不裁剪：武器表只有 2-3 行而悬浮高，滚动容器会拦腰截断一切
+   向下开的 tip（#15 实测）。属性表靠“表长 + tip 短 + 末行上翻” stays
+   in-container；装备表行少，改为 wrapper 不裁剪，翻转规则与属性共用一套。 */
+.table-wrap.gear-wrap { overflow:visible; }
 .tip .tf { grid-column:1 / -1; display:block; color:#b9ad93; margin-top:2px; font-size:11px; }
 .legend { font-size:12px; color:var(--muted); margin:0 0 10px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
 .toc { position:sticky; top:53px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 10px; display:flex; gap:8px; overflow-x:auto; font-size:13px; }
@@ -84,8 +86,8 @@ table.wt { width:100%; border-collapse:collapse; font-size:11px; line-height:1.4
 <section class="card" id="s-mechanism" data-section="mechanism"><h2>机制一句话</h2><p>{{MECHANISM}}</p></section>
 <section class="card" id="s-attrs-primary" data-section="attrs-primary"><h2>核心属性·主表</h2><p class="legend">图例：<span class="rating rating-S">S</span><span class="rating rating-A">A</span><span class="rating rating-B">B</span><span class="rating rating-C">C</span><span class="rating rating-D">D</span><span class="rating rating-F">F</span><span class="rating rating-none">— 未提及</span> · 评级只认视频作者口径，未提诚实空出 · 排序图标随 wiki Stats 原序 · <span class="badge-dlc">DLC</span>=深渊魔物专属 · ※=中文待客户端简中校对</p><div class="table-wrap"><table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>{{ATTRS_PRIMARY_ROWS}}</table></div></section>
 <section class="card" id="s-attrs-secondary" data-section="attrs-secondary"><h2>核心属性·次级表</h2><p class="legend">次级 22 全量随 wiki 次级表原序（消耗品治疗到重随价格） · wiki 本无专用图标统一 ◆ 占位 · 悬浮为 wiki Notable Items 热链 · ※待校对只 warn 加标</p><div class="table-wrap"><table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>{{ATTRS_SECONDARY_ROWS}}</table></div></section>
-<section class="card" id="s-weapons" data-section="weapons"><h2>武器分档</h2><h3>T1 主选</h3><div class="table-wrap"><table><tr><th>武器</th><th>为什么 / 何时拿换</th></tr>{{WEAPONS_T1_ROWS}}</table></div><h3>T2 备选过渡</h3><div class="table-wrap"><table><tr><th>武器</th><th>为什么 / 何时拿换</th></tr>{{WEAPONS_T2_ROWS}}</table></div></section>
-<section class="card" id="s-items" data-section="items"><h2>关键道具</h2><div class="table-wrap"><table><tr><th>道具</th><th>推荐理由</th></tr>{{ITEMS_ROWS}}</table></div></section>
+<section class="card" id="s-weapons" data-section="weapons"><h2>武器分档</h2><h3>T1 主选</h3><div class="table-wrap gear-wrap"><table><tr><th>武器</th><th>为什么 / 何时拿换</th></tr>{{WEAPONS_T1_ROWS}}</table></div><h3>T2 备选过渡</h3><div class="table-wrap gear-wrap"><table><tr><th>武器</th><th>为什么 / 何时拿换</th></tr>{{WEAPONS_T2_ROWS}}</table></div></section>
+<section class="card" id="s-items" data-section="items"><h2>关键道具</h2><div class="table-wrap gear-wrap"><table><tr><th>道具</th><th>推荐理由</th></tr>{{ITEMS_ROWS}}</table></div></section>
 <section class="card" id="s-phases" data-section="phases"><h2>开局 / 中期 / 后期</h2>{{PHASES_BLOCK}}</section>
 <section class="card" id="s-upgrade" data-section="upgrade"><h2>升级优先级</h2><p>{{UPGRADE}}</p></section>
 <section class="card" id="s-shop" data-section="shop"><h2>商店优先级</h2><p>{{SHOP}}</p></section>

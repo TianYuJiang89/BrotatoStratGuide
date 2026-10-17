@@ -1,0 +1,119 @@
+{
+  "slug": "engineer",
+  "mechanism": "炮塔群养人：只拿扳手 (Wrench)，每把自带一座炮塔，站 6 座炮塔群中间吃收入，靠结构慢慢磨，工程 (Engineering) 只需少量，活下来即输出。（解锁条件与胜场奖励：作者未提及 — 待补口径）",
+  "ratings": {
+    "Engineering": {
+      "rating": "S",
+      "note": "越多越好，但别直购堆数值，靠扳手 tier 与结构数量"
+    },
+    "Harvesting": {
+      "rating": "A",
+      "note": "开局必 roll，钱即更多扳手与结构"
+    },
+    "Attack Speed": {
+      "rating": "A",
+      "note": "乘区稀缺，时钟 wasp 与改良工具最赚"
+    },
+    "Armor": {
+      "rating": "A",
+      "note": "标准 roll 牌，站桩必吃伤"
+    },
+    "Max HP": {
+      "rating": "B",
+      "note": "血够吃两下，W1 可拿 3 点过渡"
+    },
+    "HP Regeneration": {
+      "rating": "B",
+      "note": "与护甲同为站桩本钱"
+    },
+    "Life Steal": {
+      "rating": "D",
+      "note": "作者明确不好用，直接 ban"
+    },
+    "Crit Chance": {
+      "rating": "D",
+      "note": "不靠武器平砍，基本无用"
+    }
+  },
+  "weapons_t1": [
+    {
+      "name_en": "Wrench",
+      "note": "全程只拿扳手：W1 即锁，6 把合高 tier，每 tier 自带不同炮塔，站群中间吃收入，作者明确不用螺丝刀。"
+    }
+  ],
+  "weapons_t2": [],
+  "items": [
+    {
+      "name_en": "Turret",
+      "reason": "结构数量即输出：花园与医疗炮塔最优先，有了就买，6 座扳手炮塔远远不够"
+    },
+    {
+      "name_en": "Coffee",
+      "reason": "攻速乘区：15 点攻速也照拿，炮塔射速即清线"
+    },
+    {
+      "name_en": "Improved Tools",
+      "reason": "本局最重要乘区：攻速叠起来后质变，线性堆工程不如它"
+    }
+  ],
+  "phases": [
+    {
+      "label": "开局",
+      "waves": "W1-5",
+      "body": "锁 1 把扳手升 tier，只 roll 收获 (Harvesting) / 工程 (Engineering)；站炮塔群中间吃收入，结构件先占 1-2 个，前半段靠扳手自己清。",
+      "buy": "扳手 (Wrench) → 占 6 把，和平蜜蜂过渡收获"
+    },
+    {
+      "label": "中期",
+      "waves": "W6-12",
+      "body": "转向点：结构数量铺起来吃灯塔 tempo 红利，击退撑起安全壳；工程一件也别多直购，全靠扳手 tier 与新结构。",
+      "buy": "补炮塔 + 灯塔 tempo，追护甲与回复"
+    },
+    {
+      "label": "后期",
+      "waves": "W13-20",
+      "body": "转向点：最大生命 (Max HP) + 护甲补坦度，乘区只认改良工具与时钟；绝不离巢乱跑，离巢即暴毙，拉怪穿炮塔群。",
+      "buy": "T4 扳手 + 改良工具，堆血甲站住"
+    }
+  ],
+  "upgrade": "属性 Top3：收获 (Harvesting) / 工程 (Engineering) / 护甲 (Armor)；生命窃取与暴击出了也不拿；血量告急时保命优先。（两层：先 Top3 再点名）",
+  "shop": "属性 Top3：工程 (Engineering) / 攻击速度 (Attack Speed) / 最大生命 (Max HP)；必拿：炮塔 / 改良工具 / 和平蜜蜂；必刷：缺关键结构时点 1-2 次重随；工程直购永远只补少量。（两层：先 Top3 再点名，升级在前）",
+  "pitfalls": [
+    "别离巢乱跑：工程伤害慢，只能站炮塔群里慢慢磨，跑出去即被弹幕逼死。",
+    "别直买工程堆数值：线性堆工程不如多买一座结构，防御与数量才是输出。",
+    "别碰生命窃取 (Life Steal) / 暴击：作者明确不好用，拿了等于白板。"
+  ],
+  "hard": "高难特例：仅 Nightmare / Ultimate 成立——环境弹幕逼走位，贴边开局让怪同向来；W16 增强苍蝇与精英逼离巢，提前拉怪穿炮塔群，击退配燃烧炮塔造壳。",
+  "source": {
+    "title": "If You Build It, They Will Die - Engineer - Brotato Ultimate Nightmares Guide",
+    "url": "https://www.youtube.com/watch?v=Wge0_hd9Rt8",
+    "video_id": "Wge0_hd9Rt8",
+    "published": "2026-09-01",
+    "difficulty": "Ultimate",
+    "game_version": "Steam 1.1.15.1 (2026-09-01 + Steam)",
+    "has_captions": true,
+    "transcript": {
+      "captions": "auto",
+      "corrected": true
+    },
+    "candidates": [
+      {
+        "title": "If You Build It, They Will Die - Engineer - Brotato Ultimate Nightmares Guide",
+        "url": "https://www.youtube.com/watch?v=Wge0_hd9Rt8",
+        "video_id": "Wge0_hd9Rt8",
+        "published": "2026-09-01",
+        "difficulty": "Ultimate",
+        "has_captions": true
+      },
+      {
+        "title": "\"Engineer is Impossible In Nightmare\" - Engineer - Brotato Ultimate Nightmares Guide",
+        "url": "https://www.youtube.com/watch?v=QbKT2VHnqbc",
+        "video_id": "QbKT2VHnqbc",
+        "published": "2026-07-15",
+        "difficulty": "Ultimate",
+        "has_captions": true
+      }
+    ],
+    "resource_review": false
+  }
+}

@@ -2350,6 +2350,195 @@
         }
       ],
       "unlock": "Default"
+    },
+    "Wrench": {
+      "class": "Tool",
+      "dlc": null,
+      "needs_review": true,
+      "page": "https://brotato.wiki.spellsandguns.com/Wrench",
+      "price": [
+        {
+          "lv": 1,
+          "t": "20"
+        },
+        {
+          "lv": 2,
+          "t": "39"
+        },
+        {
+          "lv": 3,
+          "t": "74"
+        },
+        {
+          "lv": 4,
+          "t": "149"
+        }
+      ],
+      "special": "Spawns a turret per tier (T1 bullets 10 +80% Engineering; T2 flames 8x5 +33% Engineering burning; T3 piercing 20 +125% Engineering; T4 explosive 25 +150% Engineering area)",
+      "stats": [
+        {
+          "k": "Damage",
+          "lv": [
+            {
+              "b": "12",
+              "lv": 1,
+              "p": "100%",
+              "s": "Melee Damage",
+              "suf": ""
+            },
+            {
+              "b": "16",
+              "lv": 2,
+              "p": "100%",
+              "s": "Melee Damage",
+              "suf": ""
+            },
+            {
+              "b": "20",
+              "lv": 3,
+              "p": "100%",
+              "s": "Melee Damage",
+              "suf": ""
+            },
+            {
+              "b": "24",
+              "lv": 4,
+              "p": "100%",
+              "s": "Melee Damage",
+              "suf": ""
+            }
+          ]
+        },
+        {
+          "k": "Attack Speed",
+          "lv": [
+            {
+              "lv": 1,
+              "t": "1.7s"
+            },
+            {
+              "lv": 2,
+              "t": "1.64s"
+            },
+            {
+              "lv": 3,
+              "t": "1.55s"
+            },
+            {
+              "lv": 4,
+              "t": "1.49s"
+            }
+          ]
+        },
+        {
+          "k": "DPS",
+          "lv": [
+            {
+              "lv": 1,
+              "t": "7.1/s"
+            },
+            {
+              "lv": 2,
+              "t": "9.8/s"
+            },
+            {
+              "lv": 3,
+              "t": "12.9/s"
+            },
+            {
+              "lv": 4,
+              "t": "16.1/s"
+            }
+          ]
+        },
+        {
+          "k": "Crit Damage/Chance",
+          "lv": [
+            {
+              "lv": 1,
+              "t": "x2 (3%)"
+            },
+            {
+              "lv": 2,
+              "t": "x2 (3%)"
+            },
+            {
+              "lv": 3,
+              "t": "x2 (3%)"
+            },
+            {
+              "lv": 4,
+              "t": "x2 (3%)"
+            }
+          ]
+        },
+        {
+          "k": "Range",
+          "lv": [
+            {
+              "lv": 1,
+              "t": "175"
+            },
+            {
+              "lv": 2,
+              "t": "175"
+            },
+            {
+              "lv": 3,
+              "t": "175"
+            },
+            {
+              "lv": 4,
+              "t": "175"
+            }
+          ]
+        },
+        {
+          "k": "Knockback",
+          "lv": [
+            {
+              "lv": 1,
+              "t": "20"
+            },
+            {
+              "lv": 2,
+              "t": "20"
+            },
+            {
+              "lv": 3,
+              "t": "20"
+            },
+            {
+              "lv": 4,
+              "t": "20"
+            }
+          ]
+        },
+        {
+          "k": "Lifesteal",
+          "lv": [
+            {
+              "lv": 1,
+              "t": "0"
+            },
+            {
+              "lv": 2,
+              "t": "0"
+            },
+            {
+              "lv": 3,
+              "t": "0"
+            },
+            {
+              "lv": 4,
+              "t": "0"
+            }
+          ]
+        }
+      ],
+      "thumb": "https://brotato.wiki.spellsandguns.com/images/thumb/7/7c/Wrench.png/60px-Wrench.png",
+      "unlock": "Default",
+      "zh": ""
     }
   },
   "chars": {

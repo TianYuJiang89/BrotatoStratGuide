@@ -1,7 +1,8 @@
-# BrotatoStratGuide 生产链 (#13 取材巡检)
+# BrotatoStratGuide 生产链 (#14 流程落地加首批验证)
 
+手册 `docs/sop/` 落主干，新 session 显式调用可恢复共识；首批真角色工程师落链（Ultimate Guide 真片 Top3 + 双标注）。
 名录 64（本体 50 + Abyssal 14）与术语主 17 + 次级 22 全量两表单源落地，
-同一赛博格页改由集中数据重渲染。取材 Top3 + 双标注 + 巡检徽标落链：
+武器注册表首批 3+1（SMG/Pistol/Minigun + Wrench），道具首批 4。取材 Top3 + 双标注 + 巡检徽标落链：
 难度只认三档、娱乐局永不作主候选、抽取只做两件且纠专名、
 旧日期挂待重审、资源失效挂资源待重审、缺项挂待补徽标可发布。
 页面纯静态、单模板复用、中文、手机可读、Pages 可开、离线双击可开可读。
@@ -9,8 +10,9 @@
 ## 构建（产物人不手改，只改源码重构建）
 
 ```bash
-python scripts/build.py --slug cyborg   # 按角色
-python scripts/build.py --all            # 全量 (64 索引，1 可点)
+python scripts/build.py --slug engineer  # 按角色（首批真角色，Top3 真片）
+python scripts/build.py --slug cyborg   # 按角色（演示占位，待补）
+python scripts/build.py --all            # 全量 (64 索引，2 可点：cyborg + engineer)
 python scripts/check.py docs/cyborg.html # 单页机检：段序 + 术语全量角标排序图标 + 取材门禁
 python scripts/check_updates.py          # 基线 + 追加规则 + 取材日期巡检（旧日期待重审）
 python scripts/check_resources.py        # 注册表 + 应急空目录（--live 全量 HEAD 挂资源待重审）
@@ -64,6 +66,12 @@ mypy scripts/build.py scripts/check.py scripts/check_updates.py  # 类型检查
 3. 对客户端简中逐项校对后再入库，未校对前标待校对不发布（`check_updates.py` 增量 `needs_review=true` 即 fail）。
 4. Mod 永不进入：无 Steam App + 无游戏文件 + 无 wiki 主表即拒收（未知 slug 构建即 fail）。
 
+## 流程落地与首批验证（#14）
+
+- 手册：`docs/sop/new-character-guide.md`（显式调用：先读全文再读 #8，不靠记忆；人只做报角色名/选定候选/验收三件事）+ `docs/sop/character-issue-template.md`（原样填：目标角色 + 选定取材 + 执行步骤 + 禁止 + 三问验收）。
+- 首批真角色：工程师（`data/builds/engineer.json`，主 `Wge0_hd9Rt8` Ultimate Guide 2026-09-01 + 补充 `QbKT2VHnqbc`，双标注 `Steam 1.1.15.1`，字幕 auto 已纠专名；T1 扳手一把一句话视频口径，T2 空诚实待补；道具炮塔/咖啡/改良工具均视频实提；商店升级两层先 Top3；避坑通用致命；高难只收高难变招）。赛博格仍演示占位待补。
+- 发布：`docs/engineer.html` + `docs/index.html`（2 可点，去草稿）；三问全过即关单，不过原单批改；带待补照发（T2 空待补），排版不重验；产物人不手改，机检全绿。
+
 ## 边界（后续票，不在本票膨胀）
 
-- #14 流程落地加首批验证：手册 + 1-2 真角色（本票取材链已落，demo 仍诚实空缺待补，真片交 #14）。
+- 第 2 个真角色与批量生产（按玩哪个做哪个，本票只验 1 个真 + 1 演示）。

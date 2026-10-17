@@ -38,6 +38,8 @@
 1. **元数据**（`yt-dlp --print` 单视频）：标题 / 时长 / `upload_date` / 描述 / `chapters`。描述版本号（如 `1.1.15.1`）偶有，不单信；一律发布日期 + Steam 版本双标注。chapters 对开局/中期/后期分段。注：列表页 `description/upload_date` NA 不可靠，必须逐个单视频抓。
 2. **自动字幕**（`yt-dlp --write-auto-sub --sub-langs en-orig --sub-format vtt --skip-download`）：存 `data/subs/<slug>__<variant-id>.en-orig.vtt`（每变体独立存，构建不读，仅取证；variant-id 为 covers slug 化，如 `ultimate`、`ultimate-nightmare`、`danger-5`）。该频道实测只有自动字幕、无手动字幕；专名误听多（如 Brotato→Bart），必须对照 wiki 纠拼写，不照抄。
 
+Cookie 协作（单视频被风控 `Sign in to confirm you're not a bot` / `DPAPI 10927` 时）：人用 `Get cookies.txt LOCALLY` 只导出 `youtube.com` 存仓库根 `cookies.txt`（已进 `.gitignore`，不入库不贴原文），agent 跑 `yt-dlp --cookies cookies.txt ...` 同命令取数；失效（`Could not copy / Failed to decrypt / LOGIN_REQUIRED`）agent 提示人重出，不换 Data API/第三方转写，gate 不变。
+
 明确不用：音频拉回 Whisper 重转写、画面帧 OCR/视觉抽取、全视频多模态理解、YouTube Data API、第三方转写服务。字幕缺失不转听译、不看画面猜，该候选降级或标待补。
 
 ## 5. 交叉表机器 gate（清零：抽取→交叉表清零→填表之二）

@@ -19,7 +19,7 @@ Part of #8
 ## 固定输入（只做 1+2）
 
 * 元数据：`yt-dlp --print "%(title)s | %(duration_string)s | %(upload_date)s | %(description)s" --skip-download <URL>` + `--print "%(chapters)s"`。
-* 自动字幕：`yt-dlp --write-auto-sub --sub-langs en-orig --sub-format vtt --skip-download -o "data/subs/<slug>__<variant-id>.%(ext)s" <URL>`（每变体独立存，variant-id 为 covers slug 化）。
+* 自动字幕：`yt-dlp --write-auto-sub --sub-langs en-orig --sub-format vtt --skip-download -o "data/subs/<slug>__<variant-id>.%(ext)s" <URL>`（每变体独立存，variant-id 为 covers slug 化）。被风控时加 `--cookies cookies.txt`（人用扩展只导 `youtube.com` 放仓库根，已 gitignore，失效 agent 提示重出）。
 * 不做：Whisper 重转写、看画面帧、多模态整视频理解、Data API、第三方转写。无字幕不猜，标待补/换候选。
 
 ## 执行步骤（锁死：抽取→交叉表清零→填表）

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>yt-dlp 取材操作教程 · 工程师 Top3</title>
+<style>
+:root { --bg:#f7f5ef; --card:#fff; --ink:#1f1b16; --muted:#7a7166; --line:#e7e0d2; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
+.wrap { max-width:760px; margin:0 auto; padding:16px 14px 80px; }
+h1 { font-size:22px; margin:14px 0 4px; }
+p.sub { color:var(--muted); font-size:14px; margin:0 0 12px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin:12px 0; }
+.card h2 { font-size:17px; margin:0 0 8px; }
+ol, ul { margin:8px 0 8px 20px; padding:0; }
+code.cmd { display:block; background:#1f1b16; color:#e8e6df; border-radius:10px; padding:10px 12px; font-size:13px; line-height:1.5; overflow-x:auto; white-space:pre; margin:8px 0; }
+button.copy { font-size:13px; border:1px solid var(--line); background:#fff; border-radius:999px; padding:6px 12px; cursor:pointer; }
+.warn { background:#fff8e1; border:1px solid #f0d27a; border-radius:10px; padding:10px 12px; font-size:14px; margin:8px 0; }
+.ok { background:#e8f5e9; border:1px solid #a5d6a7; border-radius:10px; padding:10px 12px; font-size:14px; margin:8px 0; }
+.small { font-size:13px; color:var(--muted); }
+.footer { font-size:12px; color:var(--muted); margin-top:16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>yt-dlp 取材操作教程 · 工程师 Top3</h1>
+<p class="sub">离线双击可开 · 只做取证（日期+字幕），不手改产物 · 跑完把结果贴回我就接手</p>
+
+<div class="card">
+<h2>0. 先进仓库目录</h2>
+<ol>
+<li>按 <code>Win + X → Windows PowerShell</code>（推荐用 PowerShell，不用 CMD，否则 <code>%</code> 转义不同）</li>
+<li>执行：</li>
+</ol>
+<code class="cmd">cd D:\notebook\BrotatoStratGuide
+yt-dlp --version</code>
+<button class="copy" data-copy='cd D:\notebook\BrotatoStratGuide'>复制 cd</button>
+<p class="small">有版本号即装好。若提示找不到，先 <code>winget install yt-dlp</code> 再重开 PowerShell。</p>
+</div>
+
+<div class="card">
+<h2>1. 贴回日期（三行，复制输出给我）</h2>
+<p>PowerShell 里逐条跑，<code>--skip-download</code> 只取元数据不下视频：</p>
+<code class="cmd">yt-dlp --print "%(title)s | %(upload_date)s | %(duration_string)s" --skip-download "https://www.youtube.com/watch?v=Wge0_hd9Rt8"
+yt-dlp --print "%(title)s | %(upload_date)s | %(duration_string)s" --skip-download "https://www.youtube.com/watch?v=QbKT2VHnqbc"
+yt-dlp --print "%(title)s | %(upload_date)s | %(duration_string)s" --skip-download "https://www.youtube.com/watch?v=dhQ67IeBq0Q"</code>
+<button class="copy" data-copy='yt-dlp --print "%(title)s | %(upload_date)s | %(duration_string)s" --skip-download "https://www.youtube.com/watch?v=Wge0_hd9Rt8"'>复制第1条</button>
+<div class="warn">你这张截图就是缺 JS 运行时 + 被风控：<code>No supported JavaScript runtime</code> 后面跟 <code>Sign in to confirm you're not a bot</code>。先装 Node 再重跑，八成直接过。<code>NA | NA</code> 才是列表页正常。</div>
+</div>
+
+<div class="card">
+<h2>0b. 装 JS 运行时（只装一次）</h2>
+<ol>
+<li>PowerShell 里跑：<code>winget install OpenJS.NodeJS</code>，装完关掉重开 PowerShell</li>
+<li>验：<code>node --version</code> 有版本号就行（装 Deno 也行，但 Node 最稳）</li>
+<li>回同一目录重跑第1步三条，警告里的 EJS 链接消失即生效</li>
+</ol>
+<code class="cmd">winget install OpenJS.NodeJS
+node --version</code>
+</div>
+
+<div class="card">
+<h2>0c. 登录态（还报 Sign in 才看，二选一）</h2>
+<div class="warn">原理：YouTube 把机房/无登录匿名请求拦了，读你本地浏览器已登录的 cookies 只为过验证，不上传密码，关掉浏览器是怕文件被锁。</div>
+<ol>
+<li>确认浏览器已登录 YouTube（能正常看片就行），然后<b>先关掉该浏览器</b>再跑命令</li>
+<li>Chrome 用户直接跑下面三行；Edge 把 <code>chrome</code> 全换 <code>edge</code>，Firefox 换 <code>firefox</code></li>
+<li>成功标志：红字 <code>Sign in...</code> 消失，出 <code>标题 | 202xxxxx | 时长</code> 三段</li>
+</ol>
+<code class="cmd">yt-dlp --cookies-from-browser chrome --print "%(title)s | %(upload_date)s | %(duration_string)s" --skip-download "https://www.youtube.com/watch?v=Wge0_hd9Rt8"
+yt-dlp --cookies-from-browser chrome --print "%(title)s | %(upload_date)s | %(duration_string)s" --skip-download "https://www.youtube.com/watch?v=QbKT2VHnqbc"
+yt-dlp --cookies-from-browser chrome --print "%(title)s | %(upload_date)s | %(duration_string)s" --skip-download "https://www.youtube.com/watch?v=dhQ67IeBq0Q"</code>
+<button class="copy" data-copy='yt-dlp --cookies-from-browser chrome --print "%(title)s | %(upload_date)s | %(duration_string)s" --skip-download "https://www.youtube.com/watch?v=Wge0_hd9Rt8"'>复制登录态第1条</button>
+<p class="small">隐私：只读本地 cookies 数据库过验证，不读密码不上传；实在不想给浏览器，就换网/等10分钟再试无 cookies 版。</p>
+<div class="warn">报 <code>Failed to decrypt with DPAPI（10927）</code> 就是新版 Chrome 应用级加密锁死，<code>--cookies-from-browser chrome/edge</code> 全灭不用试了，直接走扩展导出（浏览器自己解密，最稳）：<br>① Chrome 商店装 <code>Get cookies.txt LOCALLY</code>；② 打开 <code>youtube.com</code>（确认已登录）→ 点扩展 → 只导出 <code>youtube.com</code> → 存为仓库根 <code>cookies.txt</code>（已进 <code>.gitignore</code>，不会入库）；③ 跑下面 <code>--cookies cookies.txt</code> 版（不用关浏览器）：</div>
+<code class="cmd">taskkill /F /IM chrome.exe
+yt-dlp --cookies-from-browser chrome --print "%(title)s | %(upload_date)s" --skip-download "https://www.youtube.com/watch?v=Wge0_hd9Rt8"</code>
+<code class="cmd">yt-dlp --cookies cookies.txt --print "%(title)s | %(upload_date)s | %(duration_string)s" --skip-download "https://www.youtube.com/watch?v=Wge0_hd9Rt8"
+yt-dlp --cookies cookies.txt --write-auto-sub --sub-langs en-orig --sub-format vtt --skip-download -o "data/subs/engineer__ultimate.en-orig.vtt" "https://www.youtube.com/watch?v=Wge0_hd9Rt8"</code>
+</div>
+
+<div class="card">
+<h2>2. 下字幕（直接落 SOP 位置，不用改名）</h2>
+<p>无登录态版（先试这个）：</p>
+<code class="cmd">yt-dlp --write-auto-sub --sub-langs en-orig --sub-format vtt --skip-download -o "data/subs/engineer__ultimate.en-orig.vtt" "https://www.youtube.com/watch?v=Wge0_hd9Rt8"
+yt-dlp --write-auto-sub --sub-langs en-orig --sub-format vtt --skip-download -o "data/subs/engineer__danger-5.en-orig.vtt" "https://www.youtube.com/watch?v=dhQ67IeBq0Q"
+yt-dlp --write-auto-sub --sub-langs en-orig --sub-format vtt --skip-download -o "data/subs/tmp_QbKT.en-orig.vtt" "https://www.youtube.com/watch?v=QbKT2VHnqbc"</code>
+<p class="small">QbKT 是备选（验 Top3 有无字幕用），提示无字幕就说一声，我标 <code>无字幕</code> 不硬上。</p>
+<p>登录态版（第1步用了 cookies，这里也要加，同浏览器同关法）：</p>
+<code class="cmd">yt-dlp --cookies-from-browser chrome --write-auto-sub --sub-langs en-orig --sub-format vtt --skip-download -o "data/subs/engineer__ultimate.en-orig.vtt" "https://www.youtube.com/watch?v=Wge0_hd9Rt8"
+yt-dlp --cookies-from-browser chrome --write-auto-sub --sub-langs en-orig --sub-format vtt --skip-download -o "data/subs/engineer__danger-5.en-orig.vtt" "https://www.youtube.com/watch?v=dhQ67IeBq0Q"
+yt-dlp --cookies-from-browser chrome --write-auto-sub --sub-langs en-orig --sub-format vtt --skip-download -o "data/subs/tmp_QbKT.en-orig.vtt" "https://www.youtube.com/watch?v=QbKT2VHnqbc"</code>
+</div>
+
+<div class="card">
+<h2>3. 验一下（回我这两样）</h2>
+<code class="cmd">dir data\subs\engineer__*.vtt</code>
+<div class="ok">回我：① 第1步的三行日期输出 ② <code>dir</code> 有文件。<code>.vtt</code> 落仓里我就直接读到，不用你上传。</div>
+<p class="small">还不行就把报错全文贴我（红字那段），我换 browser 转写方案，不让你折腾。</p>
+</div>
+
+<div class="footer">构建产物人不手改 · 只做取证 · 转述非搬运 · SOP §4 固定输入（元数据+自动字幕+wiki纠专名）</div>
+</div>
+<script>
+(function(){
+"use strict";
+document.querySelectorAll("button.copy").forEach(function(b){
+  b.addEventListener("click", function(){
+    var t = b.getAttribute("data-copy") || "";
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).then(function(){ b.textContent = "已复制"; });
+    } else {
+      var ta = document.createElement("textarea");
+      ta.value = t; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); b.textContent = "已复制"; } catch(e){}
+      document.body.removeChild(ta);
+    }
+  });
+});
+})();
+</script>
+<!-- GENERATED helper by agent: hand-openable tutorial, not part of docs/ build. -->
+</body>
+</html>

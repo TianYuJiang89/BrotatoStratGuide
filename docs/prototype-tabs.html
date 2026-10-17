@@ -1,22 +1,24 @@
-<!-- PROTOTYPE — 阅后即焚，不进 main。分支 prototype/tabs-20 专用。
+<!-- PROTOTYPE v2 — 阅后即焚，不进 main。分支 prototype/tabs-20 专用。
   Three variants of the multi-difficulty tabs, switchable via ?variant=, on a throwaway route.
-  问题：tab 长什么样、变体数据模型怎么摆？（见子票「多难度 tab 原型」）
-  用法：双击本文件离线打开；右下角悬浮条 ← → 切 A/B/C；地址 ?variant= 可分享。
-  夹具：内联 ENGINEER_FIXTURE，非真口径；Danger 5 置灰待补；其余段为子集演示（机制/主表子集/武器/道具/取材），其余 6 段结构同理。
+  已拍板（人验）：A 胜出 + 动态诚实标签——有几份证据出几个 tab，不预留空档；
+  同一视频合讲多档则合并为一个 tab（如 Ultimate + Nightmare）。
+  默认 ?variant=A；A 内再经 ?sc=split|merged|d5only 看三种诚实覆盖。
+  用法：双击本文件离线打开；右下角悬浮条 ← → 切 A/B/C；地址可分享。
+  夹具：内联，非真口径；子集演示（机制/主表子集/武器/道具/取材），其余 6 段结构同理。
 -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>PROTOTYPE 多难度 tab 三方案 · 工程师夹具</title>
+<title>PROTOTYPE v2 · A 胜出 + 动态诚实标签 · 工程师夹具</title>
 <style>
 :root { --bg:#f7f5ef; --card:#fff; --ink:#1f1b16; --muted:#7a7166; --line:#e7e0d2; }
 * { box-sizing:border-box; }
 body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 -apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif; }
 a { color:#0b5fff; }
 .wrap { max-width:720px; margin:0 auto; padding:14px 14px 120px; }
-.proto-banner { background:#3d2b00; color:#ffe9b0; border-radius:12px; padding:10px 12px; font-size:13px; margin:0 0 12px; }
+.proto-banner { background:#0e3b1e; color:#d8f3dc; border-radius:12px; padding:10px 12px; font-size:13px; margin:0 0 12px; }
 .proto-banner code { color:#ffd966; }
 .hero { background:#1f1b16; color:#fdf6e3; border-radius:16px; padding:18px 16px; }
 .hero h1 { margin:0 0 6px; font-size:22px; }
@@ -35,25 +37,27 @@ th { color:var(--muted); font-weight:600; font-size:12px; }
 .empty { color:#9e9e9e; }
 .badge-pending { display:inline-block; font-size:12px; border:1px solid #9a3412; color:#9a3412; border-radius:999px; padding:2px 9px; margin-left:8px; }
 .badge-ready { display:inline-block; font-size:12px; border:1px solid #0e8a16; color:#0e8a16; border-radius:999px; padding:2px 9px; margin-left:8px; }
-/* Variant A: sticky segmented tablist */
+.coverbadge { display:inline-block; font-size:13px; border:1px solid #0e8a16; background:#e8f5e9; color:#1b5e20; border-radius:999px; padding:6px 14px; margin:8px 0; }
+/* A: sticky segmented tablist (winner) */
 .seg { position:sticky; top:0; z-index:6; background:rgba(247,245,239,.96); padding:10px 0 6px; display:flex; gap:8px; overflow-x:auto; }
 .seg [role=tab] { flex:1 0 auto; min-height:44px; font-size:15px; border:1px solid var(--line); background:#fff; border-radius:999px; padding:8px 14px; cursor:pointer; white-space:nowrap; }
 .seg [role=tab][aria-selected=true] { background:#1f1b16; color:#fff; border-color:#1f1b16; font-weight:700; }
 .seg [role=tab]:focus-visible { outline:3px solid #0b5fff; outline-offset:2px; }
-/* Variant B: stacked sections nav */
+.scen { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
+.scen button { min-height:44px; font-size:14px; border:1px solid var(--line); background:#fff; border-radius:999px; padding:8px 14px; cursor:pointer; }
+.scen button[aria-pressed=true] { background:#1f1b16; color:#fff; border-color:#1f1b16; font-weight:700; }
+/* B: stacked sections nav (loser, kept as primary source) */
 .stacknav { position:sticky; top:0; z-index:6; background:rgba(247,245,239,.96); padding:10px 0; display:flex; gap:8px; overflow-x:auto; font-size:13px; }
 .stacknav a { white-space:nowrap; text-decoration:none; background:#fff; border:1px solid var(--line); border-radius:999px; padding:8px 12px; color:var(--ink); min-height:44px; display:inline-flex; align-items:center; }
 .stacksec { border:2px solid var(--line); border-radius:14px; margin:12px 0; overflow:hidden; }
 .stacksec > header { padding:10px 12px; background:#efe9d8; font-weight:700; display:flex; gap:8px; align-items:center; }
-.stacksec.missing > header { background:#f3ede0; color:var(--muted); }
-/* Variant C: native select + summary */
+/* C: native select + summary (loser, kept as primary source) */
 .diffselect { width:100%; min-height:44px; font-size:16px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:#fff; }
 .summary { background:#1f1b16; color:#fdf6e3; border-radius:12px; padding:12px; margin:10px 0; font-size:14px; }
 .summary code { color:#ffd966; }
 .state { font-size:13px; color:var(--muted); background:#fff; border:1px dashed var(--line); border-radius:12px; padding:10px 12px; }
 .state b { color:var(--ink); }
 pre.model { font-size:12px; line-height:1.5; overflow-x:auto; background:#1f1b16; color:#e8e6df; border-radius:12px; padding:12px; }
-/* floating prototype switcher */
 #proto-switcher { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); z-index:50; display:flex; gap:10px; align-items:center; background:#111; color:#fff; border-radius:999px; padding:8px 10px; box-shadow:0 8px 24px rgba(0,0,0,.4); font-size:14px; }
 #proto-switcher button { width:44px; height:44px; border-radius:50%; border:1px solid #555; background:#222; color:#fff; font-size:18px; cursor:pointer; }
 #proto-switcher button:focus-visible { outline:3px solid #ffd966; }
@@ -64,15 +68,15 @@ pre.model { font-size:12px; line-height:1.5; overflow-x:auto; background:#1f1b16
 </head>
 <body>
 <div class="wrap">
-<div class="proto-banner">PROTOTYPE（分支 <code>prototype/tabs-20</code>，不进 main）· 三方案经 <code>?variant=A|B|C</code> 切换，右下角悬浮条可点 · 夹具非真口径 · 人拍板后胜出方案才重写落正式模板</div>
-<div class="hero"><h1>工程师 (Engineer) · 多难度原型</h1><p>土豆兄弟 (Brotato) · Danger 5 / Nightmare / Ultimate 三档 · 同页不同源 · 空档置灰待补</p></div>
+<div class="proto-banner">PROTOTYPE v2（分支 <code>prototype/tabs-20</code>，不进 main）· <b>已拍板：A 胜出 + 动态诚实标签</b>（有几份证据出几个 tab，不预留；合讲则合并）· 三方案仍经 <code>?variant=A|B|C</code> 切换，B/C 为落选存档 · A 内经 <code>?sc=split|merged|d5only</code> 看三种诚实覆盖</div>
+<div class="hero"><h1>工程师 (Engineer) · 多难度原型 v2</h1><p>土豆兄弟 (Brotato) · 动态诚实标签：tab 由取材证据驱动 · 合讲合并 · 无证据不占位</p></div>
 <div class="state" id="state">状态加载中…</div>
 <div id="mount"></div>
-<div class="card"><h2>数据模型提案（随原型一起出，人拍板）</h2>
-<p style="font-size:14px">推荐：<b>builds/&lt;slug&gt;.json 内按档位分块</b> <code>variants: { "Danger 5" | "Nightmare" | "Ultimate" }</code>，每变体独立 Top3+双标注+10段；空档 <code>{ status:"missing" }</code> 置灰待补。交叉表同理 <code>data/mentions/&lt;slug&gt;__&lt;difficulty&gt;.json</code> 每变体独立跑（格式沿用已关的 <a href="https://github.com/TianYuJiang89/BrotatoStratGuide/issues/17">交叉表脚本与机检</a>）。旧单层键（mechanism/ratings/…）废除，不兼容旧 fixture。全文见 <code>docs/prototype-tabs.model.json</code>（同分支）。</p>
+<div class="card"><h2>数据模型提案 v2（已拍板，随原型）</h2>
+<p style="font-size:14px"><b>builds/&lt;slug&gt;.json 内 variants 数组</b>，每变体自带 <code>covers</code> + 显示名 <code>label</code>，独立 Top3+双标注+10段；tab 按数组渲染，有几个渲染几个；单变体退化为覆盖徽章，不留单 tab 栏；排序按最高难度从高到低（Ultimate &gt; Nightmare &gt; Danger 5）；标签用全名（Danger 5，不用 D5）。交叉表 <code>data/mentions/&lt;slug&gt;__&lt;variant-id&gt;.json</code> 每变体独立跑（格式沿用已关的 <a href="https://github.com/TianYuJiang89/BrotatoStratGuide/issues/17">交叉表脚本与机检</a>，variant-id 为 covers slug 化，如 <code>ultimate-nightmare</code>）。旧单层键与固定三 key 废除。全文见 <code>docs/prototype-tabs.model.json</code>（同分支）。</p>
 <pre class="model" id="model"></pre>
 </div>
-<div class="footer"><p>离线双击可开 · 无外部依赖 · 页内首个 JS 在体尾 · 无障碍：A 为 APG tablist（←→/Home/End），C 为原生 select（零自定义键盘），B 为锚点跳转（无隐藏内容，天然可比）。移动端：tab 横滑 + 44px 触区 + sticky 不遮挡。</p></div>
+<div class="footer"><p>离线双击可开 · 无外部依赖 · 页内首个 JS 在体尾 · A（胜出）：APG tablist（←→/Home/End），单变体时无 tablist 只有徽章 · 移动端：tab 横滑 + 44px 触区 + sticky 不遮挡。</p></div>
 </div>
 <div id="proto-switcher" role="group" aria-label="原型方案切换">
 <button id="ps-prev" aria-label="上一个方案">←</button>
@@ -82,83 +86,108 @@ pre.model { font-size:12px; line-height:1.5; overflow-x:auto; background:#1f1b16
 <script>
 (function(){
 "use strict";
-/* 内联夹具：演示变体独立 + 空档待补。非真口径，leden。 */
-var FIXTURE = {
-  slug: "engineer", zh: "工程师", en: "Engineer",
-  order: ["Ultimate", "Nightmare", "Danger 5"],
-  variants: {
-    "Ultimate": { status: "ready",
-      mechanism: "【夹具】炮塔养线：远程转工程，W13 后靠炮塔吃波次。",
-      ratings: [["Ranged Damage","S","唯一核心"],["Attack Speed","A","枪快清得快"],["Speed","C","拿过 9 点，评有点用"],["Luck","C","备选后放弃"],["Dodge","C","9 点可堆"],["Damage","B","线圈百分比想拿"],["Melee Damage","D","和平蜜蜂扣 1 无所谓"]],
-      weapons_t1: [["Wrench","【夹具】W1 即拿，升满再换"]], weapons_t2: [["Hammer","【夹具】中期可换"]],
-      items: [["Turret","先占 2 个"],["Coffee","攻速即清线"],["Improved Tools","本命，见了必拿"]],
-      source: { title: "PROTO Ultimate 教学局（夹具）", video_id: "PROTO-ULT", published: "2026-09-01", difficulty: "Ultimate", game_version: "1.1.15.1" } },
-    "Nightmare": { status: "ready",
-      mechanism: "【夹具】Nightmare 前半压力大：先保枪等级再铺结构（与 Ultimate 不同源）。",
-      ratings: [["Ranged Damage","A","先保清线"], ["Attack Speed","B","够用"], ["Speed","B","Nightmare 走位税更高"], ["Luck","C","备选"], ["Dodge","B","更吃闪"], ["Damage","C","线圈随缘"], ["Melee Damage","—","作者未提及"]],
-      weapons_t1: [["SMG","【夹具】前期最滑"]], weapons_t2: [["Pistol","【夹具】便宜过渡"]],
-      items: [["Turret","主力"],["Coffee","双吃"],["Coffin","Nightmare 容错（本档特有）"]],
-      source: { title: "PROTO Nightmare 实况（夹具）", video_id: "PROTO-NM", published: "2026-08-10", difficulty: "Nightmare", game_version: "1.1.15.1" } },
-    "Danger 5": { status: "missing", reason: "暂无可用主引用 — 待补口径，不编造娱乐局。" }
-  }
+/* A 用动态场景（胜出方案演示诚实覆盖）；B/C 沿用 v1 固定夹具（落选存档）。非真口径。 */
+var ULT = { covers:["Ultimate"], label:"Ultimate",
+  mechanism: "【夹具】炮塔养线：远程转工程，W13 后靠炮塔吃波次。",
+  ratings: [["Ranged Damage","S","唯一核心"],["Attack Speed","A","枪快清得快"],["Speed","C","拿过 9 点，评有点用"],["Luck","C","备选后放弃"],["Dodge","C","9 点可堆"],["Damage","B","线圈百分比想拿"],["Melee Damage","D","和平蜜蜂扣 1 无所谓"]],
+  weapons_t1: [["Wrench","【夹具】W1 即拿，升满再换"]], weapons_t2: [["Hammer","【夹具】中期可换"]],
+  items: [["Turret","先占 2 个"],["Coffee","攻速即清线"],["Improved Tools","本命，见了必拿"]],
+  source: { title: "PROTO Ultimate 教学局（夹具）", video_id: "PROTO-ULT", published: "2026-09-01", difficulty: "Ultimate", game_version: "1.1.15.1" } };
+var NM = { covers:["Nightmare"], label:"Nightmare",
+  mechanism: "【夹具】Nightmare 前半压力大：先保枪等级再铺结构（与 Ultimate 不同源）。",
+  ratings: [["Ranged Damage","A","先保清线"],["Attack Speed","B","够用"],["Speed","B","Nightmare 走位税更高"],["Luck","C","备选"],["Dodge","B","更吃闪"],["Damage","C","线圈随缘"],["Melee Damage","—","作者未提及"]],
+  weapons_t1: [["SMG","【夹具】前期最滑"]], weapons_t2: [["Pistol","【夹具】便宜过渡"]],
+  items: [["Turret","主力"],["Coffee","双吃"],["Coffin","Nightmare 容错（本档特有）"]],
+  source: { title: "PROTO Nightmare 实况（夹具）", video_id: "PROTO-NM", published: "2026-08-10", difficulty: "Nightmare", game_version: "1.1.15.1" } };
+var MERGED = { covers:["Ultimate","Nightmare"], label:"Ultimate + Nightmare",
+  mechanism: "【夹具】合讲：同一视频覆盖 Ultimate + Nightmare，只跑一份内容，不硬拆。",
+  ratings: [["Ranged Damage","S","合讲口径取高（出处：字幕原句）"],["Attack Speed","A","枪快清得快"],["Speed","B","走位税按 Nightmare 取"]],
+  weapons_t1: [["Wrench","【夹具】合讲主选"]], weapons_t2: [["SMG","【夹具】合讲备选"]],
+  items: [["Turret","主力"],["Coffee","双吃"]],
+  source: { title: "PROTO 合讲：Ultimate + Nightmare（夹具）", video_id: "PROTO-MIX", published: "2026-09-01", difficulty: "Ultimate + Nightmare", game_version: "1.1.15.1" } };
+var D5 = { covers:["Danger 5"], label:"Danger 5",
+  mechanism: "【夹具】Danger 5 保底：只讲 D5，只出一个 tab，不预留别档。",
+  ratings: [["Ranged Damage","B","保底够用"]],
+  weapons_t1: [["Wrench","【夹具】保底主选"]], weapons_t2: [],
+  items: [["Turret","主力"]],
+  source: { title: "PROTO Danger 5 保底（夹具）", video_id: "PROTO-D5", published: "2026-07-01", difficulty: "Danger 5", game_version: "1.1.15.1" } };
+var SCEN = {
+  split: { name: "分立：Ultimate 与 Nightmare 各讲各（两 tab）", variants: [ULT, NM] },
+  merged: { name: "合并：同一视频合讲（单 tab：Ultimate + Nightmare）", variants: [MERGED] },
+  d5only: { name: "仅 D5：资料源只讲 Danger 5（单徽章，无 tab 栏）", variants: [D5] }
 };
+var FIXED = { order: ["Ultimate","Nightmare"], variants: { "Ultimate": ULT, "Nightmare": NM } };
 var MODEL = {
-  "$comment": "提案：builds/<slug>.json 按档位分块（推荐，待人拍板）",
+  "$comment": "提案 v2（已拍板）：builds/<slug>.json 内 variants 数组，诚实标签",
   "slug": "engineer",
-  "variants": {
-    "Danger 5": { "status": "missing", "reason": "暂无可用主引用" },
-    "Nightmare": { "status": "ready", "mechanism": "…", "ratings": {}, "weapons_t1": [], "weapons_t2": [], "items": [], "phases": [], "upgrade": "…", "shop": "…", "pitfalls": [], "hard": "…", "source": { "difficulty": "Nightmare", "candidates": [] } },
-    "Ultimate": { "status": "ready", "mechanism": "…", "ratings": {}, "weapons_t1": [], "weapons_t2": [], "items": [], "phases": [], "upgrade": "…", "shop": "…", "pitfalls": [], "hard": "…", "source": { "difficulty": "Ultimate", "candidates": [] } }
-  }
+  "variants": [
+    { "id": "ultimate-nightmare", "covers": ["Ultimate","Nightmare"], "label": "Ultimate + Nightmare",
+      "status": "ready", "mechanism": "…", "ratings": {}, "weapons_t1": [], "weapons_t2": [], "items": [],
+      "phases": [], "upgrade": "…", "shop": "…", "pitfalls": [], "hard": "…",
+      "source": { "difficulty": "Ultimate + Nightmare", "candidates": [] } }
+  ]
 };
-var NAMES = { A: "A（顶部 sticky 分段 tab，独占切换）", B: "B（全栈并列，可比）", C: "C（原生 select + 摘要头，移动优先）" };
+var NAMES = { A: "A（胜出：sticky 分段 tab + 动态诚实标签）", B: "B（落选存档：全栈并列）", C: "C（落选存档：原生 select）" };
 function getParam(k){ try { return new URL(window.location.href).searchParams.get(k); } catch(e){ return null; } }
-function setVariant(v){ try { var u = new URL(window.location.href); u.searchParams.set("variant", v); history.replaceState(null, "", u.toString()); } catch(e){ window.location.hash = "variant=" + v; } }
+function setParam(k, v){ try { var u = new URL(window.location.href); u.searchParams.set(k, v); history.replaceState(null, "", u.toString()); } catch(e){} }
 var proto = (getParam("variant") || "A").toUpperCase(); if(!NAMES[proto]) proto = "A";
-var diff = "Ultimate";
+var sc = (getParam("sc") || "split").toLowerCase(); if(!SCEN[sc]) sc = "split";
+var diff = SCEN[sc].variants[0].label;
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function ratingHtml(r){ return (["S","A","B","C","D","F"].indexOf(r) >= 0) ? '<span class="rating rating-'+r+'">'+r+'</span>' : '<span class="rating rating-none" title="视频作者未提及，诚实空出">—</span>'; }
-function variantBody(d){
-  var v = FIXTURE.variants[d];
-  if(v.status === "missing") return '<div class="card"><h2>'+esc(d)+' <span class="badge-pending">待补口径</span></h2><p class="empty">'+esc(v.reason)+' 空档置灰待补：tab 可点，点开只看待补说明，不借别档口径。</p></div>';
+function variantBody(v){
   var rows = v.ratings.map(function(r){ return '<tr><td>'+esc(r[0])+'</td><td style="text-align:center">'+ratingHtml(r[1])+'</td><td>'+esc(r[2])+'</td></tr>'; }).join("");
-  var w1 = v.weapons_t1.map(function(w){ return '<tr><td>'+esc(w[0])+'</td><td>'+esc(w[1])+'</td></tr>'; }).join("");
+  var w1 = v.weapons_t1.length ? v.weapons_t1.map(function(w){ return '<tr><td>'+esc(w[0])+'</td><td>'+esc(w[1])+'</td></tr>'; }).join("") : '<tr><td colspan="2"><span class="empty">作者未提及</span></td></tr>';
   var it = v.items.map(function(w){ return '<tr><td>'+esc(w[0])+'</td><td>'+esc(w[1])+'</td></tr>'; }).join("");
   return '<section class="card"><h2>机制一句话 <span class="badge-ready">已就绪</span></h2><p>'+esc(v.mechanism)+'</p></section>'
-    + '<section class="card"><h2>核心属性·主表（子集演示，全量 17 同理）</h2><table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>'+rows+'</table></section>'
+    + '<section class="card"><h2>核心属性·主表（子集演示）</h2><table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>'+rows+'</table></section>'
     + '<section class="card"><h2>武器分档（本变体独立）</h2><table><tr><th>武器</th><th>为什么</th></tr>'+w1+'</table></section>'
     + '<section class="card"><h2>关键道具（本变体独立）</h2><table><tr><th>道具</th><th>推荐理由</th></tr>'+it+'</table></section>'
     + '<section class="card"><h2>取材与版本（本变体独立源）</h2><p>'+esc(v.source.title)+' <code>'+esc(v.source.video_id)+'</code> / '+esc(v.source.published)+' / '+esc(v.source.difficulty)+' / '+esc(v.source.game_version)+'</p></section>';
 }
-function renderState(){ document.getElementById("state").innerHTML = '当前状态：<b>方案 '+esc(proto)+'</b> '+esc(NAMES[proto])+' · <b>档位 '+esc(diff)+'</b>（'+esc(FIXTURE.variants[diff].status)+'）· 夹具非真口径 · <code>?variant='+esc(proto)+'</code> 可分享'; document.getElementById("model").textContent = JSON.stringify(MODEL, null, 2); document.getElementById("ps-label").textContent = proto + "（" + NAMES[proto].slice(0,12) + "…）"; }
+function findV(label){ var vs = SCEN[sc].variants; for(var i=0;i<vs.length;i++) if(vs[i].label===label) return vs[i]; return vs[0]; }
+function renderState(extra){ document.getElementById("state").innerHTML = '当前状态：<b>方案 '+esc(proto)+'</b> '+esc(NAMES[proto])+(proto==="A" ? ' · 场景 <b>'+esc(sc)+'</b> '+esc(SCEN[sc].name)+' · 当前 <b>'+esc(diff)+'</b>' : ' · 当前 <b>'+esc(diff)+'</b>')+' · 夹具非真口径'; document.getElementById("model").textContent = JSON.stringify(MODEL, null, 2); document.getElementById("ps-label").textContent = proto + "（" + (proto==="A"?"胜出":proto) + "）"; }
 function mountA(){
-  var tabs = FIXTURE.order.map(function(d, i){ var v = FIXTURE.variants[d]; var badge = v.status === "missing" ? ' <span class="badge-pending">待补</span>' : ''; return '<button role="tab" id="tab-'+i+'" aria-controls="panel" aria-selected="'+(d===diff)+'" tabindex="'+(d===diff?"0":"-1")+'" data-d="'+esc(d)+'">'+esc(d)+badge+'</button>'; }).join("");
-  document.getElementById("mount").innerHTML = '<div class="seg" role="tablist" aria-label="难度档位">'+tabs+'</div><div id="panel" role="tabpanel" aria-live="polite" tabindex="0">'+variantBody(diff)+'</div>';
-  var btns = Array.prototype.slice.call(document.querySelectorAll('[role=tab]'));
-  function select(d, focus){ diff = d; btns.forEach(function(b, i){ var on = b.getAttribute("data-d")===d; b.setAttribute("aria-selected", on); b.tabIndex = on?0:-1; if(on && focus) b.focus(); }); document.getElementById("panel").innerHTML = variantBody(d); renderState(); }
-  btns.forEach(function(b, i){ b.addEventListener("click", function(){ select(b.getAttribute("data-d"), false); }); b.addEventListener("keydown", function(e){ var j = null; if(e.key==="ArrowRight") j=(i+1)%btns.length; else if(e.key==="ArrowLeft") j=(i-1+btns.length)%btns.length; else if(e.key==="Home") j=0; else if(e.key==="End") j=btns.length-1; if(j!==null){ e.preventDefault(); select(btns[j].getAttribute("data-d"), true); } }); });
+  var scenBtns = Object.keys(SCEN).map(function(k){ return '<button data-sc="'+k+'" aria-pressed="'+(k===sc)+'">'+esc(k)+'：'+esc(SCEN[k].name)+'</button>'; }).join("");
+  var vs = SCEN[sc].variants;
+  var body;
+  if(vs.length === 1){
+    body = '<div class="scen" role="group" aria-label="诚实覆盖场景">'+scenBtns+'</div>'
+      + '<span class="coverbadge">覆盖：'+esc(vs[0].label)+'（单变体，无 tab 栏）</span>'
+      + variantBody(vs[0]);
+    document.getElementById("mount").innerHTML = body;
+    diff = vs[0].label;
+  } else {
+    var tabs = vs.map(function(v){ return '<button role="tab" aria-controls="panel" aria-selected="'+(v.label===diff)+'" tabindex="'+(v.label===diff?"0":"-1")+'" data-d="'+esc(v.label)+'">'+esc(v.label)+'</button>'; }).join("");
+    document.getElementById("mount").innerHTML = '<div class="scen" role="group" aria-label="诚实覆盖场景">'+scenBtns+'</div>'
+      + '<div class="seg" role="tablist" aria-label="难度覆盖（动态）">'+tabs+'</div><div id="panel" role="tabpanel" aria-live="polite" tabindex="0">'+variantBody(findV(diff))+'</div>';
+    var btns = Array.prototype.slice.call(document.querySelectorAll('[role=tab]'));
+    btns.forEach(function(b, i){ b.addEventListener("click", function(){ diff = b.getAttribute("data-d"); mountA(); }); b.addEventListener("keydown", function(e){ var j = null; if(e.key==="ArrowRight") j=(i+1)%btns.length; else if(e.key==="ArrowLeft") j=(i-1+btns.length)%btns.length; else if(e.key==="Home") j=0; else if(e.key==="End") j=btns.length-1; if(j!==null){ e.preventDefault(); diff = btns[j].getAttribute("data-d"); mountA(); var nb = document.querySelectorAll('[role=tab]')[j]; if(nb) nb.focus(); } }); });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("[data-sc]"), function(b){ b.addEventListener("click", function(){ sc = b.getAttribute("data-sc"); setParam("sc", sc); diff = SCEN[sc].variants[0].label; mountA(); }); });
+  renderState();
 }
 function mountB(){
-  var nav = FIXTURE.order.map(function(d){ var s = FIXTURE.variants[d].status; return '<a href="#sec-'+esc(d)+'">'+esc(d)+(s==="missing"?'（待补）':'')+'</a>'; }).join("");
-  var secs = FIXTURE.order.map(function(d){ var v = FIXTURE.variants[d]; return '<div class="stacksec'+(v.status==="missing"?" missing":"")+'" id="sec-'+esc(d)+'"><header>'+esc(d)+(v.status==="missing"?' <span class="badge-pending">待补口径</span>':' <span class="badge-ready">已就绪</span>')+'</header><div style="padding:0 12px 12px">'+variantBody(d)+'</div></div>'; }).join("");
-  document.getElementById("mount").innerHTML = '<nav class="stacknav" aria-label="档位跳转">'+nav+'</nav><p style="font-size:13px;color:var(--muted)">B 方案：三档同页并列，无隐藏内容，天然可比；锚点跳转，无自定义键盘。</p>'+secs;
+  var nav = FIXED.order.map(function(d){ return '<a href="#sec-'+esc(d)+'">'+esc(d)+'</a>'; }).join("");
+  var secs = FIXED.order.map(function(d){ var v = FIXED.variants[d]; return '<div class="stacksec" id="sec-'+esc(d)+'"><header>'+esc(d)+' <span class="badge-ready">已就绪</span></header><div style="padding:0 12px 12px">'+variantBody(v)+'</div></div>'; }).join("");
+  document.getElementById("mount").innerHTML = '<p style="font-size:13px;color:var(--muted)">B 落选存档（固定三档旧形）。胜出为 A，本区仅留作 primary source。</p><nav class="stacknav" aria-label="档位跳转">'+nav+'</nav>'+secs;
   diff = "全部并列"; renderState();
 }
 function mountC(){
-  var opts = FIXTURE.order.map(function(d){ var s = FIXTURE.variants[d].status; return '<option value="'+esc(d)+'"'+(d===diff?" selected":"")+'>'+esc(d)+(s==="missing"?" — 待补":"")+'</option>'; }).join("");
-  var v = FIXTURE.variants[diff];
-  var summ = v.status === "missing" ? '<div class="summary">当前：<b>'+esc(diff)+'</b> 待补口径 · '+esc(v.reason)+'</div>'
-    : '<div class="summary">当前：<b>'+esc(diff)+'</b> · '+esc(v.source.title)+' <code>'+esc(v.source.video_id)+'</code> · Top3 独立 · 双标注 '+esc(v.source.published)+' + '+esc(v.source.game_version)+'</div>';
-  document.getElementById("mount").innerHTML = '<label for="dsel" style="font-size:13px;color:var(--muted)">档位（原生 select，移动端调系统滚轮）</label><select class="diffselect" id="dsel">'+opts+'</select>'+summ+'<div id="cbody">'+variantBody(diff)+'</div>';
-  document.getElementById("dsel").addEventListener("change", function(e){ diff = e.target.value; mountC(); renderState(); });
+  var opts = FIXED.order.map(function(d){ return '<option value="'+esc(d)+'"'+(d===diff?" selected":"")+'>'+esc(d)+'</option>'; }).join("");
+  var v = FIXED.variants[diff] || FIXED.variants["Ultimate"];
+  var summ = '<div class="summary">当前：<b>'+esc(v.label)+'</b> · '+esc(v.source.title)+' <code>'+esc(v.source.video_id)+'</code></div>';
+  document.getElementById("mount").innerHTML = '<p style="font-size:13px;color:var(--muted)">C 落选存档。胜出为 A。</p><select class="diffselect" id="dsel">'+opts+'</select>'+summ+'<div>'+variantBody(v)+'</div>';
+  document.getElementById("dsel").addEventListener("change", function(e){ diff = e.target.value; mountC(); });
+  renderState();
 }
-function mount(){ if(diff==="全部并列") diff="Ultimate"; if(proto==="A") mountA(); else if(proto==="B") mountB(); else mountC(); renderState(); }
-document.getElementById("ps-prev").addEventListener("click", function(){ var o=["A","B","C"]; proto = o[(o.indexOf(proto)+2)%3]; setVariant(proto); mount(); });
-document.getElementById("ps-next").addEventListener("click", function(){ var o=["A","B","C"]; proto = o[(o.indexOf(proto)+1)%3]; setVariant(proto); mount(); });
-document.addEventListener("keydown", function(e){ var t = e.target; if(t && (t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.tagName==="SELECT"||t.isContentEditable)) return; if(e.key==="ArrowRight"||e.key==="ArrowLeft"){ var o=["A","B","C"]; proto = e.key==="ArrowRight" ? o[(o.indexOf(proto)+1)%3] : o[(o.indexOf(proto)+2)%3]; setVariant(proto); mount(); } });
+function mount(){ if(proto==="A") mountA(); else if(proto==="B") mountB(); else { if(diff!=="Ultimate"&&diff!=="Nightmare") diff="Ultimate"; mountC(); } }
+document.getElementById("ps-prev").addEventListener("click", function(){ var o=["A","B","C"]; proto = o[(o.indexOf(proto)+2)%3]; setParam("variant", proto); mount(); });
+document.getElementById("ps-next").addEventListener("click", function(){ var o=["A","B","C"]; proto = o[(o.indexOf(proto)+1)%3]; setParam("variant", proto); mount(); });
+document.addEventListener("keydown", function(e){ var t = e.target; if(t && (t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.tagName==="SELECT"||t.isContentEditable)) return; if(e.key==="ArrowRight"||e.key==="ArrowLeft"){ var o=["A","B","C"]; proto = e.key==="ArrowRight" ? o[(o.indexOf(proto)+1)%3] : o[(o.indexOf(proto)+2)%3]; setParam("variant", proto); mount(); } });
 mount();
 })();
 </script>
-<!-- GENERATED? No — hand-written PROTOTYPE, do not build, do not merge to main. -->
+<!-- GENERATED? No — hand-written PROTOTYPE v2, do not build, do not merge to main. -->
 </body>
 </html>

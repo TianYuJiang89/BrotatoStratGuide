@@ -132,7 +132,8 @@ def test_check_missing_section_fails(tmp_path: Path) -> None:
     data_dir, templates_dir, out = make_isolated(tmp_path)
     build_file = data_dir / "builds" / "cyborg.json"
     data = json.loads(build_file.read_text(encoding="utf-8"))
-    data.pop("pitfalls", None)
+    assert isinstance(data.get("variants"), list) and data["variants"]
+    data["variants"][0].pop("pitfalls", None)
     build_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     r = subprocess.run(
         [sys.executable, str(REPO / "scripts" / "build.py"),
@@ -182,7 +183,7 @@ def test_missing_acceptance_warns_but_publishes(tmp_path: Path) -> None:
     data_dir, templates_dir, out = make_isolated(tmp_path)
     build_file = data_dir / "builds" / "cyborg.json"
     data = json.loads(build_file.read_text(encoding="utf-8"))
-    data["weapons_t1"] = []
+    data["variants"][0]["weapons_t1"] = []
     build_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     r = subprocess.run(
         [sys.executable, str(REPO / "scripts" / "build.py"),

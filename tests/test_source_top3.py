@@ -55,13 +55,25 @@ def build_fixture(data_dir: Path, templates_dir: Path, out: Path) -> subprocess.
 
 def read_source(data_dir: Path) -> dict:
     build_file = data_dir / "builds" / "cyborg.json"
-    return json.loads(build_file.read_text(encoding="utf-8"))
+    data = json.loads(build_file.read_text(encoding="utf-8"))
+    assert isinstance(data.get("variants"), list) and data["variants"]
+    return data["variants"][0]
 
 
 def write_source(data_dir: Path, source: dict) -> None:
     build_file = data_dir / "builds" / "cyborg.json"
     data = json.loads(build_file.read_text(encoding="utf-8"))
-    data["source"] = source
+    assert isinstance(data.get("variants"), list) and data["variants"]
+    # 覆盖制: 首变体 covers/label/id 须与 source.difficulty 一致时同步更新.
+    variant = data["variants"][0]
+    assert isinstance(variant, dict)
+    variant["source"] = source
+    diff = str(source.get("difficulty", ""))
+    # 若 source 难度为单档且与当前变体不同, 同步变体身份 (测试隔离用).
+    if diff in ("Danger 5", "Nightmare", "Ultimate"):
+        variant["covers"] = [diff]
+        variant["label"] = diff
+        variant["id"] = diff.lower().replace(" ", "-")
     build_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
 

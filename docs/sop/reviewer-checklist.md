@@ -1,18 +1,18 @@
 # Reviewer 块级审稿清单（SOP 附录，#18 落地）
 
 > 由 SOP §9 调用：第二道闸。drafter 写稿、reviewer 审稿（drafter 不审己稿）。
-> 前提：交叉表格式见 #17（`data/mentions/<slug>.json`，39术语+武器/道具逐个计数附原句）；
+> 前提：交叉表格式见 #17（`data/mentions/<slug>__<variant-id>.json`，每变体独立跑，39术语+武器/道具逐个计数附原句，variant-id 为 covers slug 化）+ 覆盖制见 #20（`builds/<slug>.json` 内 `variants` 数组，每变体 `covers` + `label`，动态诚实标签）；
 > 失败来源见 #14 批注（凭印象漏 Speed/Luck/Dodge，必须机器+块级双强制）。
 > 人三问是第三道闸、最后一道闸；降级（放松 gate）须另开票，本清单不直接放宽。
 
 ## 0. 输入（只认三件套，不看 drafter 脑补）
 
-* 字幕：`data/subs/<slug>.en-orig.vtt`（仅取证，专名已按 wiki 纠拼写）。
-* 口径：`data/builds/<slug>.json`（每变体独立 Top3+双标注+10段）。
-* 交叉表：`data/mentions/<slug>.json`（`build_mentions` 产物；多变体时每变体独立跑，落盘分块待 #20 定）。
-* 机检：`python scripts/check_mentions.py --slug <slug>` 输出（只 warn 不 fail；缺表/缺 build 才 FAIL，必须补）。
+* 字幕：`data/subs/<slug>__<variant-id>.en-orig.vtt`（每变体独立存，仅取证，专名已按 wiki 纠拼写）。
+* 口径：`data/builds/<slug>.json` 内 `variants` 数组（每变体 `covers` + `label` + 独立 Top3+双标注+10段，旧单层键废除）。
+* 交叉表：`data/mentions/<slug>__<variant-id>.json`（`build_mentions` 产物；每变体独立跑，variant-id 为 covers slug 化如 `ultimate-nightmare`，格式沿 #17）。
+* 机检：`python scripts/check_mentions.py --slug <slug>` 输出（只 warn 不 fail；缺表/缺 build 才 FAIL，必须补；`--variant <id>` 可单变体）。
 
-术语：档位=三档之一（Danger 5 / Nightmare / Ultimate）；变体=某角色某档位的整套打法（Top3+双标注+10段），同页不同源，空档置灰待补。
+术语：档位=三档之一（Danger 5 / Nightmare / Ultimate）；变体=某角色某覆盖范围（单档或合讲多档）的整套打法（Top3+双标注+10段），同页不同源，tab 由证据驱动（动态诚实标签：有证据才出 tab，无证据不占位，合讲合并，单变体退覆盖徽章）；旧空档置灰废除。
 
 ## 1. 块级范围（10段×变体逐块过）
 

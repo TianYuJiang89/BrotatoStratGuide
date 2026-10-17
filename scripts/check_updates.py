@@ -98,28 +98,39 @@ def check_baseline(data_dir: Path) -> tuple[list[str], list[str]]:
                 continue
             if not isinstance(payload, dict):
                 continue
-            source = payload.get("source")
-            if not isinstance(source, dict):
-                continue
-            published = source.get("published")
-            game_version = source.get("game_version")
             slug = build_file.stem
-            if not isinstance(published, str) or not published.strip():
-                warns.append(f"取材待补 {slug}: 发布日期缺项 (双标注须齐全)")
-                continue
-            import re as _re
+            # 覆盖制: variants 数组每变体独立巡检; 旧单层兼容 (过渡期).
+            sources: list[tuple[str, dict[str, object]]] = []
+            raw_variants = payload.get("variants")
+            if isinstance(raw_variants, list) and raw_variants:
+                for v in raw_variants:
+                    if isinstance(v, dict) and isinstance(v.get("source"), dict):
+                        vid = str(v.get("id", "?"))
+                        src = v.get("source")
+                        assert isinstance(src, dict)
+                        sources.append((f"{slug}__{vid}", src))
+            else:
+                source = payload.get("source")
+                if isinstance(source, dict):
+                    sources.append((slug, source))
+            for label, source in sources:
+                published = source.get("published")
+                game_version = source.get("game_version")
+                if not isinstance(published, str) or not published.strip():
+                    warns.append(f"取材待补 {label}: 发布日期缺项 (双标注须齐全)")
+                    continue
+                import re as _re
 
-            if not _re.fullmatch(r"\d{4}-\d{2}-\d{2}", published.strip()):
-                # 占位文案 (待补/占位) 走待补 warn, 其余非法格式同样 warn (fail 由 build 门禁报)。
-                warns.append(f"取材待补 {slug}: 发布日期 {published!r} 非 YYYY-MM-DD")
-                continue
-            if published.strip() < LAST_MAJOR_UPDATE:
-                warns.append(
-                    f"取材待重审 {slug}: 发布 {published.strip()} 早于大更新 {LAST_MAJOR_UPDATE} "
-                    f"(双标注复核, 命中待重审)"
-                )
-            if not isinstance(game_version, str) or not game_version.strip():
-                warns.append(f"取材待补 {slug}: 游戏版本缺项 (双标注须齐全)")
+                if not _re.fullmatch(r"\d{4}-\d{2}-\d{2}", published.strip()):
+                    warns.append(f"取材待补 {label}: 发布日期 {published!r} 非 YYYY-MM-DD")
+                    continue
+                if published.strip() < LAST_MAJOR_UPDATE:
+                    warns.append(
+                        f"取材待重审 {label}: 发布 {published.strip()} 早于大更新 {LAST_MAJOR_UPDATE} "
+                        f"(双标注复核, 命中待重审)"
+                    )
+                if not isinstance(game_version, str) or not game_version.strip():
+                    warns.append(f"取材待补 {label}: 游戏版本缺项 (双标注须齐全)")
     return (errors, warns)
 
 

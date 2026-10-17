@@ -36,7 +36,7 @@
 本节是三段式第一段：抽取（抽取→交叉表清零→填表，详见 §5–§7）。只做两件事，不做其他：
 
 1. **元数据**（`yt-dlp --print` 单视频）：标题 / 时长 / `upload_date` / 描述 / `chapters`。描述版本号（如 `1.1.15.1`）偶有，不单信；一律发布日期 + Steam 版本双标注。chapters 对开局/中期/后期分段。注：列表页 `description/upload_date` NA 不可靠，必须逐个单视频抓。
-2. **自动字幕**（`yt-dlp --write-auto-sub --sub-langs en-orig --sub-format vtt --skip-download`）：存 `data/subs/<slug>.en-orig.vtt`（构建不读，仅取证）。该频道实测只有自动字幕、无手动字幕；专名误听多（如 Brotato→Bart），必须对照 wiki 纠拼写，不照抄。
+2. **自动字幕**（`yt-dlp --write-auto-sub --sub-langs en-orig --sub-format vtt --skip-download`）：存 `data/subs/<slug>__<variant-id>.en-orig.vtt`（每变体独立存，构建不读，仅取证；variant-id 为 covers slug 化，如 `ultimate`、`ultimate-nightmare`、`danger-5`）。该频道实测只有自动字幕、无手动字幕；专名误听多（如 Brotato→Bart），必须对照 wiki 纠拼写，不照抄。
 
 明确不用：音频拉回 Whisper 重转写、画面帧 OCR/视觉抽取、全视频多模态理解、YouTube Data API、第三方转写服务。字幕缺失不转听译、不看画面猜，该候选降级或标待补。
 
@@ -44,10 +44,11 @@
 
 大黑箱拆细（#14 失败批注：旧 §5②+§6 单步凭印象漏 Speed/Luck/Dodge，必须机器强制）。本节是三段式第二段：交叉表清零。
 
-* 格式先定（子票「交叉表脚本与机检」#17 已定）：脚本扫字幕×39术语+注册表武器/道具名，逐个命中计数并附原句；输出落 `data/mentions/<slug>.json`（单变体；多变体时每变体独立跑，落盘分块待「多难度 tab 原型」#20 定，原则不变：每变体清零）。VTT 解析按空行分块，丢时间戳/序号/WEBVTT/NOTE/STYLE，去 HTML 标签，每块一句原句（cap 500字，quotes cap 10）。
-* 命令：`python scripts/build_mentions.py --slug <slug>` / `--all` 建表；`python scripts/check_mentions.py --slug <slug>` / `--all` 机检。`check_mentions` 只 warn 不 fail，不动现有 `check.py` 门禁；缺表/缺 build 才 FAIL（gate 未跑必须补）。
+* 格式先定（子票「交叉表脚本与机检」#17 已定 + 「多难度 tab 原型」#20 已定覆盖制）：脚本扫字幕×39术语+注册表武器/道具名，逐个命中计数并附原句；输出落 `data/mentions/<slug>__<variant-id>.json`（每变体独立跑，variant-id 为 covers slug 化，如 `ultimate`、`ultimate-nightmare`、`danger-5`，格式沿 #17，原则不变：每变体清零）。VTT 解析按空行分块，丢时间戳/序号/WEBVTT/NOTE/STYLE，去 HTML 标签，每块一句原句（cap 500字，quotes cap 10）。
+* 数据模型（#20 决议：A 胜出 + 动态诚实标签）：`data/builds/<slug>.json` 内 `variants` 数组，每变体自带 `covers` + 显示名 `label` + 独立 Top3+双标注+10段；tab 按数组渲染，有几个渲染几个；旧单层键与固定三 key 废除。排序按最高难度从高到低（Ultimate > Nightmare > Danger 5）；标签用全名（Danger 5，不用 D5）。同一视频合讲多档则合并为一个变体（如 Ultimate + Nightmare，内容/取材/交叉表只跑一份）；资料源只讲 Danger 5 就只出 Danger 5。单变体退化为覆盖徽章，不留单 tab 栏。tab 为 A 方案 sticky 分段独占切换（APG tablist：箭头/Home/End，44px 触区，横滑，vanilla JS 离线可用，页内首个 JS）。
+* 命令：`python scripts/build_mentions.py --slug <slug>` / `--all` 建全部分块（`--variant <id>` 单变体）；`python scripts/check_mentions.py --slug <slug>` / `--all` 机检（`--variant <id>` 单变体）。`check_mentions` 只 warn 不 fail，不动现有 `check.py` 门禁；缺表/缺 build 才 FAIL（gate 未跑必须补）。
 * 清零定义（drafter 自清，reviewer 复查）：① 提到未定级（count>0 但无 S–F/武器不在 T1+T2/道具不在列）→ 补定级；② 定级无命中（有定级但 count==0）须挂名注明出处是标题/描述/chapters（note/reason 含 标题/描述/出处/chapter/title/description 任一），否则疑为编 WARN。清零后 `check_mentions` 仍 warn 可发布，但必须逐条有交代，不许凭印象空出。
-* 术语：档位=三档之一（Danger 5 / Nightmare / Ultimate）；变体=某角色某档位的整套打法（Top3+双标注+10段），同页不同源；空档置灰待补。
+* 术语：档位=三档之一（Danger 5 / Nightmare / Ultimate）；变体=某角色某覆盖范围（单档或合讲多档）的整套打法（Top3+双标注+10段），同页不同源，tab 由证据驱动（动态诚实标签：有几份证据做几个变体，有证据才出 tab，无证据不占位；同一视频合讲多档则合并为一个变体如 Ultimate + Nightmare；单变体退化为覆盖徽章即 coverbadge，不留单 tab 栏；标签全名 Danger 5，排序按最高难度从高到低 Ultimate > Nightmare > Danger 5）；旧空档置灰废除，被动态诚实标签取代。
 
 ## 6. 开逐角色单（模板原样填）
 

@@ -36,6 +36,12 @@ td.rating-cell { width:2.6em; text-align:center; white-space:nowrap; }
 .badge-resource { display:inline-block; font-size:11px; border:1px solid #1565c0; color:#fff; background:#1565c0; border-radius:999px; padding:1px 7px; margin-left:6px; vertical-align:1px; }
 .badge-dlc { display:inline-block; font-size:11px; border:1px solid #9a3412; color:#fff; background:#9a3412; border-radius:999px; padding:1px 7px; margin-left:6px; vertical-align:1px; }
 .badge-review { display:inline-block; font-size:11px; border:1px dashed #9a3412; color:#9a3412; border-radius:999px; padding:1px 7px; margin-left:6px; vertical-align:1px; }
+.coverbadge { display:inline-block; font-size:13px; border:1px solid #0e8a16; background:#e8f5e9; color:#1b5e20; border-radius:999px; padding:6px 14px; margin:8px 0; }
+.seg { position:sticky; top:0; z-index:6; background:rgba(247,245,239,.96); padding:10px 0 6px; display:flex; gap:8px; overflow-x:auto; }
+.seg [role=tab] { flex:1 0 auto; min-height:44px; font-size:15px; border:1px solid var(--line); background:#fff; border-radius:999px; padding:8px 14px; cursor:pointer; white-space:nowrap; }
+.seg [role=tab][aria-selected=true] { background:#1f1b16; color:#fff; border-color:#1f1b16; font-weight:700; }
+.seg [role=tab]:focus-visible { outline:3px solid #0b5fff; outline-offset:2px; }
+[role=tabpanel][hidden] { display:none; }
 .sic { width:20px; height:20px; vertical-align:-4px; image-rendering:pixelated; background:#efe9d8; border-radius:6px; }
 .sic.none { display:inline-flex; width:20px; height:20px; vertical-align:-4px; align-items:center; justify-content:center; font-size:12px; color:var(--muted); background:#f2ecdd; border-radius:6px; }
 .has-tip { position:relative; border-bottom:1px dotted var(--muted); cursor:help; }
@@ -72,6 +78,7 @@ table.wt { width:100%; border-collapse:collapse; font-size:11px; line-height:1.4
 .toc { position:sticky; top:53px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 10px; display:flex; gap:8px; overflow-x:auto; font-size:13px; }
 .toc a { white-space:nowrap; text-decoration:none; background:#f2ecdd; border-radius:999px; padding:4px 10px; color:var(--ink); }
 .footer { font-size:12px; color:var(--muted); margin-top:16px; }
+:focus-visible { outline:3px solid #0b5fff; outline-offset:2px; }
 @media (max-width:480px){ .hero h1 { font-size:20px; } }
 </style>
 </head>
@@ -82,22 +89,43 @@ table.wt { width:100%; border-collapse:collapse; font-size:11px; line-height:1.4
 <h1>{{ZH}} ({{EN}}){{PENDING_BADGE}}</h1>
 <p>土豆兄弟 (Brotato) · 单角色攻略 · 纯静态单模板</p>
 </div>
-<nav class="toc" aria-label="目录">
-<a href="#s-mechanism">机制一句话</a><a href="#s-attrs-primary">核心属性·主表</a><a href="#s-attrs-secondary">核心属性·次级表</a><a href="#s-weapons">武器分档</a><a href="#s-items">关键道具</a><a href="#s-phases">开局/中期/后期</a><a href="#s-upgrade">升级优先级</a><a href="#s-shop">商店优先级</a><a href="#s-pitfalls">避坑</a><a href="#s-hard">高难特例</a><a href="#s-source">取材与版本</a>
-</nav>
-<section class="card" id="s-mechanism" data-section="mechanism"><h2>机制一句话</h2><p>{{MECHANISM}}</p></section>
-<section class="card" id="s-attrs-primary" data-section="attrs-primary"><h2>核心属性·主表</h2><p class="legend">图例：<span class="rating rating-S">S</span><span class="rating rating-A">A</span><span class="rating rating-B">B</span><span class="rating rating-C">C</span><span class="rating rating-D">D</span><span class="rating rating-F">F</span><span class="rating rating-none">— 未提及</span> · 评级只认视频作者口径，未提诚实空出 · 排序图标随 wiki Stats 原序 · <span class="badge-dlc">DLC</span>=深渊魔物专属 · ※=中文待客户端简中校对</p><div class="table-wrap"><table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>{{ATTRS_PRIMARY_ROWS}}</table></div></section>
-<section class="card" id="s-attrs-secondary" data-section="attrs-secondary"><h2>核心属性·次级表</h2><p class="legend">次级 22 全量随 wiki 次级表原序（消耗品治疗到重随价格） · wiki 本无专用图标统一 ◆ 占位 · 悬浮为 wiki Notable Items 热链 · ※待校对只 warn 加标</p><div class="table-wrap"><table><tr><th>属性</th><th>评级</th><th>怎么看</th></tr>{{ATTRS_SECONDARY_ROWS}}</table></div></section>
-<section class="card" id="s-weapons" data-section="weapons"><h2>武器分档</h2><h3>T1 主选</h3><div class="table-wrap gear-wrap"><table><tr><th>武器</th><th>为什么 / 何时拿换</th></tr>{{WEAPONS_T1_ROWS}}</table></div><h3>T2 备选过渡</h3><div class="table-wrap gear-wrap"><table><tr><th>武器</th><th>为什么 / 何时拿换</th></tr>{{WEAPONS_T2_ROWS}}</table></div></section>
-<section class="card" id="s-items" data-section="items"><h2>关键道具</h2><div class="table-wrap gear-wrap"><table><tr><th>道具</th><th>推荐理由</th></tr>{{ITEMS_ROWS}}</table></div></section>
-<section class="card" id="s-phases" data-section="phases"><h2>开局 / 中期 / 后期</h2>{{PHASES_BLOCK}}</section>
-<section class="card" id="s-upgrade" data-section="upgrade"><h2>升级优先级</h2><p>{{UPGRADE}}</p></section>
-<section class="card" id="s-shop" data-section="shop"><h2>商店优先级</h2><p>{{SHOP}}</p></section>
-<section class="card" id="s-pitfalls" data-section="pitfalls"><h2>避坑</h2><ul>{{PITFALLS_ITEMS}}</ul></section>
-<section class="card" id="s-hard" data-section="hard"><h2>高难特例</h2><p>{{HARD}}</p></section>
-<section class="card" id="s-source" data-section="source"><h2>取材与版本</h2>{{SOURCE_BLOCK}}</section>
+{{TOC}}
+{{VARIANT_TABS}}
+{{VARIANT_PANELS}}
 <div class="footer">{{FOOTER}}</div>
 </div>
+<script>
+(function(){
+"use strict";
+var tabs = Array.prototype.slice.call(document.querySelectorAll('[role=tab]'));
+if(!tabs.length) return;
+var panels = Array.prototype.slice.call(document.querySelectorAll('[role=tabpanel]'));
+function select(label, focus){
+  tabs.forEach(function(t){
+    var on = t.getAttribute("data-d") === label;
+    t.setAttribute("aria-selected", on ? "true" : "false");
+    t.tabIndex = on ? 0 : -1;
+    if(on && focus) t.focus();
+  });
+  panels.forEach(function(p){
+    var on = p.getAttribute("data-variant-label") === label;
+    if(on) p.removeAttribute("hidden");
+    else p.setAttribute("hidden", "");
+  });
+}
+tabs.forEach(function(t, i){
+  t.addEventListener("click", function(){ select(t.getAttribute("data-d"), false); });
+  t.addEventListener("keydown", function(e){
+    var j = null;
+    if(e.key === "ArrowRight") j = (i+1)%tabs.length;
+    else if(e.key === "ArrowLeft") j = (i-1+tabs.length)%tabs.length;
+    else if(e.key === "Home") j = 0;
+    else if(e.key === "End") j = tabs.length-1;
+    if(j !== null){ e.preventDefault(); select(tabs[j].getAttribute("data-d"), true); }
+  });
+});
+})();
+</script>
 <!-- GENERATED by scripts/build.py: do not edit, rebuild from data/ + templates/ -->
 </body>
 </html>

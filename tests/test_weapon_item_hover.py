@@ -107,7 +107,9 @@ def test_big_arms_schema_example_renders_all_fields() -> None:
     try:
         build_file = data_dir / "builds" / "cyborg.json"
         data = json.loads(build_file.read_text(encoding="utf-8"))
-        data["items"] = [*data["items"], {"name_en": "Big Arms", "reason": "schema 例"}]
+        assert isinstance(data.get("variants"), list) and data["variants"]
+        variant = data["variants"][0]
+        variant["items"] = [*variant["items"], {"name_en": "Big Arms", "reason": "schema 例"}]
         build_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         r = build_fixture(data_dir, templates_dir, out)
         assert r.returncode == 0, f"fixture build failed: {r.stderr[-2000:]}"
@@ -134,7 +136,9 @@ def test_unknown_weapon_fails() -> None:
     try:
         build_file = data_dir / "builds" / "cyborg.json"
         data = json.loads(build_file.read_text(encoding="utf-8"))
-        data["weapons_t1"] = [*data["weapons_t1"], {"name_en": "Fake Gun", "note": "造假"}]
+        assert isinstance(data.get("variants"), list) and data["variants"]
+        variant = data["variants"][0]
+        variant["weapons_t1"] = [*variant["weapons_t1"], {"name_en": "Fake Gun", "note": "造假"}]
         build_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         r = build_fixture(data_dir, templates_dir, out)
         assert r.returncode != 0, "unknown weapon must fail"
@@ -150,7 +154,9 @@ def test_unknown_item_fails() -> None:
     try:
         build_file = data_dir / "builds" / "cyborg.json"
         data = json.loads(build_file.read_text(encoding="utf-8"))
-        data["items"] = [*data["items"], {"name_en": "Fake Trinket", "reason": "造假"}]
+        assert isinstance(data.get("variants"), list) and data["variants"]
+        variant = data["variants"][0]
+        variant["items"] = [*variant["items"], {"name_en": "Fake Trinket", "reason": "造假"}]
         build_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         r = build_fixture(data_dir, templates_dir, out)
         assert r.returncode != 0, "unknown item must fail"

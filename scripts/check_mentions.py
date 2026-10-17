@@ -1,6 +1,7 @@
-"""交叉表机检 (#17): 字幕提到未定级 warn, 定级无命中挂名 warn, 只 warn 不 fail.
+"""交叉表机检 (#17 + #20 覆盖制): 字幕提到未定级 warn, 定级无命中挂名 warn, 只 warn 不 fail.
 
-输入: `data/mentions/<slug>.json` (build_mentions 产物) + `data/builds/<slug>.json`.
+输入: `data/mentions/<slug>__<variant>.json` (每变体独立, build_mentions 产物) + `data/builds/<slug>.json` 内 variants.
+
 - 提到未定级: terms/weapons/items 在字幕 count>0 但 builds 无定级 -> WARN.
 - 定级无命中: builds 有定级 (S-F / 武器在列 / 道具在列) 但 count==0,
   且 note/reason 未注明出处 (标题/描述/chapters) -> WARN 疑为编.
@@ -43,35 +44,32 @@ def _has_source(note: object) -> bool:
     return any(kw.lower() in lowered for kw in SOURCE_KEYWORDS)
 
 
-def check_one(
-    slug: str, data_dir: Path, mentions_dir: Path
+def _load_variant(data: dict[str, object], variant_id: str | None) -> tuple[dict[str, object] | None, list[str]]:
+    variants_raw = data.get("variants")
+    if not isinstance(variants_raw, list) or not variants_raw:
+        return (None, ["missing section data: variants (须为非空数组, 旧单层键废除)"])
+    if variant_id is None:
+        # 单变体默认首个, 多变体须显式 --variant (调用方循环).
+        first = variants_raw[0] if isinstance(variants_raw[0], dict) else None
+        return (first, [] if first else ["variants[0] must be dict"])
+    for v in variants_raw:
+        if isinstance(v, dict) and str(v.get("id", "")) == variant_id:
+            return (v, [])
+    return (None, [f"unknown variant: __{variant_id}"])
+
+
+def check_one_variant(
+    slug: str, variant_id: str, variant: dict[str, object], mentions: dict[str, object],
 ) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warns: list[str] = []
-    mentions_path = mentions_dir / f"{slug}.json"
-    if not mentions_path.exists():
-        return ([f"missing mentions table: {mentions_path} (先跑 build_mentions --slug {slug})"], [])
-    build_path = data_dir / "builds" / f"{slug}.json"
-    if not build_path.exists():
-        return ([f"missing build data: {build_path}"], [])
-    try:
-        mentions = json.loads(mentions_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        return ([f"mentions load fail {slug}: {exc}"], [])
-    try:
-        data = json.loads(build_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        return ([f"build load fail {slug}: {exc}"], [])
-    if not isinstance(mentions, dict) or not isinstance(data, dict):
-        return ([f"mentions/build must be dict: {slug}"], [])
-
+    label = f"{slug}__{variant_id}"
     terms_m = mentions.get("terms")
     weapons_m = mentions.get("weapons")
     items_m = mentions.get("items")
     if not isinstance(terms_m, dict):
-        return ([f"mentions terms must be dict: {slug}"], [])
-
-    ratings_raw = data.get("ratings")
+        return ([f"mentions terms must be dict: {label}"], [])
+    ratings_raw = variant.get("ratings")
     ratings: dict[str, object] = ratings_raw if isinstance(ratings_raw, dict) else {}
 
     # --- 术语 ---
@@ -100,10 +98,10 @@ def check_one(
                     f"(疑为编, 须注明标题/描述/chapters)"
                 )
 
-    # --- 武器 (weapons_t1+t2 的 name_en 集合为定级) ---
+    # --- 武器 (weapons_t1+t2 的 name_en 集合为定级, 每变体独立) ---
     present_weapons: dict[str, object] = {}
     for key in ("weapons_t1", "weapons_t2"):
-        arr = data.get(key)
+        arr = variant.get(key)
         if isinstance(arr, list):
             for w in arr:
                 if isinstance(w, dict) and isinstance(w.get("name_en"), str):
@@ -126,9 +124,9 @@ def check_one(
                         f"(疑为编, 须注明标题/描述/chapters)"
                     )
 
-    # --- 道具 (items 的 name_en 集合为定级) ---
+    # --- 道具 (items 的 name_en 集合为定级, 每变体独立) ---
     present_items: dict[str, object] = {}
-    arr = data.get("items")
+    arr = variant.get("items")
     if isinstance(arr, list):
         for it in arr:
             if isinstance(it, dict) and isinstance(it.get("name_en"), str):
@@ -153,6 +151,61 @@ def check_one(
     return (errors, warns)
 
 
+def check_one(
+    slug: str, data_dir: Path, mentions_dir: Path, variant_id: str | None = None,
+) -> tuple[list[str], list[str]]:
+    """覆盖制机检: 每变体独立表 `data/mentions/<slug>__<variant>.json`, 只 warn 不 fail."""
+    errors: list[str] = []
+    warns: list[str] = []
+    build_path = data_dir / "builds" / f"{slug}.json"
+    if not build_path.exists():
+        return ([f"missing build data: {build_path}"], [])
+    try:
+        data = json.loads(build_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return ([f"build load fail {slug}: {exc}"], [])
+    if not isinstance(data, dict):
+        return ([f"build must be dict: {slug}"], [])
+    variants_raw = data.get("variants")
+    if not isinstance(variants_raw, list) or not variants_raw:
+        return ([f"missing section data: variants (须为非空数组, 旧单层键废除): {slug}"], [])
+    targets: list[dict[str, object]] = []
+    for v in variants_raw:
+        if not isinstance(v, dict):
+            continue
+        if variant_id is None or str(v.get("id", "")) == variant_id:
+            targets.append(v)
+    if variant_id is not None and not targets:
+        return ([f"unknown variant: {slug}__{variant_id}"], [])
+    for variant in targets:
+        vid = str(variant.get("id", ""))
+        mentions_path = mentions_dir / f"{slug}__{vid}.json"
+        # 单变体兼容旧表: 若 per-variant 缺但旧 <slug>.json 在, 回落旧表.
+        fallback_used = False
+        if not mentions_path.exists():
+            legacy = mentions_dir / f"{slug}.json"
+            if len(targets) == 1 and legacy.exists():
+                mentions_path = legacy
+                fallback_used = True
+            else:
+                errors.append(f"missing mentions table: {mentions_path} (先跑 build_mentions --slug {slug} --variant {vid})")
+                continue
+        try:
+            mentions = json.loads(mentions_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            errors.append(f"mentions load fail {slug}__{vid}: {exc}")
+            continue
+        if not isinstance(mentions, dict):
+            errors.append(f"mentions must be dict: {slug}__{vid}")
+            continue
+        v_errors, v_warns = check_one_variant(slug, vid, variant, mentions)
+        errors.extend(v_errors)
+        for w in v_warns:
+            warns.append(f"[{slug}__{vid}] {w}" if not w.startswith("[" ) else w)
+        _ = fallback_used
+    return (errors, warns)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="交叉表机检只 warn 不 fail (#17)")
     group = parser.add_mutually_exclusive_group(required=True)
@@ -160,6 +213,7 @@ def main(argv: list[str] | None = None) -> int:
     group.add_argument("--all", action="store_true", help="全量检查")
     parser.add_argument("--data-dir", default="data")
     parser.add_argument("--mentions-dir", default="")
+    parser.add_argument("--variant", default="", help="单变体 id, 如 --variant ultimate")
     args = parser.parse_args(argv)
 
     repo = Path(__file__).resolve().parent.parent
@@ -171,7 +225,8 @@ def main(argv: list[str] | None = None) -> int:
         mentions_dir = repo / mentions_dir
 
     if args.slug:
-        errors, warns = check_one(args.slug, data_dir, mentions_dir)
+        variant_arg = str(args.variant).strip() or None
+        errors, warns = check_one(args.slug, data_dir, mentions_dir, variant_arg)
         if errors:
             for err in errors:
                 print(f"FAIL: {err}", file=sys.stderr)
@@ -181,7 +236,8 @@ def main(argv: list[str] | None = None) -> int:
         if warns:
             print(f"WARN: check_mentions {len(warns)} 项待清零/挂名, 仍可发布 (只 warn 不 fail)")
         else:
-            print(f"OK: mentions cleared, {args.slug} 交叉表清零")
+            suffix = f"__{variant_arg}" if variant_arg else ""
+            print(f"OK: mentions cleared, {args.slug}{suffix} 交叉表清零")
         return 0
 
     builds_dir = data_dir / "builds"
@@ -189,8 +245,19 @@ def main(argv: list[str] | None = None) -> int:
     failed = False
     total_warns = 0
     for slug in slugs:
-        # 无字幕无表者跳过 (待补, 由 build_mentions --all 统一提示).
-        if not (mentions_dir / f"{slug}.json").exists():
+        # 覆盖制: 每变体表独立, 缺表跳过待补.
+        try:
+            raw = json.loads((data_dir / "builds" / f"{slug}.json").read_text(encoding="utf-8"))
+        except Exception:
+            print(f"WARN: missing build, skip {slug} (待补)")
+            continue
+        variants_raw = raw.get("variants") if isinstance(raw, dict) else None
+        vids: list[str] = [str(v.get("id", "")) for v in variants_raw if isinstance(v, dict)] if isinstance(variants_raw, list) else []
+        if not vids:
+            print(f"WARN: missing variants, skip {slug} (待补)")
+            continue
+        has_any = any((mentions_dir / f"{slug}__{vid}.json").exists() or (mentions_dir / f"{slug}.json").exists() for vid in vids)
+        if not has_any:
             print(f"WARN: missing mentions table, skip {slug} (待补)")
             continue
         errors, warns = check_one(slug, data_dir, mentions_dir)
@@ -200,7 +267,7 @@ def main(argv: list[str] | None = None) -> int:
             failed = True
             continue
         for w in warns:
-            print(f"[{slug}] {w}")
+            print(w if w.startswith("[") else f"[{slug}] {w}")
         total_warns += len(warns)
     if failed:
         return 1

@@ -1,8 +1,8 @@
-"""#17 E2E seam: 字幕x术语交叉表机器 gate + check_mentions 只 warn.
+"""#17+#20 E2E seam: 字幕x术语交叉表机器 gate + check_mentions 只 warn (覆盖制每变体独立).
 
 Seams under test (pre-agreed per #16 Notes: E2E only):
-- `python scripts/build_mentions.py --slug <slug>` exit codes + `data/mentions/<slug>.json` bytes
-- `python scripts/check_mentions.py --slug <slug>` exit codes (只 warn 不 fail)
+- `python scripts/build_mentions.py --slug <slug>` exit codes + `data/mentions/<slug>__<variant>.json` bytes
+- `python scripts/check_mentions.py --slug <slug>` exit codes (只 warn 不 fail, 每变体独立)
 
 No internal imports, no network. All assertions inspect CLI exit codes
 and data file bytes. Fixtures are isolated tmp copies.
@@ -60,12 +60,17 @@ def make_workdir() -> tuple[Path, tempfile.TemporaryDirectory[str]]:
     return (work / "data", tmp)
 
 
-def write_vtt(data_dir: Path, slug: str, content: str) -> Path:
+def write_vtt(data_dir: Path, slug: str, content: str, variant: str = "nightmare") -> Path:
     subs = data_dir / "subs"
     subs.mkdir(parents=True, exist_ok=True)
-    p = subs / f"{slug}.en-orig.vtt"
+    # 覆盖制每变体独立存; 测试夹具单变体 nightmare.
+    p = subs / f"{slug}__{variant}.en-orig.vtt"
     p.write_text(content, encoding="utf-8")
     return p
+
+
+def mentions_path(data_dir: Path, slug: str = "cyborg", variant: str = "nightmare") -> Path:
+    return data_dir / "mentions" / f"{slug}__{variant}.json"
 
 
 def run_build_mentions(data_dir: Path, slug: str) -> subprocess.CompletedProcess[str]:
@@ -83,16 +88,17 @@ def run_check_mentions(data_dir: Path, slug: str) -> subprocess.CompletedProcess
 
 
 def test_build_mentions_produces_cross_table_json() -> None:
-    """交叉表格式: data/mentions/<slug>.json 含 39 术语 + 武器/道具, 逐个计数附原句."""
+    """交叉表格式: data/mentions/<slug>__<variant>.json 含 39 术语 + 武器/道具, 逐个计数附原句."""
     data_dir, tmp = make_workdir()
     try:
         write_vtt(data_dir, "cyborg", REGRESSION_VTT)
         r = run_build_mentions(data_dir, "cyborg")
         assert r.returncode == 0, f"build_mentions must exit 0: {r.stderr[-2000:]}"
-        out = data_dir / "mentions" / "cyborg.json"
-        assert out.exists(), "交叉表输出须落 data/mentions/<slug>.json (本单定)"
+        out = mentions_path(data_dir)
+        assert out.exists(), "交叉表输出须落 data/mentions/<slug>__<variant>.json (覆盖制每变体)"
         payload = json.loads(out.read_text(encoding="utf-8"))
         assert payload.get("slug") == "cyborg"
+        assert payload.get("variant") == "nightmare"
         terms = payload.get("terms")
         assert isinstance(terms, dict) and len(terms) == EXPECTED_TERMS, (
             f"terms 须 39 全量, got {len(terms) if isinstance(terms, dict) else type(terms)}"
@@ -118,7 +124,7 @@ def test_regression_14_missed_ratings_are_caught() -> None:
         write_vtt(data_dir, "cyborg", REGRESSION_VTT)
         r = run_build_mentions(data_dir, "cyborg")
         assert r.returncode == 0, r.stderr[-2000:]
-        payload = json.loads((data_dir / "mentions" / "cyborg.json").read_text(encoding="utf-8"))
+        payload = json.loads(mentions_path(data_dir).read_text(encoding="utf-8"))
         terms = payload["terms"]
         for en in ("Speed", "Luck", "Dodge", "Damage", "Melee Damage"):
             assert terms[en]["count"] > 0, f"{en} 字幕明确提及, 交叉表必须命中 (否则重演 #14 漏定级)"
@@ -172,7 +178,7 @@ def test_attack_speed_does_not_pollute_speed() -> None:
             "WEBVTT\n\n00:00.000 --> 00:02.000\nattack speed is great, take clock\n",
         )
         assert run_build_mentions(data_dir, "cyborg").returncode == 0
-        payload = json.loads((data_dir / "mentions" / "cyborg.json").read_text(encoding="utf-8"))
+        payload = json.loads(mentions_path(data_dir).read_text(encoding="utf-8"))
         assert payload["terms"]["Attack Speed"]["count"] > 0
         assert payload["terms"]["Speed"]["count"] == 0, "attack speed 不得污染 Speed"
     finally:

@@ -79,6 +79,91 @@ LAST_MAJOR_UPDATE: str = "2026-09-01"
 # 占位标记:值含任一即视为待补 (诚实空出, warn 不 fail)。
 PLACEHOLDER_MARKERS: tuple[str, ...] = ("占位", "待补", "待写", "demo-placeholder", "TODO")
 
+# 覆盖制 (#20 决议: A 胜出 + 动态诚实标签, #21 先改后做).
+# variants 数组内每变体 covers+label, tab 由证据驱动, 旧单层键与固定三 key 废除.
+DIFFICULTY_RANK: dict[str, int] = {"Danger 5": 1, "Nightmare": 2, "Ultimate": 3}
+
+
+def _slugify_difficulty(value: str) -> str:
+    """档位 slug 化: Danger 5->danger-5, Nightmare->nightmare, Ultimate->ultimate."""
+    return str(value).strip().lower().replace(" ", "-")
+
+
+def variant_id_for_covers(covers: list[str]) -> str:
+    """variant-id 为 covers slug 化 (高->低排序后 join, 如 ultimate-nightmare)."""
+    ranked = sorted(covers, key=lambda c: DIFFICULTY_RANK.get(str(c), 0), reverse=True)
+    return "-".join(_slugify_difficulty(c) for c in ranked)
+
+
+def _sorted_covers(covers: list[str]) -> list[str]:
+    return sorted([str(c) for c in covers], key=lambda c: DIFFICULTY_RANK.get(c, 0), reverse=True)
+
+
+def validate_variants(data: dict[str, object]) -> tuple[list[dict[str, object]], list[str]]:
+    """覆盖制结构校验: variants 非空数组, 每变体 covers/label/id/10段齐全.
+
+    返回 (sorted_variants, errors). 排序按最高难度高->低.
+    """
+    errors: list[str] = []
+    raw = data.get("variants")
+    if not isinstance(raw, list) or not raw:
+        return ([], ["missing section data: variants (须为非空数组, 旧单层键废除)"])
+    seen_ids: set[str] = set()
+    seen_covers: set[str] = set()
+    parsed: list[dict[str, object]] = []
+    for idx, item in enumerate(raw):
+        if not isinstance(item, dict):
+            errors.append(f"missing section data: variants[{idx}] need dict")
+            continue
+        covers_raw = item.get("covers")
+        if not isinstance(covers_raw, list) or not covers_raw:
+            errors.append(f"missing section data: variants[{idx}].covers 须为非空数组")
+            continue
+        covers = [str(c) for c in covers_raw]
+        for c in covers:
+            if c not in ALLOWED_DIFFICULTIES:
+                errors.append(f"取材难度只认三档即 fail: variants[{idx}].covers {c!r}")
+        if _sorted_covers(covers) != covers:
+            errors.append(f"variants[{idx}].covers 须高->低排序: {covers}")
+        label = item.get("label")
+        expected_label = " + ".join(covers)
+        if label != expected_label:
+            errors.append(f"variants[{idx}].label 须为全名 covers join: got {label!r}, want {expected_label!r}")
+        vid = item.get("id")
+        expected_id = variant_id_for_covers(covers)
+        if vid != expected_id:
+            errors.append(f"variants[{idx}].id 须为 covers slug 化: got {vid!r}, want {expected_id!r}")
+        if isinstance(vid, str):
+            if vid in seen_ids:
+                errors.append(f"variants id 重复即 fail: {vid}")
+            seen_ids.add(vid)
+        key = "+".join(covers)
+        if key in seen_covers:
+            errors.append(f"variants covers 重复即 fail: {key}")
+        seen_covers.add(key)
+        for key2 in REQUIRED_KEYS:
+            if key2 not in item:
+                errors.append(f"missing section data: variants[{idx}].{key2}")
+        parsed.append(item)
+    # 旧单层键残留即 fail (废除).
+    for legacy in REQUIRED_KEYS:
+        if legacy in data:
+            errors.append(f"旧单层键废除即 fail: 顶层含 {legacy} (须只用 variants 数组)")
+            break
+
+    def _variant_rank(v: dict[str, object]) -> int:
+        covers_raw = v.get("covers")
+        covers_list: list[object] = covers_raw if isinstance(covers_raw, list) else []
+        best = 0
+        for c in covers_list:
+            rank = DIFFICULTY_RANK.get(str(c), 0)
+            if rank > best:
+                best = rank
+        return best
+
+    parsed_sorted = sorted(parsed, key=_variant_rank, reverse=True)
+    return (parsed_sorted, errors)
+
 # 单源基线: 主 17 + 次级 22, wiki 原序, 旧次级 3 口径作废。
 EXPECTED_PRIMARY: list[str] = [
     "Max HP",
@@ -676,6 +761,16 @@ def _is_youtube_url(url: object) -> bool:
     )
 
 
+def _is_allowed_difficulty(value: object) -> bool:
+    """覆盖制难度校验: 单档或合讲合并标签 (Ultimate + Nightmare) 均可, 每部分须在三档内."""
+    if not isinstance(value, str):
+        return False
+    parts = [p.strip() for p in value.split("+")]
+    if not parts:
+        return False
+    return all(p in ALLOWED_DIFFICULTIES for p in parts)
+
+
 def check_source(source: object) -> tuple[list[str], list[str]]:
     """#13 取材门禁 (fail) + 验收线 (warn)。
 
@@ -704,8 +799,8 @@ def check_source(source: object) -> tuple[list[str], list[str]]:
     published = source.get("published")
     difficulty = source.get("difficulty")
     game_version = source.get("game_version")
-    # --- 门禁:主引用 ---
-    if difficulty not in ALLOWED_DIFFICULTIES:
+    # --- 门禁:主引用 (覆盖制: 单档或合讲合并标签) ---
+    if not _is_allowed_difficulty(difficulty):
         # 诚实空缺 (待补标题 + 占位 id) 允许 warn, 不 fail;其余非法难度 fail。
         honest_empty = _is_placeholder(video_id) or (isinstance(title, str) and "暂无可用主引用" in title)
         if not honest_empty:
@@ -743,7 +838,7 @@ def check_source(source: object) -> tuple[list[str], list[str]]:
             c_vid = cand.get("video_id")
             c_pub = cand.get("published")
             c_diff = cand.get("difficulty")
-            if c_diff not in ALLOWED_DIFFICULTIES:
+            if not _is_allowed_difficulty(c_diff):
                 errors.append(f"取材候选难度只认三档即 fail: candidates[{idx}] {c_diff!r}")
             c_hit = _has_entertainment(c_title)
             if c_hit:
@@ -1001,30 +1096,27 @@ def build_term_tables(
 
 
 def check_structure_data(data: dict[str, object]) -> list[str]:
-    """结构机检: 缺必填键即 fail。返回错误列表, 为空即通过。"""
-    errors: list[str] = []
-    for key in REQUIRED_KEYS:
-        if key not in data:
-            errors.append(f"missing section data: {key}")
-    phases = data.get("phases")
-    if "phases" in data:
-        if not isinstance(phases, list):
-            errors.append("missing section data: phases (need exactly 3: W1-5/W6-12/W13-20)")
-        elif len(phases) != 3:  # noqa: PLR2004
-            errors.append("missing section data: phases (need exactly 3: W1-5/W6-12/W13-20)")
-    ratings = data.get("ratings")
-    if "ratings" in data and not isinstance(ratings, dict):
-        errors.append("missing section data: ratings (need dict en->rating/note)")
+    """结构机检: 覆盖制 variants 数组, 每变体 10 段齐全, 旧单层键废除."""
+    variants, errors = validate_variants(data)
+    if errors:
+        return errors
+    for idx, variant in enumerate(variants):
+        phases = variant.get("phases")
+        if not isinstance(phases, list) or len(phases) != 3:  # noqa: PLR2004
+            errors.append("missing section data: " f"variants[{idx}].phases (need exactly 3: W1-5/W6-12/W13-20)")
+        ratings = variant.get("ratings")
+        if not isinstance(ratings, dict):
+            errors.append(f"missing section data: variants[{idx}].ratings (need dict en->rating/note)")
     return errors
 
 
-def check_acceptance(data: dict[str, object]) -> list[str]:
-    """验收线机检: 缺项只 warn, 不 fail。返回警告列表。"""
+def check_acceptance_one(variant: dict[str, object]) -> list[str]:
+    """单变体验收线机检: 缺项只 warn, 不 fail."""
     warns: list[str] = []
-    mechanism = data.get("mechanism")
+    mechanism = variant.get("mechanism")
     if not isinstance(mechanism, str) or not mechanism.strip():
         warns.append("acceptance: 机制一句话缺项")
-    ratings = data.get("ratings")
+    ratings = variant.get("ratings")
     found_sa = False
     if isinstance(ratings, dict):
         for v in ratings.values():
@@ -1033,13 +1125,13 @@ def check_acceptance(data: dict[str, object]) -> list[str]:
                 break
     if not found_sa:
         warns.append("acceptance: 属性 S/A 无口径")
-    weapons_t1 = data.get("weapons_t1")
+    weapons_t1 = variant.get("weapons_t1")
     if not isinstance(weapons_t1, list) or len(weapons_t1) < 1:
         warns.append("acceptance: 武器 T1 至少 1 把缺项")
-    items = data.get("items")
+    items = variant.get("items")
     if not isinstance(items, list) or len(items) < 3:  # noqa: PLR2004
         warns.append("acceptance: 关键道具至少 3 件缺项")
-    phases = data.get("phases")
+    phases = variant.get("phases")
     phase_ok = (
         isinstance(phases, list)
         and len(phases) == 3  # noqa: PLR2004
@@ -1054,10 +1146,10 @@ def check_acceptance(data: dict[str, object]) -> list[str]:
     if not phase_ok:
         warns.append("acceptance: 阶段转向点 / 波次范围缺项")
     for key in ("upgrade", "shop"):
-        value = data.get(key)
+        value = variant.get(key)
         if not isinstance(value, str) or not value.strip():
             warns.append(f"acceptance: {key} Top3 缺项")
-    source = data.get("source")
+    source = variant.get("source")
     if not isinstance(source, dict):
         warns.append("acceptance: 取材版本缺项")
     else:
@@ -1075,15 +1167,32 @@ def check_acceptance(data: dict[str, object]) -> list[str]:
     return warns
 
 
+def check_acceptance(data: dict[str, object]) -> list[str]:
+    """覆盖线机检: 每变体验收线汇总, 缺项只 warn, 不 fail."""
+    variants, errors = validate_variants(data)
+    if errors:
+        return []
+    warns: list[str] = []
+    for variant in variants:
+        vid = str(variant.get("id", "?"))
+        for w in check_acceptance_one(variant):
+            warns.append(f"[{vid}] {w}" if w.startswith("acceptance:") else w)
+    return warns
+
+
 def check_structure_html(html_text: str) -> list[str]:
-    """产物结构机检: 11 个 data-section 齐全且顺序正确, 否则 fail。"""
+    """产物结构机检: 每变体 11 个 data-section 齐全且顺序正确, 否则 fail (覆盖制)."""
     import re
 
     found = re.findall(r'data-section="([^"]+)"', html_text)
-    if found != SECTION_ORDER:
-        return [
-            f"section order mismatch: expected {SECTION_ORDER}, got {found}",
-        ]
+    if not found:
+        return [f"section order mismatch: expected {SECTION_ORDER}, got {found}"]
+    if len(found) % len(SECTION_ORDER) != 0:
+        return [f"section order mismatch: expected N x {SECTION_ORDER}, got {found}"]
+    for i in range(0, len(found), len(SECTION_ORDER)):
+        chunk = found[i:i + len(SECTION_ORDER)]
+        if chunk != SECTION_ORDER:
+            return [f"section order mismatch: expected {SECTION_ORDER}, got {chunk} (variant block {i // len(SECTION_ORDER)})",]
     return []
 
 
@@ -1114,6 +1223,175 @@ def footer_html(source: dict[str, object]) -> str:
     )
 
 
+def _variant_section_html(vid: str, section: str, title: str, inner: str) -> str:
+    """单变体单段卡片: id 按变体后缀, data-section+data-variant 双标."""
+    sec_id = f"s-{section}-{vid}"
+    return (
+        f'<section class="card" id="{esc(sec_id)}" '
+        f'data-section="{esc(section)}" data-variant="{esc(vid)}">'
+        f"<h2>{title}</h2>{inner}</section>"
+    )
+
+
+def build_variant_panel(
+    variant: dict[str, object],
+    terms: list[dict[str, str]],
+    reg: dict[str, object],
+    terms_by_en: dict[str, dict[str, str]],
+    items_map: dict[str, object],
+    weapons_map: dict[str, object],
+) -> tuple[str, list[str], list[str]]:
+    """单变体 11 段面板 inner. 返回 (html, errors, warns)."""
+    vid = str(variant.get("id", ""))
+    ratings_raw = variant.get("ratings")
+    ratings: dict[str, object] = ratings_raw if isinstance(ratings_raw, dict) else {}
+    primary_rows, secondary_rows, term_errors, term_warns = build_term_tables(terms, ratings, reg)
+    if term_errors:
+        return ("", term_errors, [])
+    w1_raw = variant.get("weapons_t1")
+    w2_raw = variant.get("weapons_t2")
+    items_raw = variant.get("items")
+    w1_rows, w1_errors, w1_warns = weapon_rows(
+        w1_raw if isinstance(w1_raw, list) else [], weapons_map, terms_by_en
+    )
+    w2_rows, w2_errors, w2_warns = weapon_rows(
+        w2_raw if isinstance(w2_raw, list) else [], weapons_map, terms_by_en
+    )
+    items_rows, item_errors, item_warns = item_rows(
+        items_raw if isinstance(items_raw, list) else [], items_map, terms_by_en
+    )
+    gear_errors = w1_errors + w2_errors + item_errors
+    if gear_errors:
+        return ("", gear_errors, [])
+    mechanism = variant.get("mechanism")
+    mechanism_html = (
+        esc(mechanism)
+        if isinstance(mechanism, str) and mechanism.strip()
+        else '<span class="empty">作者未提及 — 待补口径</span>'
+    )
+    upgrade = variant.get("upgrade")
+    upgrade_html = (
+        esc(upgrade)
+        if isinstance(upgrade, str) and upgrade.strip()
+        else '<span class="empty">作者未提及 — 待补口径</span>'
+    )
+    shop = variant.get("shop")
+    shop_html = (
+        esc(shop)
+        if isinstance(shop, str) and shop.strip()
+        else '<span class="empty">作者未提及 — 待补口径</span>'
+    )
+    hard = variant.get("hard")
+    hard_html = (
+        esc(hard)
+        if isinstance(hard, str) and hard.strip()
+        else '<span class="empty">作者未提及 — 待补口径</span>'
+    )
+    pitfalls = variant.get("pitfalls")
+    if isinstance(pitfalls, list) and pitfalls:
+        pitfalls_html = "".join(
+            f"<li>{esc(p) if isinstance(p, str) and p.strip() else '<span class=\"empty\">作者未提及</span>'}</li>"
+            for p in pitfalls
+        )
+    else:
+        pitfalls_html = '<li><span class="empty">作者未提及 — 待补口径</span></li>'
+    phases = variant.get("phases")
+    source = variant.get("source")
+    legend_primary = (
+        '<p class="legend">图例：<span class="rating rating-S">S</span>'
+        '<span class="rating rating-A">A</span><span class="rating rating-B">B</span>'
+        '<span class="rating rating-C">C</span><span class="rating rating-D">D</span>'
+        '<span class="rating rating-F">F</span><span class="rating rating-none">— 未提及</span>'
+        ' · 评级只认视频作者口径，未提诚实空出 · 排序图标随 wiki Stats 原序 · '
+        '<span class="badge-dlc">DLC</span>=深渊魔物专属 · ※=中文待客户端简中校对</p>'
+    )
+    legend_secondary = (
+        '<p class="legend">次级 22 全量随 wiki 次级表原序（消耗品治疗到重随价格）'
+        ' · wiki 本无专用图标统一 ◆ 占位 · 悬浮为 wiki Notable Items 热链 · ※待校对只 warn 加标</p>'
+    )
+    parts = [
+        _variant_section_html(vid, "mechanism", "机制一句话", f"<p>{mechanism_html}</p>"),
+        _variant_section_html(vid, "attrs-primary", "核心属性·主表",
+            f"{legend_primary}<div class=\"table-wrap\"><table>"
+            f"<tr><th>属性</th><th>评级</th><th>怎么看</th></tr>{primary_rows}</table></div>"),
+        _variant_section_html(vid, "attrs-secondary", "核心属性·次级表",
+            f"{legend_secondary}<div class=\"table-wrap\"><table>"
+            f"<tr><th>属性</th><th>评级</th><th>怎么看</th></tr>{secondary_rows}</table></div>"),
+        _variant_section_html(vid, "weapons", "武器分档",
+            f"<h3>T1 主选</h3><div class=\"table-wrap gear-wrap\"><table>"
+            f"<tr><th>武器</th><th>为什么 / 何时拿换</th></tr>{w1_rows}</table></div>"
+            f"<h3>T2 备选过渡</h3><div class=\"table-wrap gear-wrap\"><table>"
+            f"<tr><th>武器</th><th>为什么 / 何时拿换</th></tr>{w2_rows}</table></div>"),
+        _variant_section_html(vid, "items", "关键道具",
+            f"<div class=\"table-wrap gear-wrap\"><table>"
+            f"<tr><th>道具</th><th>推荐理由</th></tr>{items_rows}</table></div>"),
+        _variant_section_html(vid, "phases", "开局 / 中期 / 后期",
+            phases_block(phases if isinstance(phases, list) else [])),
+        _variant_section_html(vid, "upgrade", "升级优先级", f"<p>{upgrade_html}</p>"),
+        _variant_section_html(vid, "shop", "商店优先级", f"<p>{shop_html}</p>"),
+        _variant_section_html(vid, "pitfalls", "避坑", f"<ul>{pitfalls_html}</ul>"),
+        _variant_section_html(vid, "hard", "高难特例", f"<p>{hard_html}</p>"),
+        _variant_section_html(vid, "source", "取材与版本",
+            source_block(source if isinstance(source, dict) else {})),
+    ]
+    warns = term_warns + w1_warns + w2_warns + item_warns
+    return ("".join(parts), [], warns)
+
+
+def toc_html(first_vid: str) -> str:
+    """全局目录: 锚点指向首变体 (最高难度) 后缀 id, 无 JS 仍可读."""
+    items = [
+        ("mechanism", "机制一句话"),
+        ("attrs-primary", "核心属性·主表"),
+        ("attrs-secondary", "核心属性·次级表"),
+        ("weapons", "武器分档"),
+        ("items", "关键道具"),
+        ("phases", "开局/中期/后期"),
+        ("upgrade", "升级优先级"),
+        ("shop", "商店优先级"),
+        ("pitfalls", "避坑"),
+        ("hard", "高难特例"),
+        ("source", "取材与版本"),
+    ]
+    links = "".join(
+        f'<a href="#s-{sec}-{esc(first_vid)}">{title}</a>' for sec, title in items
+    )
+    return f'<nav class="toc" aria-label="目录">{links}</nav>'
+
+
+def variants_block_html(sorted_variants: list[dict[str, object]], panels: list[str]) -> tuple[str, str]:
+    """覆盖制 tab 区: 单变体徽章 vs 多变体 tablist+panels. 返回 (tabs, panels_html)."""
+    if len(sorted_variants) == 1:
+        v = sorted_variants[0]
+        label = str(v.get("label", ""))
+        vid = str(v.get("id", ""))
+        tabs = f'<span class="coverbadge">覆盖：{esc(label)}（单变体，无 tab 栏）</span>'
+        body = (
+            f'<div id="panel-{esc(vid)}" role="tabpanel" aria-live="polite" tabindex="0" '
+            f'data-variant="{esc(vid)}" data-variant-label="{esc(label)}">{panels[0]}</div>'
+        )
+        return (tabs, body)
+    btns: list[str] = []
+    wrapped: list[str] = []
+    for idx, v in enumerate(sorted_variants):
+        label = str(v.get("label", ""))
+        vid = str(v.get("id", ""))
+        sel = "true" if idx == 0 else "false"
+        tab = "0" if idx == 0 else "-1"
+        btns.append(
+            f'<button role="tab" id="tab-{esc(vid)}" aria-controls="panel-{esc(vid)}" '
+            f'aria-selected="{sel}" tabindex="{tab}" data-d="{esc(label)}">{esc(label)}</button>'
+        )
+        hidden = "" if idx == 0 else ' hidden=""'
+        wrapped.append(
+            f'<div id="panel-{esc(vid)}" role="tabpanel" aria-labelledby="tab-{esc(vid)}" '
+            f'tabindex="0" data-variant="{esc(vid)}" data-variant-label="{esc(label)}"{hidden}>'
+            f"{panels[idx]}</div>"
+        )
+    tabs_html = f'<div class="seg" role="tablist" aria-label="难度覆盖（动态）">{"".join(btns)}</div>'
+    return (tabs_html, "".join(wrapped))
+
+
 def render_character(
     roster_entry: dict[str, object],
     primary_rows: str,
@@ -1125,65 +1403,35 @@ def render_character(
     template: str,
     warns: list[str],
 ) -> str:
+    """兼容旧签名的覆盖制渲染: 旧行参忽略, 按 variants 重算每变体面板."""
+    # 旧单层占位已废除, 此处仅为兼容旧调用保留签名, 实际按 variants 渲染.
+    # 真实 per-variant 行在 build_slug 内已算好并经此函数组装 (见下).
+    # 为保持 E2E seam 稳定, 本函数在 variants 模式下直接走新路径.
+    raise NotImplementedError("render_character 旧签名已废除, 请用 render_character_variants")
+
+
+def render_character_variants(
+    roster_entry: dict[str, object],
+    sorted_variants: list[dict[str, object]],
+    panels: list[str],
+    template: str,
+    warns: list[str],
+    footer_source: dict[str, object],
+) -> str:
     zh = esc(roster_entry.get("zh", ""))
     en = esc(roster_entry.get("en", ""))
-    pending = (
-        ' <span class="badge-pending">待补口径</span>' if warns else ""
-    )
-    mechanism = data.get("mechanism")
-    mechanism_html = (
-        esc(mechanism)
-        if isinstance(mechanism, str) and mechanism.strip()
-        else '<span class="empty">作者未提及 — 待补口径</span>'
-    )
-    upgrade = data.get("upgrade")
-    upgrade_html = (
-        esc(upgrade)
-        if isinstance(upgrade, str) and upgrade.strip()
-        else '<span class="empty">作者未提及 — 待补口径</span>'
-    )
-    shop = data.get("shop")
-    shop_html = (
-        esc(shop)
-        if isinstance(shop, str) and shop.strip()
-        else '<span class="empty">作者未提及 — 待补口径</span>'
-    )
-    hard = data.get("hard")
-    hard_html = (
-        esc(hard)
-        if isinstance(hard, str) and hard.strip()
-        else '<span class="empty">作者未提及 — 待补口径</span>'
-    )
-    pitfalls = data.get("pitfalls")
-    if isinstance(pitfalls, list) and pitfalls:
-        pitfalls_html = "".join(
-            f"<li>{esc(p) if isinstance(p, str) and p.strip() else '<span class=\"empty\">作者未提及</span>'}</li>"
-            for p in pitfalls
-        )
-    else:
-        pitfalls_html = '<li><span class="empty">作者未提及 — 待补口径</span></li>'
-
-    phases = data.get("phases")
-    source = data.get("source")
-
+    pending = ' <span class="badge-pending">待补口径</span>' if warns else ""
+    first_vid = str(sorted_variants[0].get("id", "")) if sorted_variants else ""
+    tabs_html, panels_html = variants_block_html(sorted_variants, panels)
     replacements: dict[str, str] = {
         "{{PAGE_TITLE}}": f"{roster_entry.get('zh', '')} ({roster_entry.get('en', '')}) · 土豆兄弟攻略",
         "{{ZH}}": zh,
         "{{EN}}": en,
         "{{PENDING_BADGE}}": pending,
-        "{{MECHANISM}}": mechanism_html,
-        "{{ATTRS_PRIMARY_ROWS}}": primary_rows,
-        "{{ATTRS_SECONDARY_ROWS}}": secondary_rows,
-        "{{WEAPONS_T1_ROWS}}": weapons_t1_rows,
-        "{{WEAPONS_T2_ROWS}}": weapons_t2_rows,
-        "{{ITEMS_ROWS}}": items_rows,
-        "{{PHASES_BLOCK}}": phases_block(phases if isinstance(phases, list) else []),
-        "{{UPGRADE}}": upgrade_html,
-        "{{SHOP}}": shop_html,
-        "{{PITFALLS_ITEMS}}": pitfalls_html,
-        "{{HARD}}": hard_html,
-        "{{SOURCE_BLOCK}}": source_block(source if isinstance(source, dict) else {}),
-        "{{FOOTER}}": footer_html(source if isinstance(source, dict) else {}),
+        "{{TOC}}": toc_html(first_vid),
+        "{{VARIANT_TABS}}": tabs_html,
+        "{{VARIANT_PANELS}}": panels_html,
+        "{{FOOTER}}": footer_html(footer_source),
     }
     out = template
     for token, value in replacements.items():
@@ -1319,48 +1567,36 @@ def build_slug(
     errors = check_structure_data(data)
     if errors:
         return (errors, [])
-    ratings_raw = data.get("ratings")
-    ratings: dict[str, object] = ratings_raw if isinstance(ratings_raw, dict) else {}
-    primary_rows, secondary_rows, term_errors, term_warns = build_term_tables(terms, ratings, reg)
-    if term_errors:
-        return (term_errors, [])
+    sorted_variants, _ = validate_variants(data)
     terms_by_en: dict[str, dict[str, str]] = {t["en"]: t for t in terms}
     reg_items = reg.get("items")
     reg_weapons = reg.get("weapons")
     items_map: dict[str, object] = reg_items if isinstance(reg_items, dict) else {}
     weapons_map: dict[str, object] = reg_weapons if isinstance(reg_weapons, dict) else {}
-    weapons_t1_raw = data.get("weapons_t1")
-    weapons_t2_raw = data.get("weapons_t2")
-    items_raw = data.get("items")
-    weapons_t1_rows, w1_errors, w1_warns = weapon_rows(
-        weapons_t1_raw if isinstance(weapons_t1_raw, list) else [], weapons_map, terms_by_en
-    )
-    weapons_t2_rows, w2_errors, w2_warns = weapon_rows(
-        weapons_t2_raw if isinstance(weapons_t2_raw, list) else [], weapons_map, terms_by_en
-    )
-    items_rows, item_errors, item_warns = item_rows(
-        items_raw if isinstance(items_raw, list) else [], items_map, terms_by_en
-    )
-    gear_errors = w1_errors + w2_errors + item_errors
-    if gear_errors:
-        return (gear_errors, [])
-    # #13 取材门禁:难度/娱乐/链接/Top3/抽取错即 fail。
-    raw_source = data.get("source")
-    src_errors, src_warns = check_source(raw_source)
-    if src_errors:
-        return (src_errors, src_warns)
-    warns = check_acceptance(data)
-    warns.extend(term_warns)
-    warns.extend(w1_warns + w2_warns + item_warns)
+    panels: list[str] = []
+    warns: list[str] = []
+    for variant in sorted_variants:
+        panel, p_errors, p_warns = build_variant_panel(
+            variant, terms, reg, terms_by_en, items_map, weapons_map
+        )
+        if p_errors:
+            return (p_errors, [])
+        # #13 取材门禁每变体独立: 难度/娱乐/链接/Top3/抽取错即 fail.
+        raw_source = variant.get("source")
+        src_errors, _src_warns = check_source(raw_source)
+        if src_errors:
+            vid = str(variant.get("id", "?"))
+            return ([f"[{vid}] {e}" for e in src_errors], _src_warns)
+        warns.extend(p_warns)
+        panels.append(panel)
+    warns.extend(check_acceptance(data))
     # 名录待校对只 warn。
     if str(entry.get("needs_review", "")).upper() == "TRUE" or entry.get("needs_review") is True:
         warns.append(f"名录中文待校对: {entry.get('id')}（※），以客户端简中为准")
     template = (templates_dir / "character.html").read_text(encoding="utf-8")
-    rendered = render_character(
-        entry, primary_rows, secondary_rows,
-        weapons_t1_rows, weapons_t2_rows, items_rows,
-        data, template, warns,
-    )
+    footer_src_raw = sorted_variants[0].get("source") if sorted_variants else {}
+    footer_src: dict[str, object] = footer_src_raw if isinstance(footer_src_raw, dict) else {}
+    rendered = render_character_variants(entry, sorted_variants, panels, template, warns, footer_src)
     html_errors = check_structure_html(rendered)
     if html_errors:
         return (html_errors, warns)

@@ -164,8 +164,9 @@ def test_unknown_term_fails() -> None:
         out = Path(tmp) / "out"
         build_file = work / "data" / "builds" / "cyborg.json"
         data = json.loads(build_file.read_text(encoding="utf-8"))
-        ratings = data.get("ratings")
-        assert isinstance(ratings, dict), "cyborg.json must use single-source ratings"
+        assert isinstance(data.get("variants"), list) and data["variants"]
+        ratings = data["variants"][0].get("ratings")
+        assert isinstance(ratings, dict), "cyborg.json variants[0] must use single-source ratings"
         ratings["Fake Stat That Does Not Exist"] = {"rating": "S", "note": "造假"}
         build_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         r = subprocess.run(

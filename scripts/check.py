@@ -21,52 +21,97 @@ from build import (  # noqa: E402
 )
 
 
+def _is_allowed_difficulty(value: str) -> bool:
+    """覆盖制难度: 单档或合讲合并标签均可."""
+    parts = [p.strip() for p in value.split("+")]
+    return bool(parts) and all(p in ALLOWED_DIFFICULTIES for p in parts)
+
+
 def check_file(path: Path) -> tuple[list[str], list[str]]:
     html_text = path.read_text(encoding="utf-8")
     errors: list[str] = []
     warns: list[str] = []
     found = re.findall(r'data-section="([^"]+)"', html_text)
-    if found != SECTION_ORDER:
+    # 覆盖制: 每变体 11 段, N x 顺序.
+    if not found or len(found) % len(SECTION_ORDER) != 0:
         errors.append(
-            f"section order mismatch in {path}: expected {SECTION_ORDER}, got {found}"
+            f"section order mismatch in {path}: expected N x {SECTION_ORDER}, got {found}"
         )
         return (errors, warns)
-    # 主次全量拆两表: 行数与原序。
-    m_primary = re.search(r'data-section="attrs-primary".*?</section>', html_text, re.S)
-    m_secondary = re.search(r'data-section="attrs-secondary".*?</section>', html_text, re.S)
-    if not m_primary or not m_secondary:
-        errors.append("missing attrs-primary/attrs-secondary section")
+    for i in range(0, len(found), len(SECTION_ORDER)):
+        chunk = found[i:i + len(SECTION_ORDER)]
+        if chunk != SECTION_ORDER:
+            errors.append(
+                f"section order mismatch in {path}: expected {SECTION_ORDER}, got {chunk} (variant block {i // len(SECTION_ORDER)})"
+            )
+            return (errors, warns)
+    n_variants = len(found) // len(SECTION_ORDER)
+    # 动态诚实标签: 单变体徽章 vs 多变体 tablist.
+    n_panels = len(re.findall(r'role="tabpanel"', html_text))
+    if n_panels == 0:
+        # 旧单页无面板 (过渡期): 视为单变体, 须有覆盖或直接内容.
+        n_panels = n_variants
+    n_tabs = len(re.findall(r'role="tab"', html_text))
+    has_tablist = 'role="tablist"' in html_text
+    has_badge = "coverbadge" in html_text or "覆盖" in html_text
+    if n_variants == 1:
+        if has_tablist or n_tabs != 0:
+            errors.append("动态诚实标签即 fail: 单变体不留单 tab 栏 (须退化为覆盖徽章)")
+        if not has_badge:
+            errors.append("动态诚实标签即 fail: 单变体须退化为覆盖徽章")
+    else:
+        if not has_tablist:
+            errors.append(f"动态诚实标签即 fail: {n_variants} 变体须有 tablist (A 胜出)")
+        if n_tabs != n_variants:
+            errors.append(f"动态诚实标签即 fail: 有几份证据出几个 tab, want {n_variants}, got {n_tabs}")
+        for needle in ("aria-selected", "tabpanel", "44px", "sticky"):
+            if needle not in html_text:
+                errors.append(f"A tab 即 fail: 缺 {needle}")
+                break
+    # 主次全量拆两表: 每变体逐块查行数与原序。
+    prim_secs = re.findall(r'data-section="attrs-primary".*?</section>', html_text, re.S)
+    sec_secs = re.findall(r'data-section="attrs-secondary".*?</section>', html_text, re.S)
+    if not prim_secs or not sec_secs or len(prim_secs) != n_variants or len(sec_secs) != n_variants:
+        errors.append("missing attrs-primary/attrs-secondary section (每变体须各一)")
         return (errors, warns)
-    prim_html = m_primary.group(0)
-    sec_html = m_secondary.group(0)
-    pos: list[int] = []
-    for en in EXPECTED_PRIMARY:
-        idx = prim_html.find(f"({en})")
-        if idx < 0:
-            errors.append(f"术语对不上即 fail: 主表缺 {en}")
-        else:
-            pos.append(idx)
-    if pos != sorted(pos):
-        errors.append("primary order mismatch (须随 wiki Stats 原序)")
-    pos2: list[int] = []
-    for en in EXPECTED_SECONDARY:
-        idx = sec_html.find(f"({en})")
-        if idx < 0:
-            errors.append(f"术语对不上即 fail: 次级表缺 {en}")
-        else:
-            pos2.append(idx)
-    if pos2 != sorted(pos2):
-        errors.append("secondary order mismatch (须随 wiki 次级表原序)")
-    # 角标缺失即 fail: Curse 与 % Reroll Price 必须带 DLC。
-    if "Curse" in prim_html and "DLC" not in prim_html:
-        errors.append("角标缺失即 fail: Curse 缺 DLC 角标")
-    if "Reroll Price" in sec_html and "DLC" not in sec_html:
-        errors.append("角标缺失即 fail: % Reroll Price 缺 DLC 角标")
-    # 武器道具 hover (#15): 有数据行 (无诚实空出) 必须有悬浮, 空口径行可免。
-    for sec_name in ("weapons", "items"):
-        m_sec = re.search(rf'data-section="{sec_name}".*?</section>', html_text, re.S)
-        if m_sec and "待补口径" not in m_sec.group(0) and "has-tip" not in m_sec.group(0):
-            errors.append(f"hover 缺失即 fail: {sec_name} 区有名无悬浮 (未知武器/道具或模板回归)")
+    for prim_html in prim_secs:
+        pos: list[int] = []
+        for en in EXPECTED_PRIMARY:
+            idx = prim_html.find(f"({en})")
+            if idx < 0:
+                errors.append(f"术语对不上即 fail: 主表缺 {en}")
+            else:
+                pos.append(idx)
+        if pos != sorted(pos):
+            errors.append("primary order mismatch (须随 wiki Stats 原序)")
+    for sec_html in sec_secs:
+        pos2: list[int] = []
+        for en in EXPECTED_SECONDARY:
+            idx = sec_html.find(f"({en})")
+            if idx < 0:
+                errors.append(f"术语对不上即 fail: 次级表缺 {en}")
+            else:
+                pos2.append(idx)
+        if pos2 != sorted(pos2):
+            errors.append("secondary order mismatch (须随 wiki 次级表原序)")
+    # 角标缺失即 fail: 每变体 Curse 与 % Reroll Price 必须带 DLC。
+    for prim_html in prim_secs:
+        if "Curse" in prim_html and "DLC" not in prim_html:
+            errors.append("角标缺失即 fail: Curse 缺 DLC 角标")
+            break
+    for sec_html in sec_secs:
+        if "Reroll Price" in sec_html and "DLC" not in sec_html:
+            errors.append("角标缺失即 fail: % Reroll Price 缺 DLC 角标")
+            break
+    # 武器道具 hover (#15): 每变体有数据行 (无诚实空出) 必须有悬浮, 空口径行可免。
+    for sec_html in re.findall(r'data-section="weapons".*?</section>', html_text, re.S):
+        if "待补口径" not in sec_html and "has-tip" not in sec_html:
+            errors.append("hover 缺失即 fail: weapons 区有名无悬浮 (未知武器/道具或模板回归)")
+            break
+    for sec_html in re.findall(r'data-section="items".*?</section>', html_text, re.S):
+        if "待补口径" not in sec_html and "has-tip" not in sec_html:
+            errors.append("hover 缺失即 fail: items 区有名无悬浮 (未知武器/道具或模板回归)")
+            break
     # 图标: 主表 wiki 热链, 次级 ◆ 占位。
     if "wiki.spellsandguns.com" not in html_text:
         errors.append("图标缺失即 fail: 主表缺 wiki 热链图标 (注册表唯一 URL 源)")
@@ -123,10 +168,8 @@ def check_file(path: Path) -> tuple[list[str], list[str]]:
         errors.append("页脚缺失即 fail: 缺转述非搬运/不搬截图原片声明")
     if "后续合规票" in html_text:
         errors.append("页脚缺失即 fail: 骨架占位文案未替换为合规署名")
-    # #13 取材门禁:难度三档 + 娱乐局不进候选 + Top3 不超 3 + 链接齐全。
-    m_source = re.search(r'data-section="source".*?</section>', html_text, re.S)
-    if m_source:
-        sec = m_source.group(0)
+    # #13 取材门禁每变体: 难度三档 (单档或合讲) + 娱乐局不进候选 + Top3 不超 3 + 链接齐全。
+    for sec in re.findall(r'data-section="source".*?</section>', html_text, re.S):
         lowered = sec.lower()
         for marker in ENTERTAINMENT_MARKERS:
             if marker in lowered:
@@ -139,7 +182,7 @@ def check_file(path: Path) -> tuple[list[str], list[str]]:
             diff_text = diff.strip()
             if not diff_text or "待补" in diff_text or "占位" in diff_text or diff_text == "—":
                 continue
-            if diff_text not in ALLOWED_DIFFICULTIES:
+            if not _is_allowed_difficulty(diff_text):
                 errors.append(f"取材难度只认三档即 fail: {diff_text!r}")
                 break
         if "youtube.com" not in sec and "youtu.be" not in sec and "待补" not in sec:

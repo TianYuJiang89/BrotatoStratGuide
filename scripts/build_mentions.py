@@ -206,8 +206,96 @@ def scan_cues(
     return result
 
 
+def _variant_id_for_covers(covers: list[str]) -> str:
+    return "-".join(str(c).strip().lower().replace(" ", "-") for c in covers)
+
+
+def _load_variants(data_dir: Path, slug: str) -> tuple[list[dict[str, object]], list[str]]:
+    """覆盖制变体加载: builds/<slug>.json 内 variants 数组, 旧单层废除."""
+    build_path = data_dir / "builds" / f"{slug}.json"
+    if not build_path.exists():
+        return ([], [f"missing build data: {build_path}"])
+    try:
+        raw = json.loads(build_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return ([], [f"build load fail {slug}: {exc}"])
+    if not isinstance(raw, dict):
+        return ([], [f"build must be dict: {slug}"])
+    variants_raw = raw.get("variants")
+    if not isinstance(variants_raw, list) or not variants_raw:
+        return ([], [f"missing section data: variants (须为非空数组, 旧单层键废除): {slug}"])
+    out: list[dict[str, object]] = [v for v in variants_raw if isinstance(v, dict)]
+    if len(out) != len(variants_raw):
+        return ([], [f"variants must be dicts: {slug}"])
+    return (out, [])
+
+
+def _vtt_for_variant(subs_dir: Path, slug: str, variant_id: str) -> Path:
+    """每变体字幕: data/subs/<slug>__<variant>.en-orig.vtt; 单变体兼容旧 <slug>.en-orig.vtt."""
+    per = subs_dir / f"{slug}__{variant_id}.en-orig.vtt"
+    if per.exists():
+        return per
+    legacy = subs_dir / f"{slug}.en-orig.vtt"
+    return legacy
+
+
+def build_one_variant(
+    slug: str, variant: dict[str, object], data_dir: Path, subs_dir: Path, mentions_dir: Path,
+    terms: list[str], weapons: list[str], items: list[str],
+) -> tuple[list[str], list[str]]:
+    covers_raw = variant.get("covers")
+    covers = [str(c) for c in covers_raw] if isinstance(covers_raw, list) else []
+    vid = str(variant.get("id", "") or _variant_id_for_covers(covers))
+    vtt_path = _vtt_for_variant(subs_dir, slug, vid)
+    if not vtt_path.exists():
+        per = subs_dir / f"{slug}__{vid}.en-orig.vtt"
+        return ([f"missing subtitle: {per} (先按 SOP §4 每变体独立入库字幕)"], [])
+    try:
+        cues = parse_vtt(vtt_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return ([f"vtt parse fail: {exc}"], [])
+    pattern_map = build_pattern_map(terms, weapons, items)
+    scanned = scan_cues(cues, pattern_map)
+    src = variant.get("source")
+    video_id = str(src.get("video_id")) if isinstance(src, dict) and isinstance(src.get("video_id"), str) else ""
+    terms_out: dict[str, dict[str, object]] = {}
+    for en in terms:
+        count, quotes = scanned.get(en, (0, []))
+        terms_out[en] = {"count": count, "quotes": quotes}
+    weapons_out: dict[str, dict[str, object]] = {}
+    for en in weapons:
+        count, quotes = scanned.get(f"weapon:{en}", (0, []))
+        weapons_out[en] = {"count": count, "quotes": quotes}
+    items_out: dict[str, dict[str, object]] = {}
+    for en in items:
+        count, quotes = scanned.get(f"item:{en}", (0, []))
+        items_out[en] = {"count": count, "quotes": quotes}
+    # vtt 相对路径: per-variant 优先, legacy 回落保留原串.
+    try:
+        repo = Path(__file__).resolve().parent.parent
+        vtt_rel = str(vtt_path.relative_to(repo))
+    except Exception:
+        vtt_rel = f"data/subs/{slug}__{vid}.en-orig.vtt"
+    payload: dict[str, object] = {
+        "slug": slug,
+        "variant": vid,
+        "covers": covers,
+        "label": str(variant.get("label", "")),
+        "vtt": vtt_rel.replace("\\", "/"),
+        "video_id": video_id,
+        "generated_by": "scripts/build_mentions.py",
+        "terms": terms_out,
+        "weapons": weapons_out,
+        "items": items_out,
+    }
+    mentions_dir.mkdir(parents=True, exist_ok=True)
+    out_path = mentions_dir / f"{slug}__{vid}.json"
+    out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return ([], [])
+
+
 def build_one(
-    slug: str, data_dir: Path, subs_dir: Path, mentions_dir: Path
+    slug: str, data_dir: Path, subs_dir: Path, mentions_dir: Path, variant_id: str | None = None,
 ) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warns: list[str] = []
@@ -221,51 +309,15 @@ def build_one(
         weapons, items = load_registry_names(data_dir)
     except Exception as exc:
         return ([f"registry load fail: {exc}"], [])
-    vtt_path = subs_dir / f"{slug}.en-orig.vtt"
-    if not vtt_path.exists():
-        return ([f"missing subtitle: {vtt_path} (先按 SOP §4 入库字幕)"], [])
-    try:
-        cues = parse_vtt(vtt_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        return ([f"vtt parse fail: {exc}"], [])
-    pattern_map = build_pattern_map(terms, weapons, items)
-    scanned = scan_cues(cues, pattern_map)
-    # video_id 回填 (有则带, 无则空).
-    video_id = ""
-    build_path = data_dir / "builds" / f"{slug}.json"
-    if build_path.exists():
-        try:
-            raw = json.loads(build_path.read_text(encoding="utf-8"))
-            if isinstance(raw, dict):
-                src = raw.get("source")
-                if isinstance(src, dict) and isinstance(src.get("video_id"), str):
-                    video_id = str(src.get("video_id"))
-        except Exception:
-            video_id = ""
-    terms_out: dict[str, dict[str, object]] = {}
-    for en in terms:
-        count, quotes = scanned.get(en, (0, []))
-        terms_out[en] = {"count": count, "quotes": quotes}
-    weapons_out: dict[str, dict[str, object]] = {}
-    for en in weapons:
-        count, quotes = scanned.get(f"weapon:{en}", (0, []))
-        weapons_out[en] = {"count": count, "quotes": quotes}
-    items_out: dict[str, dict[str, object]] = {}
-    for en in items:
-        count, quotes = scanned.get(f"item:{en}", (0, []))
-        items_out[en] = {"count": count, "quotes": quotes}
-    payload: dict[str, object] = {
-        "slug": slug,
-        "vtt": f"data/subs/{slug}.en-orig.vtt",
-        "video_id": video_id,
-        "generated_by": "scripts/build_mentions.py",
-        "terms": terms_out,
-        "weapons": weapons_out,
-        "items": items_out,
-    }
-    mentions_dir.mkdir(parents=True, exist_ok=True)
-    out_path = mentions_dir / f"{slug}.json"
-    out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    variants, v_errors = _load_variants(data_dir, slug)
+    if v_errors:
+        return (v_errors, [])
+    targets = [v for v in variants if variant_id is None or str(v.get("id", "")) == variant_id]
+    if variant_id is not None and not targets:
+        return ([f"unknown variant: {slug}__{variant_id} (covers slug 化)"], [])
+    for variant in targets:
+        v_errors, _ = build_one_variant(slug, variant, data_dir, subs_dir, mentions_dir, terms, weapons, items)
+        errors.extend(v_errors)
     return (errors, warns)
 
 
@@ -277,6 +329,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--data-dir", default="data")
     parser.add_argument("--subs-dir", default="")
     parser.add_argument("--mentions-dir", default="")
+    parser.add_argument("--variant", default="", help="单变体 id, 如 --variant ultimate (须与 --slug 同用)")
     args = parser.parse_args(argv)
 
     repo = Path(__file__).resolve().parent.parent
@@ -291,12 +344,14 @@ def main(argv: list[str] | None = None) -> int:
         mentions_dir = repo / mentions_dir
 
     if args.slug:
-        errors, _ = build_one(args.slug, data_dir, subs_dir, mentions_dir)
+        variant_arg = str(args.variant).strip() or None
+        errors, _ = build_one(args.slug, data_dir, subs_dir, mentions_dir, variant_arg)
         if errors:
             for err in errors:
                 print(f"FAIL: {err}", file=sys.stderr)
             return 1
-        print(f"built mentions --slug {args.slug} -> {mentions_dir}")
+        suffix = f"__{variant_arg}" if variant_arg else " (全变体)"
+        print(f"built mentions --slug {args.slug}{suffix} -> {mentions_dir}")
         return 0
 
     # --all: 有 build 数据且有字幕者逐个构建, 缺字幕者跳过 warn (不 fail, 待补).
@@ -304,15 +359,22 @@ def main(argv: list[str] | None = None) -> int:
     slugs = sorted(p.stem for p in builds_dir.glob("*.json")) if builds_dir.exists() else []
     failed = False
     for slug in slugs:
-        vtt_path = subs_dir / f"{slug}.en-orig.vtt"
-        if not vtt_path.exists():
-            print(f"WARN: missing subtitle, skip {slug} (待补)")
+        # 覆盖制: 每变体缺字幕单独 warn 跳过, 不 fail 整单.
+        variants, v_errors = _load_variants(data_dir, slug)
+        if v_errors or not variants:
+            print(f"WARN: missing build variants, skip {slug} (待补)")
             continue
-        errors, _ = build_one(slug, data_dir, subs_dir, mentions_dir)
-        if errors:
-            for err in errors:
-                print(f"FAIL [{slug}]: {err}", file=sys.stderr)
-            failed = True
+        for variant in variants:
+            vid = str(variant.get("id", ""))
+            vtt_path = _vtt_for_variant(subs_dir, slug, vid)
+            if not vtt_path.exists():
+                print(f"WARN: missing subtitle, skip {slug}__{vid} (待补)")
+                continue
+            errors, _ = build_one(slug, data_dir, subs_dir, mentions_dir, vid)
+            if errors:
+                for err in errors:
+                    print(f"FAIL [{slug}__{vid}]: {err}", file=sys.stderr)
+                failed = True
     print(f"built mentions --all -> {mentions_dir}")
     return 1 if failed else 0
 

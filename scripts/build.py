@@ -99,6 +99,39 @@ EXPECTED_SECONDARY: list[str] = [
 ]
 
 WIKI_BASE = "https://brotato.wiki.spellsandguns.com"
+WIKI_CHARACTERS_PAGE = "https://brotato.wiki.spellsandguns.com/wiki/Characters"
+WIKI_STATS_PAGE = "https://brotato.wiki.spellsandguns.com/wiki/Stats"
+WIKI_HOME = "https://brotato.wiki.spellsandguns.com/"
+CC_BY_SA = "https://creativecommons.org/licenses/by-sa/4.0/"
+VIDEO_CHANNEL = "https://www.youtube.com/@Cephalopocalypse"
+
+# 应急开关 (#12): 平时 False 即 wiki 热链, --use-local-assets 时 src 切相对路径。
+# 每个 CLI 进程内恒定, 测试只走 CLI 故无跨进程污染。
+_USE_LOCAL_ASSETS = False
+
+
+def local_slug(en: str) -> str:
+    """应急文件名 (#12): 全小写短横线, 与名录 id 同键风格.
+
+    Max HP→max-hp, % Reroll Price→reroll-price, SMG→smg。
+    thumb URL 原样抄 wiki (含大小写与 %27 转义), 本地名只做应急相对路径。
+    """
+    import re
+
+    s = str(en).lower().replace("%", "")
+    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+    return s or "unknown"
+
+
+def local_icon_path(group: str, en: str) -> str:
+    """应急相对路径 (#12): assets/<group>/<slug>.png, 平时不用, 切换时 src 换成它。"""
+    return f"assets/{group}/{local_slug(en)}.png"
+
+
+def set_use_local_assets(value: bool) -> None:
+    """构建开关 (#12): --use-local-assets 一键切相对路径, 平时 False 只校验不下载。"""
+    global _USE_LOCAL_ASSETS
+    _USE_LOCAL_ASSETS = bool(value)
 
 
 def esc(text: object) -> str:
@@ -304,12 +337,24 @@ def validate_chars(reg: dict[str, object], roster: list[dict[str, object]]) -> l
     return errors
 
 
-def icon_html(thumb: object, en: str) -> str:
-    """图标三件套同一渲染路径 (#12 复用, #15 武器道具共用): 有图挂热链, 无图占位。"""
+def icon_html(thumb: object, en: str, page: object = None, local: object = None) -> str:
+    """图标三件套同一渲染路径 (#12 复用, #15 武器道具共用): 有图挂热链, 无图占位。
+
+    空壳引用只留一种: 替代文本 + 宽高 + 缩略图源 + 原文件标记 + 应急路径 +
+    懒加载 + 无来源引用 + 失败移除。无图标用占位, 不挂空图。
+    三处统一走同一函数: 属性主表 / 次级占位 / 武器 / 道具。
+    次级本身无图标统一占位, 悬浮仍用热链 (调用方 tooltip 照常渲染)。
+    应急开关: _USE_LOCAL_ASSETS 为真时 src 切相对路径, 否则 wiki 热链。
+    """
     if isinstance(thumb, str) and thumb:
+        file_mark = page if isinstance(page, str) and page else en
+        local_path = local if isinstance(local, str) and local else ""
+        src = local_path if (_USE_LOCAL_ASSETS and local_path) else thumb
         return (
             f"<img class=\"sic\" alt=\"{esc(en)}\" width=\"20\" height=\"20\" "
-            f"src=\"{esc(thumb)}\" loading=\"lazy\" "
+            f"src=\"{esc(src)}\" data-file=\"{esc(file_mark)}\" "
+            f"data-local=\"{esc(local_path)}\" "
+            f"loading=\"lazy\" "
             f"referrerpolicy=\"no-referrer\" onerror=\"this.remove()\"> "
         )
     return "<span class=\"sic none\" title=\"wiki 无专用图标\">◆</span> "
@@ -502,7 +547,7 @@ def weapon_rows(
             f"{weapon_tip(name_en, entry, terms_by_en)}</span>"
         )
         thumb = entry.get("thumb")
-        parts.append(f"<tr><td>{icon_html(thumb, name_en)}{name_html}</td><td>{note_html}</td></tr>")
+        parts.append(f"<tr><td>{icon_html(thumb, name_en, entry.get('page'), local_icon_path('weapons', name_en))}{name_html}</td><td>{note_html}</td></tr>")
     return ("".join(parts), errors, warns)
 
 
@@ -537,7 +582,7 @@ def item_rows(
             f"{item_tip(name_en, entry, terms_by_en)}</span>"
         )
         thumb = entry.get("thumb")
-        parts.append(f"<tr><td>{icon_html(thumb, name_en)}{name_html}</td><td>{reason_html}</td></tr>")
+        parts.append(f"<tr><td>{icon_html(thumb, name_en, entry.get('page'), local_icon_path('items', name_en))}{name_html}</td><td>{reason_html}</td></tr>")
     return ("".join(parts), errors, warns)
 
 
@@ -625,7 +670,10 @@ def term_row(
         badges += ' <span class="badge-review" title="中文待客户端简中校对">待校对</span>'
     # 图标: 主表 wiki 热链三件套, 次级统一占位 (同一渲染路径 icon_html)。
     thumb = reg_entry.get("thumb") if isinstance(reg_entry, dict) else None
-    icon = icon_html(thumb, en)
+    page = reg_entry.get("page") if isinstance(reg_entry, dict) else None
+    if page is None and isinstance(reg_entry, dict):
+        page = reg_entry.get("file")
+    icon = icon_html(thumb, en, page, local_icon_path("stats", en))
     # 悬浮: 有 tooltip 则 hover, 诅咒无 Positive 区则无悬浮。
     tips = reg_entry.get("tooltip") if isinstance(reg_entry, dict) else None
     tip_list: list[dict[str, object]] | None = tips if isinstance(tips, list) else None
@@ -777,6 +825,33 @@ def check_structure_html(html_text: str) -> list[str]:
     return []
 
 
+def footer_html(source: dict[str, object]) -> str:
+    """页脚固定署名行 (#12 构建注入, 不手写).
+
+    图标 © Blobfish + wiki 来源 + 文本许可链 + 原页链 (Characters/Stats) +
+    机制译自 Wiki 与视频双链 + 转述非搬运 (不搬截图原片)。
+    """
+    video_url = source.get("url") if isinstance(source, dict) else None
+    if isinstance(video_url, str) and video_url.startswith("http"):
+        video_link = f'<a href="{esc(video_url)}">取材视频</a>'
+    else:
+        video_link = "取材视频待补"
+    return (
+        f"<p>图标 © Blobfish, via "
+        f"<a href=\"{WIKI_HOME}\">Brotato Wiki</a>"
+        f"低分辨率缩略图热链展示 (游戏资产原权保留, 文本 "
+        f"<a href=\"{CC_BY_SA}\">CC BY-SA 4.0</a>) · "
+        f"断网回落占位仍可读 · 未自托管分发高清 · "
+        f"<a href=\"{WIKI_CHARACTERS_PAGE}\">原页: Characters</a> · "
+        f"<a href=\"{WIKI_STATS_PAGE}\">原页: Stats</a></p>"
+        f"<p>机制译自 Wiki 与视频双链: {video_link} · "
+        f"<a href=\"{WIKI_STATS_PAGE}\">Wiki: Stats</a> · "
+        f"<a href=\"{VIDEO_CHANNEL}\">视频来源站</a> · "
+        f"转述非搬运, 不搬截图原片</p>"
+        f"<p>构建产物, 人不手改, 只改源码重构建。</p>"
+    )
+
+
 def render_character(
     roster_entry: dict[str, object],
     primary_rows: str,
@@ -846,6 +921,7 @@ def render_character(
         "{{PITFALLS_ITEMS}}": pitfalls_html,
         "{{HARD}}": hard_html,
         "{{SOURCE_BLOCK}}": source_block(source if isinstance(source, dict) else {}),
+        "{{FOOTER}}": footer_html(source if isinstance(source, dict) else {}),
     }
     out = template
     for token, value in replacements.items():
@@ -1072,6 +1148,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--data-dir", default="data")
     parser.add_argument("--templates-dir", default="templates")
     parser.add_argument("--out-dir", default="docs")
+    parser.add_argument("--use-local-assets", action="store_true",
+                        help="应急自托管: 图标 src 切 assets/ 相对路径 (平时不用, 只校验不下载)")
     args = parser.parse_args(argv)
 
     repo = Path(__file__).resolve().parent.parent
@@ -1084,6 +1162,7 @@ def main(argv: list[str] | None = None) -> int:
     out_dir = Path(args.out_dir)
     if not out_dir.is_absolute():
         out_dir = repo / out_dir
+    set_use_local_assets(args.use_local_assets)
 
     if args.slug:
         errors, warns = build_slug(args.slug, data_dir, templates_dir, out_dir)

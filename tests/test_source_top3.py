@@ -36,9 +36,8 @@ def make_workdir() -> tuple[Path, Path, Path, tempfile.TemporaryDirectory[str]]:
     # #19 clean slate: repo data/builds empty, restore fixture for isolated seam.
     _fx = REPO / "tests" / "fixtures" / "cyborg.json"
     _bf = work / "data" / "builds" / "cyborg.json"
-    if not _bf.exists() and _fx.exists():
-        _bf.parent.mkdir(parents=True, exist_ok=True)
-        _bf.write_text(_fx.read_text(encoding="utf-8"), encoding="utf-8")
+    _bf.parent.mkdir(parents=True, exist_ok=True)
+    _bf.write_text(_fx.read_text(encoding="utf-8"), encoding="utf-8")
     out = Path(tmp.name) / "out"
     return (work / "data", work / "templates", out, tmp)
 

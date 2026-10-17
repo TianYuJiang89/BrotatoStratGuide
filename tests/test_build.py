@@ -8,7 +8,7 @@ Seams under test (pre-agreed per #8 Testing Decisions: 端到端为最高且唯�
 No internal imports, no network. All assertions inspect CLI exit codes
 and generated file bytes.
 
-#21 populated: repo has 1 build (engineer, Ultimate + Danger 5); index 1 clickable.
+#19 clean slate: repo has 0 builds (data/builds empty, docs 0 clickable).
 Rendering details are covered via isolated tmp fixtures (tests/fixtures/cyborg.json),
 repo assertions cover the clean index only.
 """
@@ -93,16 +93,16 @@ def test_per_slug_build_produces_ordered_sections(tmp_path: Path) -> None:
 
 
 def test_index_links_to_character_page() -> None:
-    """#21 populated索引 1 可点: 链 engineer, 无死链."""
+    """干净起点索引 0 可点: 无角色链, 无死链 (#19)."""
     r = run_build("--all")
     assert r.returncode == 0, f"build --all failed: {r.stderr[-2000:]}"
     index = (REPO / "docs" / "index.html").read_text(encoding="utf-8")
-    assert "./cyborg.html" not in index, "unbuilt cyborg must not link"
-    assert "./engineer.html" in index, "#21 built engineer must link"
+    assert "./cyborg.html" not in index, "clean slate must not link cyborg"
+    assert "./engineer.html" not in index, "clean slate must not link engineer"
 
 
 def test_full_and_per_slug_builds_both_run(tmp_path: Path) -> None:
-    """全量构建可跑 (1 页 engineer) + 隔离单页构建可跑; 缺 build 的 slug 在 repo 上必须 fail."""
+    """全量构建可跑 (0 页) + 隔离单页构建可跑; 缺 build 的 slug 在 repo 上必须 fail."""
     r2 = run_build("--all")
     assert r2.returncode == 0, r2.stderr[-2000:]
     assert (REPO / "docs" / "index.html").exists()

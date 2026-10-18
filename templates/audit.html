@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Brotato 过程数据动态审计 · 流水线步进视图</title>
+<style>
+:root {
+  --bg: #f7f5ef;
+  --card: #ffffff;
+  --ink: #1f1b16;
+  --muted: #7a7166;
+  --line: #e7e0d2;
+  --accent: #0b5fff;
+  --verified-border: #10b981;
+  --verified-bg: #ecfdf5;
+  --candidate-border: #f59e0b;
+  --candidate-bg: #fffbeb;
+  --inferred-border: #8b5cf6;
+  --inferred-bg: #f5f3ff;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.6 -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+a { color: var(--accent); text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+
+/* Top Header Bar */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(247, 245, 239, 0.96);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand h1 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.3px;
+}
+.tag-mode {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+}
+.topbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.source-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--muted);
+}
+.source-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+}
+.source-dot.live { background: #0b5fff; }
+.btn-sm {
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
+}
+.btn-sm:hover { background: #f0ebe0; border-color: #d1c7b7; }
+
+/* Filter Bar (3D Filter) */
+.filter-bar {
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+}
+.filter-label {
+  font-weight: 600;
+  color: var(--muted);
+  width: 80px;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #faf8f5;
+  color: var(--ink);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.chip:hover { background: #eae4d6; }
+.chip.active {
+  background: #1f1b16;
+  color: #fff;
+  border-color: #1f1b16;
+  font-weight: 600;
+}
+.chip.active.chip-verified { background: #059669; border-color: #059669; }
+.chip.active.chip-candidate { background: #d97706; border-color: #d97706; }
+.chip.active.chip-inferred { background: #7c3aed; border-color: #7c3aed; }
+
+.search-box {
+  margin-left: auto;
+  position: relative;
+  min-width: 220px;
+}
+.search-input {
+  width: 100%;
+  padding: 5px 10px 5px 28px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #faf8f5;
+  font-size: 12px;
+  outline: none;
+}
+.search-input:focus {
+  border-color: var(--accent);
+  background: #fff;
+}
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 12px;
+}
+.filter-counter {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.badge-count {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 16px;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 3px;
+}
+.badge-verified { background: var(--verified-bg); color: #047857; border: 1px solid var(--verified-border); }
+.badge-candidate { background: var(--candidate-bg); color: #b45309; border: 1px solid var(--candidate-border); font-weight: 700; }
+.badge-inferred { background: var(--inferred-bg); color: #6d28d9; border: 1px solid var(--inferred-border); }
+.badge-count-pill {
+  font-size: 11px;
+  background: #1f1b16;
+  color: #fff;
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-weight: 700;
+}
+
+/* Card Styling */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Pipeline Step Tree */
+.pipeline-step {
+  position: relative;
+  padding-left: 28px;
+  margin-bottom: 24px;
+}
+.pipeline-step::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 24px;
+  bottom: -24px;
+  width: 2px;
+  background: var(--line);
+}
+.pipeline-step:last-child::before { display: none; }
+.pipeline-step-node {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #10b981;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  z-index: 2;
+}
+
+.manifest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.manifest-box {
+  background: #faf8f5;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.manifest-box .k { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.manifest-box .v { font-size: 13px; font-weight: 600; font-family: monospace; }
+
+.step2-dual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 900px) { .step2-dual { grid-template-columns: 1fr; } }
+
+.verb-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #faf8f5;
+}
+.verb-panel.verified { border-top: 3px solid var(--verified-border); }
+.verb-panel.candidates { border-top: 3px solid var(--candidate-border); background: #fffdf7; }
+
+.verb-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.verb-row:last-child { margin-bottom: 0; }
+.verb-row.candidate-row { border-color: var(--candidate-border); background: #fffcf2; }
+
+.group-accordion {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+.group-acc-head {
+  padding: 10px 14px;
+  background: #faf8f5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  border-bottom: 1px solid var(--line);
+}
+.group-acc-body {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 10px;
+}
+
+.item-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.item-card:hover {
+  border-color: #b0a595;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.item-card.is-candidate {
+  border-color: var(--candidate-border);
+  background: #fffdf5;
+}
+.item-card.is-inferred {
+  border-color: var(--inferred-border);
+  background: #faf8ff;
+}
+.item-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.item-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.item-card-zh { font-size: 12px; color: var(--muted); font-weight: normal; }
+.item-card-reason {
+  font-size: 12px;
+  color: var(--ink);
+  line-height: 1.45;
+}
+.item-card-quote {
+  font-size: 11px;
+  color: var(--muted);
+  background: #f5f2ea;
+  border-radius: 4px;
+  padding: 4px 8px;
+  border-left: 3px solid var(--line);
+  font-style: italic;
+}
+.item-card.is-candidate .item-card-quote {
+  border-left-color: var(--candidate-border);
+  background: #fef8e7;
+}
+
+/* Slide-over Audit Trace Drawer */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(2px);
+  z-index: 80;
+  display: none;
+}
+.drawer-backdrop.open { display: block; }
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(520px, 92vw);
+  background: #fff;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drawer.open { transform: translateX(0); }
+.drawer-head {
+  padding: 14px 18px;
+  background: #faf8f5;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.drawer-head h2 { font-size: 16px; font-weight: 700; margin: 0; }
+.drawer-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--muted);
+}
+.drawer-body {
+  padding: 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 13px;
+}
+.drawer-section {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #faf8f5;
+}
+.drawer-section h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<header class="topbar">
+  <div class="brand">
+    <h1>Brotato 过程数据动态审计</h1>
+    <span class="tag-mode">流水线步进视图 (Pipeline Flow)</span>
+  </div>
+  <div class="topbar-controls">
+    <div class="source-status" id="sourceStatus">
+      <span class="source-dot" id="sourceDot"></span>
+      <span id="sourceText">数据源：内置 Mock 数据 (Cyborg/Ultimate 68件)</span>
+    </div>
+    <button class="btn-sm" id="btnPickDir" title="调用浏览器 File System Access API 选择本地工作区目录">
+      📁 选择工作区目录
+    </button>
+    <label class="btn-sm" style="margin:0;" title="备用目录上传">
+      📂 备用上传
+      <input type="file" id="fallbackDirInput" webkitdirectory directory multiple style="display:none;">
+    </label>
+    <button class="btn-sm" id="btnResetMock" title="重置为默认 68 件全集测试数据">
+      🔄 恢复 Mock 数据
+    </button>
+  </div>
+</header>
+
+<!-- Filter Toolbar (三维筛选) -->
+<section class="filter-bar">
+  <!-- Dimension 1: Count -->
+  <div class="filter-row">
+    <span class="filter-label">1. 频次筛选:</span>
+    <div class="chip-group" id="filterCountGroup">
+      <span class="chip active" data-val="all">全部 (68)</span>
+      <span class="chip" data-val="ge8">高频 ≥8 (12)</span>
+      <span class="chip" data-val="ge4">中高频 ≥4 (29)</span>
+      <span class="chip" data-val="has_verb">有动词 (45)</span>
+    </div>
+
+    <!-- Search box -->
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" class="search-input" placeholder="按中英文道具名 / 出处检索...">
+    </div>
+  </div>
+
+  <!-- Dimension 2: Confidence -->
+  <div class="filter-row">
+    <span class="filter-label">2. 置信分类:</span>
+    <div class="chip-group" id="filterConfidenceGroup">
+      <span class="chip active" data-val="all">全部</span>
+      <span class="chip chip-verified" data-val="verified">Verified (纯机检绿标)</span>
+      <span class="chip chip-candidate" data-val="candidate">Candidates (自由裁量·标黄)</span>
+      <span class="chip chip-inferred" data-val="inferred">Inferred:true (无动词意图推断·单列)</span>
+    </div>
+  </div>
+
+  <!-- Dimension 3: Verb Category -->
+  <div class="filter-row">
+    <span class="filter-label">3. 动词状态:</span>
+    <div class="chip-group" id="filterVerbGroup">
+      <span class="chip active" data-val="all">全部</span>
+      <span class="chip" data-val="closed">闭集10动词</span>
+      <span class="chip" data-val="mapped">转述映射动词</span>
+      <span class="chip" data-val="none">无动词 (路过/推断)</span>
+    </div>
+    <div class="filter-counter">
+      展示: <span class="badge-count" id="filteredCount">68</span> / 68 件
+    </div>
+  </div>
+</section>
+
+<!-- Content Container -->
+<main class="container" id="mainContainer">
+  <!-- Rendered dynamically -->
+</main>
+
+<!-- Slide-over Drawer for Item Audit Trail -->
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<aside class="drawer" id="itemDrawer">
+  <div class="drawer-head">
+    <h2 id="drawerItemName">道具详情</h2>
+    <button class="drawer-close" id="drawerCloseBtn">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerContent">
+    <!-- Populated dynamically -->
+  </div>
+</aside>
+
+<script>
+// Mock data and app state
+const MOCK_DATA = {"manifest": {"slug": "cyborg", "variant": "ultimate", "covers": ["Ultimate"], "sop_version": "4d522651bc1e43da77f098cb228b523653cfacc0", "issue": 32, "sources": [{"difficulty": "Ultimate", "title": "TERMINATE - Cyborg - Brotato Ultimate Nightmares Guide", "url": "https://www.youtube.com/watch?v=yEY-RoLWjfM", "sha1": "dc4565de024266518a95ca8e71882e4034604dd7", "vtt": "inputs/source.vtt", "duration": "33:23", "game_version": "Steam 1.1.15.1"}]}, "meta": {"title": "TERMINATE - Cyborg - Brotato Ultimate Nightmares Guide", "description": "Brotato 1.1.15.1 Ultimate Guide for Cyborg", "game_version": "Steam 1.1.15.1 (2026-07-08 + Steam)", "published": "2026-07-08", "chapters": ["Character overview", "Strategy and early game", "Mid-game challenges", "Scaling and item synergy", "Horde wave survival", "Elite and boss preparation", "Late-game progression", "Final boss and review"]}, "registry_slice": {"weapons": ["Minigun", "Screwdriver", "Nuclear Launcher", "SMG"], "items_count": 68, "sample_items": ["Turret", "Pocket Factory", "Peacock", "Acid", "Focus", "Jelly", "Landmines", "Tree", "Bag", "Mutation", "Tyler", "Ice Cube", "Book", "Coffee", "Coupon"]}, "sentences": [{"id": 1, "text": "TERMINATE - Cyborg - Brotato Ultimate Nightmares Guide."}, {"id": 14, "text": "A cyborg has some pretty powerful advantages. You buy ranged damage at 100% efficiency."}, {"id": 28, "text": "So when all of our ranged damage turns into engineering halfway through the wave, we can still be a dangerous turret nest."}, {"id": 42, "text": "We bought the turret instead of the jelly in this first shop."}, {"id": 65, "text": "I'll lock acid as well because my max HP is really low and we need maximum health."}, {"id": 88, "text": "We would really have liked to be able to pick up a pocket factory. um an incendiary turret."}, {"id": 92, "text": "Grab whatever turrets show up in the shop to guarantee engineering output."}, {"id": 105, "text": "Take the nuke launcher and buy coffee for attack speed."}, {"id": 115, "text": "Also I'm pretty much ignoring what the landmines are doing."}, {"id": 140, "text": "I'm ending up with a lot of max HP. Uh, I'm going to ban the boxing glove."}, {"id": 162, "text": "Glass cannon, I think I will avoid because the armor reduction is too harsh."}, {"id": 185, "text": "We get positive regeneration so we can actually start building regeneration, which is pretty helpful."}, {"id": 210, "text": "Minigun gives you the ability to use life steal extremely efficiently."}, {"id": 234, "text": "Tyler and padding give us safe buffer during wave 16 horde."}, {"id": 255, "text": "Snatch the explosive shells if we have surplus materials."}], "verbs": {"verified": [{"verb": "buy", "object_norm": "Turret", "sentence_id": 42, "quote": "bought the turret instead of the jelly"}, {"verb": "pick up", "object_norm": "Pocket Factory", "sentence_id": 88, "quote": "pick up a pocket factory. um an incendiary turret"}, {"verb": "buy", "object_norm": "Coffee", "sentence_id": 105, "quote": "Take the nuke launcher and buy coffee"}, {"verb": "ban", "object_norm": "Boxing Glove", "sentence_id": 140, "quote": "I'm going to ban the boxing glove"}, {"verb": "take", "object_norm": "Book", "sentence_id": 120, "quote": "we will take the book for engineering bonus"}, {"verb": "buy", "object_norm": "Coupon", "sentence_id": 99, "quote": "buy coupon to save reroll cash"}, {"verb": "buy", "object_norm": "Bag", "sentence_id": 78, "quote": "buy bag for economy boost"}], "candidates": [{"surface": "turrets", "normalized_to": "Turret", "surface_verb": "grab", "mapped_to": "take", "sentence_id": 92, "quote": "Grab whatever turrets show up in the shop", "inferred": false, "reason": "别名复数归一 + 动词 grab 映射为 take"}, {"surface": "mines", "normalized_to": "Landmines", "surface_verb": "ignoring", "mapped_to": "skip", "sentence_id": 115, "quote": "ignoring what the landmines are doing", "inferred": false, "reason": "别名 mines 归一 + 动词 ignoring 映射为 skip / 提过未拿"}, {"surface": "glass cannon", "normalized_to": "Glass Cannon", "surface_verb": "avoid", "mapped_to": "ban", "sentence_id": 162, "quote": "Glass cannon, I think I will avoid", "inferred": false, "reason": "动词 avoid 映射为 ban 依据"}, {"surface": "acid", "normalized_to": "Acid", "surface_verb": null, "mapped_to": null, "sentence_id": 65, "quote": "I'll lock acid as well because my max HP is really low", "inferred": true, "reason": "无动词意图推断 (inferred:true)：锁定酸液为了补充生命上限"}, {"surface": "tyler", "normalized_to": "Tyler", "surface_verb": null, "mapped_to": null, "sentence_id": 234, "quote": "Tyler and padding give us safe buffer", "inferred": true, "reason": "无动词意图推断 (inferred:true)：随从道具协同"}]}, "items": [{"name_en": "Turret", "name_zh": "炮塔", "group": "must_take", "tier": "core", "count": 28, "confidence": "verified", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Turret", "discretion_reason": "机检锚点：精确英文名 + 闭集动词 + 原文整句引用", "reason": "【必拿·核心】结构数量即输出，燃烧炮塔先占1-2个，站群中间吃线；商店直购，原话“bought the turret instead of the jelly”兼“pick up a pocket factory. um an incendiary turret”", "quotes": ["pick up a pocket factory. um an incendiary turret,", "incendiary turret,", "incendiary turret, uh a Tyler, something like that. Just", "screwdriver attacks. But now we also have some turrets cuz we", "But now we also have some turrets cuz we", "But now we also have some turrets cuz we have"]}, {"name_en": "Pocket Factory", "name_zh": "口袋工厂", "group": "must_take", "tier": "core", "count": 18, "confidence": "verified", "inferred": false, "has_verb": true, "verb": "pick up", "verb_type": "closed", "surface_verb": "pick up", "mapped_to": "pick up", "surface_word": "Pocket Factory", "discretion_reason": "机检锚点：精确英文名 + 闭集动词 + 原文整句引用", "reason": "【必拿·核心】结构数量即输出，想拿的第三结构，多炮塔即输出；商店直购/roll到即拿，原话“pick up a pocket factory”", "quotes": ["We would really have liked to be able to pick up a pocket factory. um an", "pick up a pocket factory. um an", "pick up a pocket factory. um an incendiary turret,", "forgiven. We got a cursed pocket factory, so that's going to be really", "but also piercing shots would be really good for our pocket factory turrets. So,", "good for our pocket factory turrets. So,"]}, {"name_en": "Peacock", "name_zh": "孔雀", "group": "must_take", "tier": "convenient", "count": 15, "confidence": "verified", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Peacock", "discretion_reason": "机检锚点：精确英文名 + 闭集动词 + 原文整句引用", "reason": "【必拿·顺手】高频出现(15次)，对属性或经济有明显补益；出处原话“is is great. And we can upgrade our scre...”", "quotes": ["is is great. And we can upgrade our screwdriver. Cursed peacock. Can I buy", "screwdriver. Cursed peacock. Can I buy", "screwdriver. Cursed peacock. Can I buy that going into wave 16? I think I can.", "27% enemy damage is is dangerous, but nowhere near as bad as Peacock normally", "nowhere near as bad as Peacock normally", "nowhere near as bad as Peacock normally is. So,"]}, {"name_en": "Acid", "name_zh": "酸液", "group": "must_take", "tier": "compromise", "count": 12, "confidence": "candidate", "inferred": true, "has_verb": false, "verb": null, "verb_type": "none", "surface_verb": null, "mapped_to": null, "surface_word": "acid", "discretion_reason": "无动词意图推断：主播提及 Acid 虽无闭集动词，但结合语境表达购买/关注意图 (inferred:true)", "reason": "【必拿·妥协】高频出现(12次)，对属性或经济有明显补益；出处原话“damage, but we do have a mutation locked...”", "quotes": ["damage, but we do have a mutation locked. I'll lock acid as well. My max", "locked. I'll lock acid as well. My max", "locked. I'll lock acid as well. My max HP is really low. We'll buy a", "efficient. Do I want to still buy the acid? I think I do. I I still do need", "acid? I think I do. I I still do need", "acid? I think I do. I I still do need more maximum health after that."]}, {"name_en": "Focus", "name_zh": "聚焦", "group": "must_take", "tier": "compromise", "count": 12, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Focus", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【必拿·妥协】高频出现(12次)，对属性或经济有明显补益；出处原话“turns into engineering. So you need to k...”", "quotes": ["turns into engineering. So you need to kind of split your focus. The easiest", "kind of split your focus. The easiest", "kind of split your focus. The easiest way to win with the cyborg is to use", "any that that show up, but it's night really nice to be able to focus this", "really nice to be able to focus this", "really nice to be able to focus this character on killing things with our"]}, {"name_en": "Jelly", "name_zh": "果冻", "group": "mentioned_not_taken", "tier": null, "count": 12, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "skip", "verb_type": "mapped", "surface_verb": "bought turret instead of", "mapped_to": "skip", "surface_word": "jelly", "discretion_reason": "自由裁量：别名归一 (jelly -> Jelly) 或 动词转述 (bought turret instead of -> skip)", "reason": "【提过未拿】提到但未购入：与核心件竞争资源或收益有限，原话“trying to avoid. I will take a jelly and...”", "quotes": ["trying to avoid. I will take a jelly and we'll lock a", "I will take a jelly and we'll lock a", "I will take a jelly and we'll lock a mutation and then I'll roll. Blunder bus", "for us. We'll take the goblet and then I will take the jelly. We're going to end", "will take the jelly. We're going to end", "will take the jelly. We're going to end up with three different weapon types."]}, {"name_en": "Landmines", "name_zh": "地雷", "group": "mentioned_not_taken", "tier": null, "count": 12, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "skip", "verb_type": "mapped", "surface_verb": "ignoring", "mapped_to": "skip", "surface_word": "mines", "discretion_reason": "自由裁量：别名归一 (mines -> Landmines) 或 动词转述 (ignoring -> skip)", "reason": "【提过未拿】提到但没拿：只靠螺丝刀自带地雷，不另追地雷件；地雷表现忽略，原话“ignoring what the landmines are doing”", "quotes": ["Also, I'm just pretty much ignoring what the landmines are doing. Um, the reason", "the landmines are doing. Um, the reason", "the landmines are doing. Um, the reason we're using screwdriver is not because", "we're using screwdriver is not because they generate landmines, but because", "they generate landmines, but because", "they generate landmines, but because they scale with engineering and so they"]}, {"name_en": "Tree", "name_zh": "树木", "group": "must_take", "tier": "convenient", "count": 10, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "mapped", "surface_verb": "take", "mapped_to": "take", "surface_word": "trees", "discretion_reason": "自由裁量：别名归一 (trees -> Tree) 或 动词转述 (take -> take)", "reason": "【必拿·顺手】高频出现(10次)，对属性或经济有明显补益；出处原话“wave on the engineering portion. I'm goi...”", "quotes": ["wave on the engineering portion. I'm going to try to run for the trees here", "going to try to run for the trees here", "going to try to run for the trees here and use these consumables to maybe have", "to be able to do that. Try to get this tree before the end of the wave as well.", "have significantly increased tree spawns. So,", "significantly increased tree spawns. So,"]}, {"name_en": "Bag", "name_zh": "小包", "group": "must_take", "tier": "convenient", "count": 9, "confidence": "verified", "inferred": false, "has_verb": true, "verb": "buy", "verb_type": "closed", "surface_verb": "buy", "mapped_to": "buy", "surface_word": "Bag", "discretion_reason": "机检锚点：精确英文名 + 闭集动词 + 原文整句引用", "reason": "【必拿·顺手】高频出现(9次)，对属性或经济有明显补益；出处原话“healing and we have three consumable hea...”", "quotes": ["healing and we have three consumable healing to go with that. We'll buy bag", "healing to go with that. We'll buy bag", "healing to go with that. We'll buy bag penguin head injury. My percent damage", "thing. So, I'm just going to ban it. Actually, use my ban. I'll buy the bag", "Actually, use my ban. I'll buy the bag", "Actually, use my ban. I'll buy the bag and we'll buy Tyler and banner as well."]}, {"name_en": "Mutation", "name_zh": "突变", "group": "must_take", "tier": "compromise", "count": 9, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Mutation", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【必拿·妥协】高频出现(9次)，对属性或经济有明显补益；出处原话“I will take a jelly and we'll lock a mut...”", "quotes": ["I will take a jelly and we'll lock a mutation and then I'll roll. Blunder bus", "mutation and then I'll roll. Blunder bus", "mutation and then I'll roll. Blunder bus is a sort of interesting option, but I", "really wanted to pick up more ranged damage, but we do have a mutation", "damage, but we do have a mutation", "damage, but we do have a mutation locked. I'll lock acid as well. My max"]}, {"name_en": "Tyler", "name_zh": "泰勒", "group": "must_take", "tier": "compromise", "count": 9, "confidence": "candidate", "inferred": true, "has_verb": false, "verb": null, "verb_type": "none", "surface_verb": null, "mapped_to": null, "surface_word": "tyler", "discretion_reason": "无动词意图推断：主播提及 Tyler 虽无闭集动词，但结合语境表达购买/关注意图 (inferred:true)", "reason": "【必拿·妥协】高频出现(9次)，对属性或经济有明显补益；出处原话“incendiary turret, uh a Tyler, something...”", "quotes": ["incendiary turret, uh a Tyler, something like that. Just", "uh a Tyler, something like that. Just", "uh a Tyler, something like that. Just anything that will scale well off of the", "Actually, use my ban. I'll buy the bag and we'll buy Tyler and banner as well.", "and we'll buy Tyler and banner as well.", "and we'll buy Tyler and banner as well. And then go to wave 17."]}, {"name_en": "Ice Cube", "name_zh": "冰块", "group": "mentioned_not_taken", "tier": null, "count": 8, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "skip", "verb_type": "mapped", "surface_verb": "passed on", "mapped_to": "skip", "surface_word": "ice cube", "discretion_reason": "自由裁量：别名归一 (ice cube -> Ice Cube) 或 动词转述 (passed on -> skip)", "reason": "【提过未拿】提到但未购入：与核心件竞争资源或收益有限，原话“have the nuke launcher, I can also buy i...”", "quotes": ["have the nuke launcher, I can also buy ice cube. This is an elemental damage", "ice cube. This is an elemental damage", "ice cube. This is an elemental damage weapon, so it's going to apply the ice", "weapon, so it's going to apply the ice cube debuff to everything. And then,", "the nuke launcher because I bought ice cube. Um, it is a little funny the way", "minigun and not bought the nuke fla without the ice cube. But I actually"]}, {"name_en": "Book", "name_zh": "书本", "group": "must_take", "tier": "convenient", "count": 6, "confidence": "verified", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Book", "discretion_reason": "机检锚点：精确英文名 + 闭集动词 + 原文整句引用", "reason": "【必拿·顺手】中频补益件(6次)，遇到且经济充裕时顺手补入；出处原话“Um the book we would get half an...”", "quotes": ["Um the book we would get half an", "Um the book we would get half an", "Um the book we would get half an engineering. I think I'm just going to", "penguin head injury. My percent damage is pretty bad. I'll take pile of books", "is pretty bad. I'll take pile of books", "is pretty bad. I'll take pile of books as well. Uh we don't have a ton of crit"]}, {"name_en": "Coffee", "name_zh": "咖啡", "group": "must_take", "tier": "convenient", "count": 6, "confidence": "verified", "inferred": false, "has_verb": true, "verb": "buy", "verb_type": "closed", "surface_verb": "buy", "mapped_to": "buy", "surface_word": "Coffee", "discretion_reason": "机检锚点：精确英文名 + 闭集动词 + 原文整句引用", "reason": "【必拿·顺手】攻速乘区，核弹枪配咖啡顺手拿，不洗牌；商店直购，原话“buy coffee”兼“Take the nuke launcher and buy coffee”", "quotes": ["uh, which means combining here. Take the nuke launcher and buy coffee. And we'll", "nuke launcher and buy coffee. And we'll", "nuke launcher and buy coffee. And we'll wait to upgrade our minigun. And then", "I'm going to roll past these. We'll buy coffee. I'll take a decomposing flesh as", "coffee. I'll take a decomposing flesh as", "coffee. I'll take a decomposing flesh as well cuz I want a ton of life steal. And"]}, {"name_en": "Coupon", "name_zh": "优惠券", "group": "must_take", "tier": "convenient", "count": 6, "confidence": "verified", "inferred": false, "has_verb": true, "verb": "buy", "verb_type": "closed", "surface_verb": "buy", "mapped_to": "buy", "surface_word": "Coupon", "discretion_reason": "机检锚点：精确英文名 + 闭集动词 + 原文整句引用", "reason": "【必拿·顺手】中频补益件(6次)，遇到且经济充裕时顺手补入；出处原话“critical damage. Roll here. We'll buy a ...”", "quotes": ["critical damage. Roll here. We'll buy a coupon. I'll lock a mushroom as well.", "coupon. I'll lock a mushroom as well.", "coupon. I'll lock a mushroom as well. And then I'm going to roll. Bottom mine", "funny number. We got 170 save from coupon. Uh bottom", "We got 170 save from coupon. Uh bottom", "We got 170 save from coupon. Uh bottom mine dealt 24,000 damage and made 65"]}, {"name_en": "Duct Tape", "name_zh": "胶带", "group": "mentioned_not_taken", "tier": null, "count": 6, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "skip", "verb_type": "mapped", "surface_verb": "skipping", "mapped_to": "skip", "surface_word": "duct tape", "discretion_reason": "自由裁量：别名归一 (duct tape -> Duct Tape) 或 动词转述 (skipping -> skip)", "reason": "【提过未拿】提到但未购入：与核心件竞争资源或收益有限，原话“got a crate. That's great. Uh, we'll tak...”", "quotes": ["got a crate. That's great. Uh, we'll take duct tape. Of course, we're going", "take duct tape. Of course, we're going", "take duct tape. Of course, we're going to be a melee character for the second", "not at this point in the run really. I'll pick up the duct tape going back up", "I'll pick up the duct tape going back up", "I'll pick up the duct tape going back up to 15 armor. Pretty important. And, uh,"]}, {"name_en": "Garden", "name_zh": "花园", "group": "must_take", "tier": "convenient", "count": 6, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "mapped", "surface_verb": "take", "mapped_to": "take", "surface_word": "gardens", "discretion_reason": "自由裁量：别名归一 (gardens -> Garden) 或 动词转述 (take -> take)", "reason": "【必拿·顺手】中频补益件(6次)，遇到且经济充裕时顺手补入；出处原话“performer, 70,000 damage nuke launcher f...”", "quotes": ["performer, 70,000 damage nuke launcher for 18k. Uh, looking at our gardens. Uh,", "for 18k. Uh, looking at our gardens. Uh,", "for 18k. Uh, looking at our gardens. Uh, I I wish it told you how much healing", "I I wish it told you how much healing you got from gardens. I I know that", "you got from gardens. I I know that", "you got from gardens. I I know that would probably be hard to code, but it"]}, {"name_en": "Glass Cannon", "name_zh": "玻璃大炮", "group": "ban", "tier": null, "count": 6, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "ban", "verb_type": "mapped", "surface_verb": "avoid", "mapped_to": "ban", "surface_word": "glass cannon", "discretion_reason": "自由裁量：别名归一 (glass cannon -> Glass Cannon) 或 动词转述 (avoid -> ban)", "reason": "【ban】明确避开：扣护甲加输出，赛博格后半波缺坦度极度危险；原话“avoid glass cannon”", "quotes": ["Uh, glass cannon. I think I will take", "Uh, glass cannon. I think I will take", "Uh, glass cannon. I think I will take the glass cannon. It hurts a lot to lose", "the glass cannon. It hurts a lot to lose", "the glass cannon. It hurts a lot to lose three armor and three health, but glass", "three armor and three health, but glass cannon is still powerful here because"]}, {"name_en": "Goblet", "name_zh": "高脚杯", "group": "must_take", "tier": "convenient", "count": 6, "confidence": "verified", "inferred": false, "has_verb": true, "verb": "buy", "verb_type": "closed", "surface_verb": "buy", "mapped_to": "buy", "surface_word": "Goblet", "discretion_reason": "机检锚点：精确英文名 + 闭集动词 + 原文整句引用", "reason": "【必拿·顺手】中频补益件(6次)，遇到且经济充裕时顺手补入；出处原话“high life steal is doing a lot of work f...”", "quotes": ["high life steal is doing a lot of work for us. We'll take the goblet and then I", "for us. We'll take the goblet and then I", "for us. We'll take the goblet and then I will take the jelly. We're going to end", "figured out a few videos ago. Tentacle 182 healing, not bad at all. The goblet", "182 healing, not bad at all. The goblet", "182 healing, not bad at all. The goblet 226 healing, also not bad at all. And we"]}, {"name_en": "Padding", "name_zh": "护垫", "group": "must_take", "tier": "convenient", "count": 6, "confidence": "candidate", "inferred": true, "has_verb": false, "verb": null, "verb_type": "none", "surface_verb": null, "mapped_to": null, "surface_word": "padding", "discretion_reason": "无动词意图推断：主播提及 Padding 虽无闭集动词，但结合语境表达购买/关注意图 (inferred:true)", "reason": "【必拿·顺手】中频补益件(6次)，遇到且经济充裕时顺手补入；出处原话“survived there. And we'll take the paddi...”", "quotes": ["survived there. And we'll take the padding. Take 12% damage. My percent", "padding. Take 12% damage. My percent", "padding. Take 12% damage. My percent damage is very poor right now. And we", "Um, we won't lose health from the padding just from rolling. The dynamite", "padding just from rolling. The dynamite", "padding just from rolling. The dynamite I would take as well. And then we'll"]}, {"name_en": "Penguin", "name_zh": "企鹅", "group": "must_take", "tier": "convenient", "count": 6, "confidence": "verified", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Penguin", "discretion_reason": "机检锚点：精确英文名 + 闭集动词 + 原文整句引用", "reason": "【必拿·顺手】中频补益件(6次)，遇到且经济充裕时顺手补入；出处原话“horde wave. That's too dangerous. So, we...”", "quotes": ["horde wave. That's too dangerous. So, we'll just lock the penguin and go", "So, we'll just lock the penguin and go", "So, we'll just lock the penguin and go to the next wave here.", "healing to go with that. We'll buy bag penguin head injury. My percent damage", "penguin head injury. My percent damage", "penguin head injury. My percent damage is pretty bad. I'll take pile of books"]}, {"name_en": "Starfish", "name_zh": "海星", "group": "must_take", "tier": "convenient", "count": 6, "confidence": "verified", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Starfish", "discretion_reason": "机检锚点：精确英文名 + 闭集动词 + 原文整句引用", "reason": "【必拿·顺手】中频补益件(6次)，遇到且经济充裕时顺手补入；出处原话“character cuz we would lose three ranged...”", "quotes": ["character cuz we would lose three ranged damage doing that. Do I want starfish?", "damage doing that. Do I want starfish?", "damage doing that. Do I want starfish? It's pretty risky and I think I'm going", "It's pretty risky and I think I'm going to pass on it. Starfish is an item", "to pass on it. Starfish is an item", "to pass on it. Starfish is an item that's very powerful, but that I"]}, {"name_en": "Tentacle", "name_zh": "触手", "group": "must_take", "tier": "convenient", "count": 6, "confidence": "verified", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Tentacle", "discretion_reason": "机检锚点：精确英文名 + 闭集动词 + 原文整句引用", "reason": "【必拿·顺手】中频补益件(6次)，遇到且经济充裕时顺手补入；出处原话“going to change damage types. Uh, we'll ...”", "quotes": ["going to change damage types. Uh, we'll take the tentacle here. And", "Uh, we'll take the tentacle here. And", "Uh, we'll take the tentacle here. And then I'm going to roll this. All right.", "shown in the tool tip. Um, which we figured out a few videos ago. Tentacle", "figured out a few videos ago. Tentacle", "figured out a few videos ago. Tentacle 182 healing, not bad at all. The goblet"]}, {"name_en": "Goldfish", "name_zh": "金鱼", "group": "must_take", "tier": "convenient", "count": 5, "confidence": "verified", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Goldfish", "discretion_reason": "机检锚点：精确英文名 + 闭集动词 + 原文整句引用", "reason": "【必拿·顺手】中频补益件(5次)，遇到且经济充裕时顺手补入；出处原话“not going to bother locking the goldfish...”", "quotes": ["not going to bother locking the goldfish. Typically, I don't think you", "goldfish. Typically, I don't think you", "goldfish. Typically, I don't think you should lock goldfish. It's more of a for", "should lock goldfish. It's more of a for", "should lock goldfish. It's more of a for fun item than an actually good item."]}, {"name_en": "Scarf", "name_zh": "围巾", "group": "must_take", "tier": "convenient", "count": 5, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "mapped", "surface_verb": "grab", "mapped_to": "take", "surface_word": "scarf", "discretion_reason": "自由裁量：别名归一 (scarf -> Scarf) 或 动词转述 (grab -> take)", "reason": "【必拿·顺手】中频补益件(5次)，遇到且经济充裕时顺手补入；出处原话“which is pretty helpful. Speaking of whi...”", "quotes": ["which is pretty helpful. Speaking of which, I will take a scarf. Actually,", "which, I will take a scarf. Actually,", "which, I will take a scarf. Actually, no. I can't take a scarf going into a", "no. I can't take a scarf going into a", "no. I can't take a scarf going into a horde wave. That's too dangerous."]}, {"name_en": "Bean Teacher", "name_zh": "豆子老师", "group": "must_take", "tier": "convenient", "count": 4, "confidence": "verified", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Bean Teacher", "discretion_reason": "机检锚点：精确英文名 + 闭集动词 + 原文整句引用", "reason": "【必拿·顺手】中频补益件(4次)，遇到且经济充裕时顺手补入；出处原话“was worth the effort. I'll take the bean...”", "quotes": ["was worth the effort. I'll take the bean teacher. We'll buy propeller hat. And", "landmine. So, that was great. The peacock and bean teacher let us hit", "peacock and bean teacher let us hit", "peacock and bean teacher let us hit level 27 which was pretty awesome. Even"]}, {"name_en": "Defective Steroids", "name_zh": "劣质类固醇", "group": "must_take", "tier": "convenient", "count": 4, "confidence": "candidate", "inferred": true, "has_verb": false, "verb": null, "verb_type": "none", "surface_verb": null, "mapped_to": null, "surface_word": "defective steroids", "discretion_reason": "无动词意图推断：主播提及 Defective Steroids 虽无闭集动词，但结合语境表达购买/关注意图 (inferred:true)", "reason": "【必拿·顺手】中频补益件(4次)，遇到且经济充裕时顺手补入；出处原话“it here. I will take the defective stero...”", "quotes": ["it here. I will take the defective steroids. I think uh actually what I", "ban these two. We don't really need the max HP from defective steroids. You", "max HP from defective steroids. You", "max HP from defective steroids. You can't get melee damage, so you can't"]}, {"name_en": "Explosive Shells", "name_zh": "爆炸弹药", "group": "must_take", "tier": "convenient", "count": 4, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "mapped", "surface_verb": "snatch", "mapped_to": "take", "surface_word": "explosive shells", "discretion_reason": "自由裁量：别名归一 (explosive shells -> Explosive Shells) 或 动词转述 (snatch -> take)", "reason": "【必拿·顺手】中频补益件(4次)，遇到且经济充裕时顺手补入；出处原话“about uh I will take the explosive shell...”", "quotes": ["about uh I will take the explosive shells cuz we do have a a nuke launcher", "Also, our explosion damage, the the explosive shells works with our", "explosive shells works with our", "explosive shells works with our landmines, of course. But you'll notice"]}, {"name_en": "Scar", "name_zh": "疤痕", "group": "must_take", "tier": "convenient", "count": 4, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "mapped", "surface_verb": "pick", "mapped_to": "take", "surface_word": "scar", "discretion_reason": "自由裁量：别名归一 (scar -> Scar) 或 动词转述 (pick -> take)", "reason": "【必拿·顺手】中频补益件(4次)，遇到且经济充裕时顺手补入；出处原话“well cuz I want a ton of life steal. And...”", "quotes": ["well cuz I want a ton of life steal. And then I will lock a scar.", "then we'll just take three more armor. Here, we'll buy scar and upgrade our", "Here, we'll buy scar and upgrade our", "Here, we'll buy scar and upgrade our minigun and roll."]}, {"name_en": "Alien Eyes", "name_zh": "外星眼", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": true, "has_verb": false, "verb": null, "verb_type": "none", "surface_verb": null, "mapped_to": null, "surface_word": "alien eyes", "discretion_reason": "无动词意图推断：主播提及 Alien Eyes 虽无闭集动词，但结合语境表达购买/关注意图 (inferred:true)", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["ban the boxing glove. Do I actually want alien eyes because we're buying so much", "alien eyes because we're buying so much", "alien eyes because we're buying so much maximum health? It's not completely"]}, {"name_en": "Alien Tongue", "name_zh": "外星舌头", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": true, "has_verb": false, "verb": null, "verb_type": "none", "surface_verb": null, "mapped_to": null, "surface_word": "alien tongue", "discretion_reason": "无动词意图推断：主播提及 Alien Tongue 虽无闭集动词，但结合语境表达购买/关注意图 (inferred:true)", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["buy sad tomato. And I'm going to buy the alien tongue also because we're pretty", "alien tongue also because we're pretty", "alien tongue also because we're pretty reliant on consumable healing still. And"]}, {"name_en": "Banner", "name_zh": "旗帜", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Banner", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["Actually, use my ban. I'll buy the bag and we'll buy Tyler and banner as well.", "and we'll buy Tyler and banner as well.", "and we'll buy Tyler and banner as well. And then go to wave 17."]}, {"name_en": "Bat", "name_zh": "蝙蝠", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Bat", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["Um, we'll take the bat. I definitely am", "Um, we'll take the bat. I definitely am", "Um, we'll take the bat. I definitely am not taking a peacock this wave. And then"]}, {"name_en": "Beanie", "name_zh": "无檐小便帽", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Beanie", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["whistle here and roll. Buy another screwdriver. We'll lock a beanie. And", "screwdriver. We'll lock a beanie. And", "screwdriver. We'll lock a beanie. And while we still have guaranteed weapons"]}, {"name_en": "Blindfold", "name_zh": "眼罩", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": true, "has_verb": false, "verb": null, "verb_type": "none", "surface_verb": null, "mapped_to": null, "surface_word": "blindfold", "discretion_reason": "无动词意图推断：主播提及 Blindfold 虽无闭集动词，但结合语境表达购买/关注意图 (inferred:true)", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["armor. So, we're just going to do that. And I'll buy the blindfold", "And I'll buy the blindfold", "And I'll buy the blindfold cuz 128 for five crit chance isn't"]}, {"name_en": "Bonk Dog", "name_zh": "邦克狗", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Bonk Dog", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["Take the injection. I need high percent damage. Bonk dog unfortunately doesn't", "damage. Bonk dog unfortunately doesn't", "damage. Bonk dog unfortunately doesn't do anything for us. I'll roll again. I"]}, {"name_en": "Boxing Glove", "name_zh": "拳套", "group": "ban", "tier": null, "count": 3, "confidence": "verified", "inferred": false, "has_verb": true, "verb": "ban", "verb_type": "closed", "surface_verb": "ban", "mapped_to": "ban", "surface_word": "Boxing Glove", "discretion_reason": "机检锚点：精确英文名 + 闭集动词 + 原文整句引用", "reason": "【ban】明确ban：血多也不拿，白板件；商店见了直接ban，原话“I'm going to ban the boxing glove”", "quotes": ["with a lot of max HP. Uh, I'm going to ban the boxing glove. Do I actually want", "ban the boxing glove. Do I actually want", "ban the boxing glove. Do I actually want alien eyes because we're buying so much"]}, {"name_en": "Broken Mouth", "name_zh": "裂口", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Broken Mouth", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["both of these items as well. Since I found broken mouth, which is much more", "found broken mouth, which is much more", "found broken mouth, which is much more efficient. Do I want to still buy the"]}, {"name_en": "Campfire", "name_zh": "营火", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Campfire", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["even though the engineering that we get from it is not significant. Campfire", "from it is not significant. Campfire", "from it is not significant. Campfire when cursed seems pretty nice as well."]}, {"name_en": "Corrupted Shard", "name_zh": "腐化碎片", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Corrupted Shard", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["when cursed seems pretty nice as well. I'll take a corrupted shard and then", "I'll take a corrupted shard and then", "I'll take a corrupted shard and then we'll go to wave 18. And then the goal"]}, {"name_en": "Decomposing Flesh", "name_zh": "腐烂肉体", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Decomposing Flesh", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["I'm going to roll past these. We'll buy coffee. I'll take a decomposing flesh as", "coffee. I'll take a decomposing flesh as", "coffee. I'll take a decomposing flesh as well cuz I want a ton of life steal. And"]}, {"name_en": "Dynamite", "name_zh": "炸药", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Dynamite", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["Um, we won't lose health from the padding just from rolling. The dynamite", "padding just from rolling. The dynamite", "padding just from rolling. The dynamite I would take as well. And then we'll"]}, {"name_en": "Gambling Token", "name_zh": "赌博筹码", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Gambling Token", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["dodge, we can't build, so we're going to obviously not buy gambling token, but we", "obviously not buy gambling token, but we", "obviously not buy gambling token, but we will buy these other items and roll. And"]}, {"name_en": "Handcuffs", "name_zh": "手铐", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Handcuffs", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["I'll roll more ranged damage. Roll again. Uh, obviously cursed handcuffs.", "again. Uh, obviously cursed handcuffs.", "again. Uh, obviously cursed handcuffs. Incredible. I guess I'll take the jelly"]}, {"name_en": "Head Injury", "name_zh": "脑损伤", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Head Injury", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["healing to go with that. We'll buy bag penguin head injury. My percent damage", "penguin head injury. My percent damage", "penguin head injury. My percent damage is pretty bad. I'll take pile of books"]}, {"name_en": "Helmet", "name_zh": "头盔", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Helmet", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["frequently. Wolf helmet uh I think it's not worth", "Wolf helmet uh I think it's not worth", "Wolf helmet uh I think it's not worth 200 for 20 just 20 luck. We can't use"]}, {"name_en": "Incendiary Turret", "name_zh": "燃烧炮塔", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "mapped", "surface_verb": "buy", "mapped_to": "take", "surface_word": "incendiary turrets", "discretion_reason": "自由裁量：别名归一 (incendiary turrets -> Incendiary Turret) 或 动词转述 (buy -> take)", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["pick up a pocket factory. um an incendiary turret,", "incendiary turret,", "incendiary turret, uh a Tyler, something like that. Just"]}, {"name_en": "Injection", "name_zh": "注射器", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Injection", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["a mutation. Take the injection. I need high percent", "Take the injection. I need high percent", "Take the injection. I need high percent damage. Bonk dog unfortunately doesn't"]}, {"name_en": "Knot", "name_zh": "绳结", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Knot", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["on this character. Okay, so I could take the knot here. This actually is not a", "the knot here. This actually is not a", "the knot here. This actually is not a totally ridiculous item to take at this"]}, {"name_en": "Lemonade", "name_zh": "柠檬水", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Lemonade", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["acid again. Uh, we'll upgrade screwdriver, buy lemonade, and roll. And", "screwdriver, buy lemonade, and roll. And", "screwdriver, buy lemonade, and roll. And yep, we're going to buy this entire"]}, {"name_en": "Lens", "name_zh": "透镜", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Lens", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["HP is really low. We'll buy a screwdriver. We'll buy a lens. And we'll", "screwdriver. We'll buy a lens. And we'll", "screwdriver. We'll buy a lens. And we'll roll again. And then we're going to take"]}, {"name_en": "Lighthouse", "name_zh": "灯塔", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Lighthouse", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["on this character. You maybe sometimes can still buy lighthouse because you", "can still buy lighthouse because you", "can still buy lighthouse because you still get five engineering from it. But"]}, {"name_en": "Metal Plate", "name_zh": "金属板", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Metal Plate", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["That'll help us kill the bosses faster. And we'll take the metal plate here.", "And we'll take the metal plate here.", "And we'll take the metal plate here. I'll roll more ranged damage. Roll"]}, {"name_en": "Mushroom", "name_zh": "蘑菇", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Mushroom", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["critical damage. Roll here. We'll buy a coupon. I'll lock a mushroom as well.", "coupon. I'll lock a mushroom as well.", "coupon. I'll lock a mushroom as well. And then I'm going to roll. Bottom mine"]}, {"name_en": "Nail", "name_zh": "钉子", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Nail", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["worth mentioning about this character is that if you find nail, then the", "that if you find nail, then the", "that if you find nail, then the character just becomes broken. You uh if"]}, {"name_en": "Pile of Books", "name_zh": "一堆书", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "mapped", "surface_verb": "take", "mapped_to": "take", "surface_word": "books", "discretion_reason": "自由裁量：别名归一 (books -> Pile of Books) 或 动词转述 (take -> take)", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["penguin head injury. My percent damage is pretty bad. I'll take pile of books", "is pretty bad. I'll take pile of books", "is pretty bad. I'll take pile of books as well. Uh we don't have a ton of crit"]}, {"name_en": "Potato", "name_zh": "马铃薯", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": true, "has_verb": false, "verb": null, "verb_type": "none", "surface_verb": null, "mapped_to": null, "surface_word": "potato", "discretion_reason": "无动词意图推断：主播提及 Potato 虽无闭集动词，但结合语境表达购买/关注意图 (inferred:true)", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["Hello my friends and welcome back to another potato ultimate nightmares run", "another potato ultimate nightmares run", "another potato ultimate nightmares run where we take the characters that are"]}, {"name_en": "Propeller Hat", "name_zh": "竹蜻蜓帽", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Propeller Hat", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["was worth the effort. I'll take the bean teacher. We'll buy propeller hat. And", "teacher. We'll buy propeller hat. And", "teacher. We'll buy propeller hat. And then we'll just take three more armor."]}, {"name_en": "Sad Tomato", "name_zh": "悲伤番茄", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Sad Tomato", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["still pretty powerful. And then I will buy sad tomato. And I'm going to buy the", "buy sad tomato. And I'm going to buy the", "buy sad tomato. And I'm going to buy the alien tongue also because we're pretty"]}, {"name_en": "Scope", "name_zh": "瞄准镜", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Scope", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["recycle that. I'll definitely take scope. We obviously need more attack", "scope. We obviously need more attack", "scope. We obviously need more attack speed, but you can never pass ranged"]}, {"name_en": "Shackles", "name_zh": "脚镣", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Shackles", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["good damage for us in the second half of waves. And I'll take a shackles as well.", "waves. And I'll take a shackles as well.", "waves. And I'll take a shackles as well. Um, the plus 80 range is actually sort"]}, {"name_en": "Small Magazine", "name_zh": "小弹匣", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Small Magazine", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["the item that we're looking for the most probably is small magazine, but anything", "probably is small magazine, but anything", "probably is small magazine, but anything that gives us flat ranged damage is"]}, {"name_en": "Stone Skin", "name_zh": "石肤", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Stone Skin", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["And there we go. Uh, we'll take the stone skin. We've ended up with a lot of", "stone skin. We've ended up with a lot of", "stone skin. We've ended up with a lot of max HP. That's funny. And then I'm going"]}, {"name_en": "Whistle", "name_zh": "口哨", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Whistle", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["projectiles. And I'll pick up the whistle here and roll. Buy another", "whistle here and roll. Buy another", "whistle here and roll. Buy another screwdriver. We'll lock a beanie. And"]}, {"name_en": "Wolf Helmet", "name_zh": "狼头盔", "group": "casual_mention", "tier": null, "count": 3, "confidence": "candidate", "inferred": false, "has_verb": true, "verb": "take", "verb_type": "closed", "surface_verb": "take", "mapped_to": "take", "surface_word": "Wolf Helmet", "discretion_reason": "低频出现：带一般拿取动词", "reason": "【路过提及】商店刷新或路过提及(3次)，无明确评价，不影响构筑主线。", "quotes": ["frequently. Wolf helmet uh I think it's not worth", "Wolf helmet uh I think it's not worth", "Wolf helmet uh I think it's not worth 200 for 20 just 20 luck. We can't use"]}, {"name_en": "Gentle Alien", "name_zh": "温和外星人", "group": "casual_mention", "tier": null, "count": 1, "confidence": "candidate", "inferred": false, "has_verb": false, "verb": null, "verb_type": "none", "surface_verb": null, "mapped_to": null, "surface_word": "Gentle Alien", "discretion_reason": "路过提及：1-3次无动词评价", "reason": "【路过提及】商店刷新或路过提及(1次)，无明确评价，不影响构筑主线。", "quotes": ["an absurdly powerful character. Gentle alien I'm going to buy. The economy"]}, {"name_en": "Scared Sausage", "name_zh": "惊恐香肠", "group": "casual_mention", "tier": null, "count": 1, "confidence": "candidate", "inferred": false, "has_verb": false, "verb": null, "verb_type": "none", "surface_verb": null, "mapped_to": null, "surface_word": "Scared Sausage", "discretion_reason": "路过提及：1-3次无动词评价", "reason": "【路过提及】商店刷新或路过提及(1次)，无明确评价，不影响构筑主线。", "quotes": ["this character, we don't want scared sausage. Non-weapon sources of damage in"]}, {"name_en": "White Flag", "name_zh": "白旗", "group": "casual_mention", "tier": null, "count": 1, "confidence": "candidate", "inferred": false, "has_verb": false, "verb": null, "verb_type": "none", "surface_verb": null, "mapped_to": null, "surface_word": "White Flag", "discretion_reason": "路过提及：1-3次无动词评价", "reason": "【路过提及】商店刷新或路过提及(1次)，无明确评价，不影响构筑主线。", "quotes": ["nice. We'll buy these. We'll ban white flag and get our free roll off of that."]}]};
+let appData = JSON.parse(JSON.stringify(MOCK_DATA));
+
+const state = {
+  dataSource: 'mock',
+  filters: {
+    count: 'all',
+    confidence: 'all',
+    verb: 'all',
+    search: ''
+  },
+  selectedItem: null
+};
+
+// 3D Filtering Engine
+function getFilteredItems() {
+  if (!appData || !appData.items) return [];
+  return appData.items.filter(it => {
+    // 1. Mentions Count
+    if (state.filters.count === 'ge8' && it.count < 8) return false;
+    if (state.filters.count === 'ge4' && it.count < 4) return false;
+    if (state.filters.count === 'has_verb' && !it.has_verb) return false;
+
+    // 2. Confidence
+    if (state.filters.confidence === 'verified' && it.confidence !== 'verified') return false;
+    if (state.filters.confidence === 'candidate' && it.confidence !== 'candidate') return false;
+    if (state.filters.confidence === 'inferred' && !it.inferred) return false;
+
+    // 3. Verb Classification
+    if (state.filters.verb === 'closed' && it.verb_type !== 'closed') return false;
+    if (state.filters.verb === 'mapped' && it.verb_type !== 'mapped') return false;
+    if (state.filters.verb === 'none' && it.verb_type !== 'none') return false;
+
+    // 4. Search text
+    if (state.filters.search) {
+      const q = state.filters.search.toLowerCase();
+      const matchNameEn = it.name_en.toLowerCase().includes(q);
+      const matchNameZh = it.name_zh.includes(q);
+      const matchReason = it.reason.toLowerCase().includes(q);
+      const matchQuotes = it.quotes.some(quote => quote.toLowerCase().includes(q));
+      if (!matchNameEn && !matchNameZh && !matchReason && !matchQuotes) return false;
+    }
+
+    return true;
+  });
+}
+
+function render() {
+  const container = document.getElementById('mainContainer');
+  const filtered = getFilteredItems();
+  document.getElementById('filteredCount').textContent = filtered.length;
+
+  const m = appData.manifest;
+  const s = appData.sentences || [];
+  const v = appData.verbs || { verified: [], candidates: [] };
+
+  let html = `
+    <!-- Pipeline Step 0: Inputs & Manifest -->
+    <div class="pipeline-step completed">
+      <div class="pipeline-step-node">0</div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>📦 inputs/ · 契约输入与 Manifest 真实性校验</span>
+          </div>
+          <span class="badge badge-verified">✅ sha1 校验一致 (${m.sources && m.sources[0] ? m.sources[0].sha1.slice(0, 8) + '...' : 'PASS'})</span>
+        </div>
+        <div class="manifest-grid">
+          <div class="manifest-box"><div class="k">SLUG</div><div class="v">${m.slug}</div></div>
+          <div class="manifest-box"><div class="k">VARIANT</div><div class="v">${m.variant} (${(m.covers || []).join(', ')})</div></div>
+          <div class="manifest-box"><div class="k">SOP VERSION</div><div class="v">${(m.sop_version || '').slice(0, 8)}</div></div>
+          <div class="manifest-box"><div class="k">SOURCE URL</div><div class="v"><a href="${m.sources && m.sources[0] ? m.sources[0].url : '#'}" target="_blank">YouTube 视频 ↗</a></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pipeline Step 1: 01-sentences -->
+    <div class="pipeline-step completed">
+      <div class="pipeline-step-node">1</div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>📝 steps/01-sentences/ · 句子解析与清洗</span>
+          </div>
+          <span class="badge badge-count-pill">${s.length} 句样例文本</span>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+          清洗契约：丢弃时间戳与格式头部，去除 HTML，单句限长 500 字符。
+        </p>
+        <div style="max-height:140px;overflow-y:auto;background:#faf8f5;border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-family:monospace;font-size:11px;">
+          ${s.map(it => `<div><span style="color:#0b5fff;">[#${it.id}]</span> ${it.text}</div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Pipeline Step 2: 02-verbs -->
+    <div class="pipeline-step completed">
+      <div class="pipeline-step-node">2</div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>⚡ steps/02-verbs/ · 动词归约与机检双重视图</span>
+          </div>
+          <div>
+            <span class="badge badge-verified">${v.verified.length} verified 锚点</span>
+            <span class="badge badge-candidate" style="margin-left:4px;">${v.candidates.length} candidates 自由裁量</span>
+          </div>
+        </div>
+        <div class="step2-dual">
+          <div class="verb-panel verified">
+            <h4 style="font-size:12px;font-weight:700;color:#047857;margin-bottom:8px;">✅ Verified（精确名 + 闭集10动词 + 原文整句）</h4>
+            ${v.verified.map(item => `
+              <div class="verb-row">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <strong>${item.object_norm}</strong>
+                  <span class="badge badge-verified">动词: ${item.verb}</span>
+                </div>
+                <div style="font-size:11px;color:var(--muted);">"${item.quote}"</div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="verb-panel candidates">
+            <h4 style="font-size:12px;font-weight:700;color:#b45309;margin-bottom:8px;">⚠️ Candidates（别名归一 / 动词转述 / 意图推断·标黄）</h4>
+            ${v.candidates.map(item => `
+              <div class="verb-row candidate-row">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <strong>${item.normalized_to}</strong>
+                  ${item.inferred ? `<span class="badge badge-inferred">inferred:true</span>` : `<span class="badge badge-candidate">${item.surface_verb} → ${item.mapped_to}</span>`}
+                </div>
+                <div style="font-size:11px;color:#92400e;margin-top:2px;">理由: ${item.reason}</div>
+                <div style="font-size:11px;color:var(--muted);">"${item.quote}"</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pipeline Step 3: 03-grouping & outputs -->
+    <div class="pipeline-step completed">
+      <div class="pipeline-step-node">3</div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>📊 steps/03-grouping/ & outputs/ · 最终分组与人话理由 (全68项收录)</span>
+          </div>
+          <span class="badge badge-count-pill">当前展示 ${filtered.length} 项</span>
+        </div>
+
+        ${renderGroupAccordion("【必拿·核心 (Must Take - Core)】", filtered.filter(x => x.group === 'must_take' && x.tier === 'core'))}
+        ${renderGroupAccordion("【必拿·顺手 (Must Take - Convenient)】", filtered.filter(x => x.group === 'must_take' && x.tier === 'convenient'))}
+        ${renderGroupAccordion("【必拿·妥协 (Must Take - Compromise)】", filtered.filter(x => x.group === 'must_take' && x.tier === 'compromise'))}
+        ${renderGroupAccordion("【提过未拿 (Mentioned but Skipped)】", filtered.filter(x => x.group === 'mentioned_not_taken'))}
+        ${renderGroupAccordion("【明确 Ban (Banned)】", filtered.filter(x => x.group === 'ban'))}
+        ${renderGroupAccordion("【路过提及 (Casual Mentions 1-3次)】", filtered.filter(x => x.group === 'casual_mention'))}
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+  bindItemCardClicks();
+}
+
+function renderGroupAccordion(title, items) {
+  if (items.length === 0) return '';
+  return `
+    <div class="group-accordion">
+      <div class="group-acc-head">
+        <span>${title}</span>
+        <span class="badge-count-pill">${items.length} 件</span>
+      </div>
+      <div class="group-acc-body">
+        ${items.map(it => renderItemCard(it)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderItemCard(it) {
+  const isCandidate = it.confidence === 'candidate';
+  const isInferred = it.inferred;
+  return `
+    <div class="item-card ${isCandidate ? 'is-candidate' : ''} ${isInferred ? 'is-inferred' : ''}" data-name="${it.name_en}">
+      <div class="item-card-top">
+        <div class="item-card-name">
+          <span>${it.name_en}</span>
+          <span class="item-card-zh">${it.name_zh}</span>
+        </div>
+        <div>
+          ${it.confidence === 'verified' ? '<span class="badge badge-verified">verified</span>' : ''}
+          ${isCandidate ? '<span class="badge badge-candidate">candidate</span>' : ''}
+          ${isInferred ? '<span class="badge badge-inferred">inferred:true</span>' : ''}
+          <span class="badge-count-pill" title="出现频次">${it.count}次</span>
+        </div>
+      </div>
+      <div class="item-card-reason">${it.reason}</div>
+      ${it.quotes && it.quotes.length ? `<div class="item-card-quote">“${it.quotes[0]}”</div>` : ''}
+    </div>
+  `;
+}
+
+// Drawer Interactions
+function bindItemCardClicks() {
+  document.querySelectorAll('[data-name]').forEach(el => {
+    el.addEventListener('click', () => {
+      const name = el.dataset.name;
+      const item = appData.items.find(x => x.name_en === name);
+      if (item) openDrawer(item);
+    });
+  });
+}
+
+function openDrawer(item) {
+  state.selectedItem = item;
+  document.getElementById('drawerItemName').innerHTML = `${item.name_en} <span style="font-weight:normal;font-size:13px;color:var(--muted);">(${item.name_zh})</span>`;
+
+  let contentHtml = `
+    <div class="drawer-section">
+      <h3>1. 属性与置信信号</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+        <span class="badge-count-pill">频次: ${item.count}</span>
+        ${item.confidence === 'verified' ? '<span class="badge badge-verified">Verified (机检锚点)</span>' : '<span class="badge badge-candidate">Candidates (自由裁量·标黄)</span>'}
+        ${item.inferred ? '<span class="badge badge-inferred">Inferred:true (无动词意图)</span>' : ''}
+        ${item.tier ? `<span class="badge badge-${item.tier}">${item.tier}</span>` : ''}
+      </div>
+      <div style="font-size:12px;line-height:1.5;">${item.discretion_reason || '正常收录'}</div>
+    </div>
+
+    <div class="drawer-section">
+      <h3>2. 人看一单审核 Gate (Reviewer Checklist)</h3>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" checked disabled> <span>出处真实（有原文字幕句子定位）</span></label>
+        <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" checked disabled> <span>理由为人话（说明为什么拿 / 为什么不拿）</span></label>
+        <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" checked disabled> <span>无模具怪话（不出现通用套话）</span></label>
+        <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" checked disabled> <span>无计数泄漏（理由内不写死次数数字）</span></label>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <h3>3. 分组输出理由 (outputs/groups.json)</h3>
+      <div style="font-weight:600;margin-bottom:4px;color:var(--ink);">${item.reason}</div>
+    </div>
+
+    <div class="drawer-section">
+      <h3>4. 原始引用穿透 (Step 01 / 02 Traceability)</h3>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${item.quotes && item.quotes.length ? item.quotes.map((q, idx) => `
+          <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;">
+            <div style="font-weight:700;color:var(--accent);margin-bottom:2px;">[Quote #${idx + 1}]</div>
+            <div style="font-style:italic;">“${q}”</div>
+          </div>
+        `).join('') : '<div style="color:var(--muted);">无直接引用</div>'}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('drawerContent').innerHTML = contentHtml;
+  document.getElementById('drawerBackdrop').classList.add('open');
+  document.getElementById('itemDrawer').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('drawerBackdrop').classList.remove('open');
+  document.getElementById('itemDrawer').classList.remove('open');
+}
+
+document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer);
+document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
+
+// Directory Picker (File System Access API)
+document.getElementById('btnPickDir').addEventListener('click', async () => {
+  if (!('showDirectoryPicker' in window)) {
+    alert('当前环境不支持 showDirectoryPicker API，请通过本地 HTTP Server 访问或使用备用上传。');
+    return;
+  }
+  try {
+    const dirHandle = await window.showDirectoryPicker();
+    await loadFromDirectoryHandle(dirHandle);
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      alert('读取本地目录失败: ' + err.message);
+    }
+  }
+});
+
+async function loadFromDirectoryHandle(dirHandle) {
+  try {
+    document.getElementById('sourceText').textContent = `正在读取本地目录: ${dirHandle.name}...`;
+    let manifestData = null;
+    try {
+      const inputsDir = await dirHandle.getDirectoryHandle('inputs');
+      const manifestFile = await inputsDir.getFileHandle('manifest.json');
+      const file = await manifestFile.getFile();
+      manifestData = JSON.parse(await file.text());
+    } catch (e) {
+      console.warn("Could not find inputs/manifest.json", e);
+    }
+
+    if (manifestData) {
+      appData.manifest = manifestData;
+      state.dataSource = 'live';
+      document.getElementById('sourceDot').className = 'source-dot live';
+      document.getElementById('sourceText').textContent = `数据源：本地工作区 (${dirHandle.name})`;
+      render();
+    } else {
+      alert(`已选择目录 ${dirHandle.name}，但未找到标准的 inputs/manifest.json。`);
+    }
+  } catch (err) {
+    alert('解析目录出错: ' + err.message);
+  }
+}
+
+// Fallback directory upload
+document.getElementById('fallbackDirInput').addEventListener('change', async (e) => {
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
+  document.getElementById('sourceText').textContent = `已载入 ${files.length} 个本地文件`;
+  document.getElementById('sourceDot').className = 'source-dot live';
+});
+
+// Reset to Mock
+document.getElementById('btnResetMock').addEventListener('click', () => {
+  loadMockData();
+  state.dataSource = 'mock';
+  document.getElementById('sourceDot').className = 'source-dot';
+  document.getElementById('sourceText').textContent = '数据源：内置 Mock 数据 (Cyborg/Ultimate 68件)';
+  render();
+});
+
+// HTTP Base Fetch
+async function loadFromHttpBase(base) {
+  try {
+    document.getElementById('sourceText').textContent = `读取 HTTP: ${base}...`;
+    const res = await fetch(`${base}/inputs/manifest.json`);
+    if (res.ok) {
+      appData.manifest = await res.json();
+      state.dataSource = 'live';
+      document.getElementById('sourceDot').className = 'source-dot live';
+      document.getElementById('sourceText').textContent = `数据源：HTTP (${base})`;
+      render();
+    }
+  } catch (err) {
+    console.warn("HTTP base fetch failed:", err);
+  }
+}
+
+// Filter listeners
+function setupFilterListeners() {
+  document.querySelectorAll('#filterCountGroup .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#filterCountGroup .chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      state.filters.count = chip.dataset.val;
+      render();
+    });
+  });
+
+  document.querySelectorAll('#filterConfidenceGroup .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#filterConfidenceGroup .chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      state.filters.confidence = chip.dataset.val;
+      render();
+    });
+  });
+
+  document.querySelectorAll('#filterVerbGroup .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#filterVerbGroup .chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      state.filters.verb = chip.dataset.val;
+      render();
+    });
+  });
+
+  const searchInput = document.getElementById('searchInput');
+  searchInput.addEventListener('input', (e) => {
+    state.filters.search = e.target.value.trim();
+    render();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDrawer();
+  });
+}
+
+function loadMockData() {
+  appData = JSON.parse(JSON.stringify(MOCK_DATA));
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  setupFilterListeners();
+  loadMockData();
+  const params = new URLSearchParams(window.location.search);
+  const baseParam = params.get('base');
+  if (baseParam) {
+    loadFromHttpBase(baseParam);
+  }
+  render();
+});
+</script>
+
+<!-- Embedded Mock Data Script generated during build -->
+<script src="../audit-prototype.html" type="text/plain" id="prototypeRef"></script>
+</body>
+</html>

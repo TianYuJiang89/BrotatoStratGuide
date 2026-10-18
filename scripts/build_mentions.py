@@ -338,7 +338,7 @@ def parse_vtt(text: str) -> list[str]:
 def scan_cues(
     cues: list[str], pattern_map: dict[str, list[re.Pattern[str]]]
 ) -> dict[str, tuple[int, list[str]]]:
-    """每 key 计数 + 原句 (cap 10 句防膨胀)."""
+    """每 key 计数 + 原句全量 (去cap: quotes 去重全留, #42跟进)."""
     result: dict[str, tuple[int, list[str]]] = {}
     lowered = [c.lower() for c in cues]
     for key, pats in pattern_map.items():
@@ -348,7 +348,7 @@ def scan_cues(
                 if pat.search(low):
                     hits.append(cues[idx])
                     break
-        result[key] = (len(hits), hits[:10])
+        result[key] = (len(hits), hits)
     return result
 
 

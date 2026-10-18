@@ -239,7 +239,8 @@ def step01(workdir: Path) -> list[dict]:
     timed = parse_vtt_timed(src)
     sentences = [{"id": i + 1, "text": c["text"],
                   "start": c["start"], "end": c["end"],
-                  "start_s": c["start_s"], "end_s": c["end_s"]}
+                  "start_s": c["start_s"], "end_s": c["end_s"],
+                  "t": (int(c["start_s"]) if c.get("start_s") is not None else None)}
                  for i, c in enumerate(timed)]
     outdir = workdir / "steps" / "01-sentences"
     outdir.mkdir(parents=True, exist_ok=True)
@@ -505,8 +506,6 @@ def step03(workdir: Path, verbs: dict, sentences: list[dict]) -> list[dict]:
         for q in quotes:
             if q not in seen_q:
                 seen_q.append(q)
-            if len(seen_q) >= 10:
-                break
         details = []
         for q in seen_q:
             hits = qlookup.get(q, [])
@@ -553,8 +552,6 @@ def step04(workdir: Path, sentences: list[dict]) -> list[dict]:
         for q in list(raw_quotes):
             if q not in seen_q:
                 seen_q.append(q)
-            if len(seen_q) >= 10:
-                break
         details = []
         for q in seen_q:
             hits = qlookup.get(q, [])
@@ -645,8 +642,6 @@ def step05(workdir: Path, sentences: list[dict]) -> dict:
         for q in list(raw):
             if q not in seen_q:
                 seen_q.append(q)
-            if len(seen_q) >= 10:
-                break
         details = []
         for q in seen_q:
             hits = qlookup.get(q, [])

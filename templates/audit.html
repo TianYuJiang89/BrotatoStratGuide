@@ -577,7 +577,7 @@ html { scroll-behavior: smooth; }
       <span class="source-dot" id="sourceDot"></span>
       <span id="sourceText">待加载：请点“选择工作区目录”载入 live（不自动显示 mock）</span>
     </div>
-    <button class="btn-sm" id="btnPickDir" title="调用浏览器 File System Access API 选择本地工作区目录">
+    <button class="btn-sm" id="btnPickDir" title="默认从 G:\brotato-work 开始（首次手选一次，之后自动记住上次目录）">
       📁 选择工作区目录
     </button>
     <label class="btn-sm" style="margin:0;" title="备用目录上传">
@@ -1192,11 +1192,19 @@ function openSentenceDrawer(sent) {
   const next = (idx >= 0 && idx+1 < all.length) ? all[idx+1].text : '';
   const refsV = ((appData.verbs||{}).verified||[]).filter(r => r.sentence_id === sent.id);
   const refsC = ((appData.verbs||{}).candidates||[]).filter(r => r.sentence_id === sent.id);
-  const refCard = (name, tag, reason) => `
-    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><strong>${name}</strong>${tag}</div>
-      ${reason ? `<div style="font-size:11px;color:#92400e;margin-top:2px;">理由: ${reason}</div>` : ''}
+  // 全量引用记录: 每条含判定徽标 + 原文 quote + 只读 context + ?t= 跳链, 不节选
+  const refCardFull = (r, isV) => {
+    const tag = isV ? `<span class="badge badge-verified">动词: ${r.verb}</span>` : (r.inferred ? '<span class="badge badge-inferred">inferred:true</span>' : `<span class="badge badge-candidate">${r.surface_verb} → ${r.mapped_to}</span>`);
+    const rl = (r.t != null) ? `<a href="${vurl}${vurl.includes('?') ? '&' : '?'}t=${r.t}s" target="_blank">⏱${r.start || ('t='+r.t)}</a>` : '';
+    return `
+    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><strong>${r.object_norm || r.normalized_to}</strong>${tag}</div>
+      ${(!isV && r.reason) ? `<div style="font-size:11px;color:#92400e;margin-top:2px;">理由: ${r.reason}</div>` : ''}
+      <div style="font-style:italic;margin-top:4px;">“${r.quote}”</div>
+      ${r.context ? `<div style="font-size:11px;color:#999;margin-top:2px;">上下文: ${r.context}</div>` : ''}
+      ${rl ? `<div style="margin-top:2px;">${rl}</div>` : ''}
     </div>`;
+  };
   document.getElementById('drawerItemName').innerHTML = `句子 #${sent.id} <span style="font-weight:normal;font-size:13px;color:var(--muted);">(steps/01-sentences)</span>`;
   document.getElementById('drawerContent').innerHTML = `
     <div class="drawer-section">
@@ -1222,7 +1230,7 @@ function openSentenceDrawer(sent) {
         <span class="badge badge-candidate">${refsC.length} candidates</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;">
-        ${(refsV.length || refsC.length) ? refsV.map(r => refCard(r.object_norm, `<span class="badge badge-verified">动词: ${r.verb}</span>`, '')).join('') + refsC.map(r => refCard(r.normalized_to, r.inferred ? '<span class="badge badge-inferred">inferred:true</span>' : `<span class="badge badge-candidate">${r.surface_verb} → ${r.mapped_to}</span>`, r.reason || '')).join('') : '<div style="color:var(--muted);">无动词引用此句（路过句）</div>'}
+        ${(refsV.length || refsC.length) ? refsV.map(r => refCardFull(r, true)).join('') + refsC.map(r => refCardFull(r, false)).join('') : '<div style="color:var(--muted);">无动词引用此句（路过句）</div>'}
       </div>
     </div>
   `;
@@ -1278,13 +1286,62 @@ document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer)
 document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
 
 // Directory Picker (File System Access API)
+// 默认工作区 G:\brotato-work: 浏览器安全限制不允许网页直写任意路径,
+// 用固定 id + IndexedDB 持久化上次目录句柄 —— 首次手选一次 G:\brotato-work\<slug>\<variant>,
+// 之后点按钮直接恢复上次目录 (权限仍在), 换目录才弹框且从上次位置开始 (startIn)
+const WORKSPACE_PICKER_ID = 'brotato-work-root';
+function idbOpenAudit() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('brotato-audit', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('handles');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbGetWorkdir() {
+  try {
+    if (!('indexedDB' in window)) return null;
+    const db = await idbOpenAudit();
+    return await new Promise((resolve) => {
+      const rq = db.transaction('handles', 'readonly').objectStore('handles').get('workdir');
+      rq.onsuccess = () => resolve(rq.result || null);
+      rq.onerror = () => resolve(null);
+    });
+  } catch (e) { return null; }
+}
+async function idbSetWorkdir(handle) {
+  try {
+    if (!('indexedDB' in window)) return;
+    const db = await idbOpenAudit();
+    await new Promise((resolve) => {
+      const tx = db.transaction('handles', 'readwrite');
+      tx.objectStore('handles').put(handle, 'workdir');
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  } catch (e) { console.warn('默认工作区记忆失败', e); }
+}
 document.getElementById('btnPickDir').addEventListener('click', async () => {
   if (!('showDirectoryPicker' in window)) {
     alert('当前环境不支持 showDirectoryPicker API，请通过本地 HTTP Server 访问或使用备用上传。');
     return;
   }
   try {
-    const dirHandle = await window.showDirectoryPicker();
+    const opts = { id: WORKSPACE_PICKER_ID, mode: 'read' };
+    try {
+      const last = await idbGetWorkdir();
+      if (last && last.name) {
+        const qp = (typeof last.queryPermission === 'function') ? await last.queryPermission({ mode: 'read' }) : 'prompt';
+        const ok = (qp === 'granted') || ((typeof last.requestPermission === 'function') && (await last.requestPermission({ mode: 'read' })) === 'granted');
+        if (ok) {
+          await loadFromDirectoryHandle(last);
+          return;
+        }
+        opts.startIn = last;
+      }
+    } catch (e) { console.warn('恢复上次目录失败，走重新选择', e); }
+    const dirHandle = await window.showDirectoryPicker(opts);
+    await idbSetWorkdir(dirHandle);
     await loadFromDirectoryHandle(dirHandle);
   } catch (err) {
     if (err.name !== 'AbortError') {
@@ -1489,6 +1546,13 @@ function loadMockData() {
 
 window.addEventListener('DOMContentLoaded', () => {
   setupFilterListeners();
+  // 启动即恢复默认工作区按钮提示 (IndexedDB 有上次目录即显示, 点之直连)
+  idbGetWorkdir().then(last => {
+    if (last && last.name) {
+      const btn = document.getElementById('btnPickDir');
+      btn.title = `默认工作区 G:\brotato-work · 上次: ${last.name}（点此继续）`;
+    }
+  });
   // 缺省不吃广告纸: 不自动载 mock, 只显示待加载; live 经 picker/?base 进来, mock 仅点按钮显式进
   appData = {manifest: null, sentences: [], verbs: {verified: [], candidates: []}, items: [], ratings: [], weapons: {t1: [], t2: []}, phases: [], priorities: {}, pitfalls: [], assemble: {}};
   state.dataSource = 'empty';

@@ -295,6 +295,10 @@ def main(argv: list[str] | None = None) -> int:
                    "openSentenceDrawer", "openVerbDrawer"):
         if marker not in audit_html:
             fail(f"audit.html 缺 step1/2 行明细 (#42跟进): {marker}", errors)
+    # 默认工作区 (picker 从 G:\brotato-work/上次目录开始: 固定 id + IndexedDB 存句柄)
+    for marker in ("startIn", "brotato-work-root"):
+        if marker not in audit_html:
+            fail(f"audit.html 缺默认工作区 (#42跟进): {marker}", errors)
     # ratings/weapons mock 常设 (离线可读, live 经 picker/?base= 全量)
     for marker in ("MOCK_RATINGS", "MOCK_WEAPONS"):
         if marker not in audit_html:

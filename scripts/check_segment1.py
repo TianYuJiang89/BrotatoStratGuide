@@ -103,6 +103,10 @@ def main(argv: list[str] | None = None) -> int:
                 break
         if n_ts < len(sentences) * 0.9:
             fail(f"start/end coverage too low: {n_ts}/{len(sentences)} (B-04 起应统一加)", errors)
+        # t 与 start 同生同死: 有 start 必有 int t (审计 step1 按 t 渲染, 缺 t 即 no-ts 误导)
+        bad_t = [s.get("id") for s in sentences if s.get("start") is not None and not isinstance(s.get("t"), int)]
+        if bad_t:
+            fail(f"sentences with start must carry int t (?t= 跳链用): ids={bad_t[:5]}", errors)
 
     sent_by_id = {s["id"]: s["text"] for s in sentences if isinstance(s, dict)}
 
@@ -297,7 +301,8 @@ def main(argv: list[str] | None = None) -> int:
             fail(f"audit.html 左侧导航缺链接 (#42跟进): #{marker}", errors)
     # step1/2 行级明细 (句子/动词行点开进抽屉, 与 step3 卡片对齐, 缺钩子即 fail)
     for marker in ("data-sent", "data-verb-v", "data-verb-c",
-                   "openSentenceDrawer", "openVerbDrawer", "fullContextHtml"):
+                   "openSentenceDrawer", "openVerbDrawer", "fullContextHtml",
+                   "data-jump-sent", "sentJumpLink"):
         if marker not in audit_html:
             fail(f"audit.html 缺 step1/2 行明细 (#42跟进): {marker}", errors)
     # 默认工作区 (picker 从 G:\brotato-work/上次目录开始: 固定 id + IndexedDB 存句柄)

@@ -418,6 +418,8 @@ html { scroll-behavior: smooth; }
 .verb-row:hover { box-shadow: 0 1px 6px rgba(0,0,0,0.08); }
 .sent-row { cursor: pointer; border-radius: 4px; padding: 1px 4px; }
 .sent-row:hover { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.sent-row { transition: background 0.3s; scroll-margin: 8px; }
+.sent-row.flash { background: #fde68a; }
 
 .group-accordion {
   border: 1px solid var(--line);
@@ -782,7 +784,7 @@ function render() {
           ${s.map(it => {
             const vurl = (m.sources && m.sources[0] && m.sources[0].url) ? m.sources[0].url : '#';
             const tlink = (it.t != null) ? `<a href="${vurl}${vurl.includes('?') ? '&' : '?'}t=${it.t}s" target="_blank" title="${it.start || ''} → ${it.end || ''}">⏱${it.start || ('t='+it.t)}</a>` : '<span style="color:#aaa;">no-ts</span>';
-            return `<div class="sent-row" data-sent="${it.id}"><span style="color:#0b5fff;">[#${it.id}]</span> ${it.text} <span style="color:#999;">${tlink}</span></div>`;
+            return `<div class="sent-row" id="sent-${it.id}" data-sent="${it.id}"><span style="color:#0b5fff;">[#${it.id}]</span> ${it.text} <span style="color:#999;">${tlink}</span></div>`;
           }).join('')}
         </div>
       </div>
@@ -991,6 +993,7 @@ function render() {
 
 // Left DAG nav: live counts + scroll-spy
 function updateSideNav() {
+  quoteToSent = null; // 句子数据已换, quote→id 映射 lazily 重建
   const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt || ''; };
   const s = appData.sentences || [];
   const v = appData.verbs || { verified: [], candidates: [] };
@@ -1127,6 +1130,22 @@ function showDrawer() {
   document.getElementById('itemDrawer').classList.add('open');
 }
 
+// 引用跳原文句: quote → steps/01-sentences 行锚点, 看完整上下文
+let quoteToSent = null;
+function sentenceIdForQuote(q) {
+  if (!quoteToSent) {
+    quoteToSent = new Map();
+    (appData.sentences||[]).forEach(s => { if (!quoteToSent.has(s.text)) quoteToSent.set(s.text, s.id); });
+  }
+  const id = quoteToSent.get(q);
+  return (id == null) ? null : id;
+}
+function sentJumpLink(sentence_id, quote) {
+  const id = (sentence_id != null) ? sentence_id : sentenceIdForQuote(quote);
+  if (id == null) return '';
+  return ` <a href="#sent-${id}" data-jump-sent="${id}" title="跳到 steps/01-sentences #${id} 看完整上下文">📍句#${id}</a>`;
+}
+
 function openDrawer(item) {
   state.selectedItem = item;
   document.getElementById('drawerItemName').innerHTML = `${item.name_en} <span style="font-weight:normal;font-size:13px;color:var(--muted);">(${item.name_zh})</span>`;
@@ -1167,7 +1186,7 @@ function openDrawer(item) {
           const tlink = (d && d.t != null) ? `<a href="${vurl}${vurl.includes('?') ? '&' : '?'}t=${d.t}s" target="_blank">⏱${d.start || ('t='+d.t)}</a>` : '';
           return `
           <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;">
-            <div style="font-weight:700;color:var(--accent);margin-bottom:2px;">[Quote #${idx + 1}] ${tlink}</div>
+            <div style="font-weight:700;color:var(--accent);margin-bottom:2px;">[Quote #${idx + 1}] ${tlink}${sentJumpLink(null, q)}</div>
             <div style="font-style:italic;">“${q}”</div>
             ${(d && d.context) ? `<div style="color:#999;margin-top:4px;">上下文: ${d.context}</div>` : ''}
           </div>`;
@@ -1282,7 +1301,7 @@ function openVerbDrawer(kind, item) {
     <div class="drawer-section">
       <h3>3. 原文引用 (?t= 跳链 + 只读 context)</h3>
       <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;">
-        <div style="font-weight:700;color:var(--accent);margin-bottom:2px;">[#${item.sentence_id}] ${tlink}</div>
+        <div style="font-weight:700;color:var(--accent);margin-bottom:2px;">[#${item.sentence_id}] ${tlink}${sentJumpLink(item.sentence_id)}</div>
         <div style="font-style:italic;">“${item.quote}”</div>
         ${fullContextHtml(item.sentence_id, item.context)}
       </div>
@@ -1298,6 +1317,29 @@ function closeDrawer() {
 
 document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer);
 document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
+
+// 抽屉内“📍句#n”: 关抽屉并滚动到 01-sentences 对应行 + 高亮
+// (data-jump-sent 全局委托, 抽屉内容每次重绘无需重绑)
+document.addEventListener('click', (e) => {
+  const a = e.target && e.target.closest ? e.target.closest('[data-jump-sent]') : null;
+  if (!a) return;
+  e.preventDefault();
+  closeDrawer();
+  const id = a.dataset.jumpSent;
+  requestAnimationFrame(() => {
+    const row = document.getElementById('sent-' + id);
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.classList.remove('flash');
+      void row.offsetWidth;
+      row.classList.add('flash');
+      setTimeout(() => row.classList.remove('flash'), 1800);
+    } else {
+      const sec = document.getElementById('audit-01-sentences');
+      if (sec) sec.scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+});
 
 // Directory Picker (File System Access API)
 // 默认工作区 G:\brotato-work: 浏览器安全限制不允许网页直写任意路径,

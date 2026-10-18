@@ -414,6 +414,10 @@ html { scroll-behavior: smooth; }
 }
 .verb-row:last-child { margin-bottom: 0; }
 .verb-row.candidate-row { border-color: var(--candidate-border); background: #fffcf2; }
+.verb-row { cursor: pointer; }
+.verb-row:hover { box-shadow: 0 1px 6px rgba(0,0,0,0.08); }
+.sent-row { cursor: pointer; border-radius: 4px; padding: 1px 4px; }
+.sent-row:hover { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
 
 .group-accordion {
   border: 1px solid var(--line);
@@ -778,7 +782,7 @@ function render() {
           ${s.slice(0,200).map(it => {
             const vurl = (m.sources && m.sources[0] && m.sources[0].url) ? m.sources[0].url : '#';
             const tlink = (it.t != null) ? `<a href="${vurl}${vurl.includes('?') ? '&' : '?'}t=${it.t}s" target="_blank" title="${it.start || ''} → ${it.end || ''}">⏱${it.start || ('t='+it.t)}</a>` : '<span style="color:#aaa;">no-ts</span>';
-            return `<div><span style="color:#0b5fff;">[#${it.id}]</span> ${it.text} <span style="color:#999;">${tlink}</span></div>`;
+            return `<div class="sent-row" data-sent="${it.id}"><span style="color:#0b5fff;">[#${it.id}]</span> ${it.text} <span style="color:#999;">${tlink}</span></div>`;
           }).join('')}
           ${s.length > 200 ? `<div style="color:#999;">… 仅显示前 200 / 共 ${s.length} 句（live 全量经 picker/?base= 载入）</div>` : ''}
         </div>
@@ -804,8 +808,8 @@ function render() {
         <div class="step2-dual">
           <div class="verb-panel verified">
             <h4 style="font-size:12px;font-weight:700;color:#047857;margin-bottom:8px;">✅ Verified（精确名 + 闭集10动词 + 原文整句）</h4>
-            ${v.verified.map(item => `
-              <div class="verb-row">
+            ${v.verified.map((item, idx) => `
+              <div class="verb-row" data-verb-v="${idx}">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                   <strong>${item.object_norm}</strong>
                   <span class="badge badge-verified">动词: ${item.verb}</span>
@@ -818,8 +822,8 @@ function render() {
           </div>
           <div class="verb-panel candidates">
             <h4 style="font-size:12px;font-weight:700;color:#b45309;margin-bottom:8px;">⚠️ Candidates（别名归一 / 动词转述 / 意图推断·标黄）</h4>
-            ${v.candidates.map(item => `
-              <div class="verb-row candidate-row">
+            ${v.candidates.map((item, idx) => `
+              <div class="verb-row candidate-row" data-verb-c="${idx}">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                   <strong>${item.normalized_to}</strong>
                   ${item.inferred ? `<span class="badge badge-inferred">inferred:true</span>` : `<span class="badge badge-candidate">${item.surface_verb} → ${item.mapped_to}</span>`}
@@ -1095,6 +1099,33 @@ function bindItemCardClicks() {
       if (w) openDrawer({name_en: w.name_en, name_zh: w.tier||'', count: w.count, confidence: w.confidence, inferred: false, tier: w.tier, discretion_reason: '来源：registry-slice + mentions count='+w.count+' + builds weapons_t1/t2', reason: w.note||'', quotes: w.quotes||[], quote_details: w.quote_details||[]});
     });
   });
+
+  document.querySelectorAll('[data-sent]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      const sent = (appData.sentences||[]).find(x => x.id === +el.dataset.sent);
+      if (sent) openSentenceDrawer(sent);
+    });
+  });
+  document.querySelectorAll('[data-verb-v]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      const item = ((appData.verbs||{}).verified||[])[+el.dataset.verbV];
+      if (item) openVerbDrawer('verified', item);
+    });
+  });
+  document.querySelectorAll('[data-verb-c]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      const item = ((appData.verbs||{}).candidates||[])[+el.dataset.verbC];
+      if (item) openVerbDrawer('candidate', item);
+    });
+  });
+}
+
+function showDrawer() {
+  document.getElementById('drawerBackdrop').classList.add('open');
+  document.getElementById('itemDrawer').classList.add('open');
 }
 
 function openDrawer(item) {
@@ -1147,8 +1178,95 @@ function openDrawer(item) {
   `;
 
   document.getElementById('drawerContent').innerHTML = contentHtml;
-  document.getElementById('drawerBackdrop').classList.add('open');
-  document.getElementById('itemDrawer').classList.add('open');
+  showDrawer();
+}
+
+// Step 01 sentence detail: 句子定位 + 全文与前后句 + 反向引用它的动词判定
+function openSentenceDrawer(sent) {
+  state.selectedItem = sent;
+  const vurl = (appData.manifest && appData.manifest.sources && appData.manifest.sources[0]) ? appData.manifest.sources[0].url : '#';
+  const tlink = (sent.t != null) ? `<a href="${vurl}${vurl.includes('?') ? '&' : '?'}t=${sent.t}s" target="_blank">⏱${sent.start || ('t='+sent.t)}</a>` : '<span style="color:#aaa;">无时间戳</span>';
+  const all = appData.sentences || [];
+  const idx = all.findIndex(x => x.id === sent.id);
+  const prev = idx > 0 ? all[idx-1].text : '';
+  const next = (idx >= 0 && idx+1 < all.length) ? all[idx+1].text : '';
+  const refsV = ((appData.verbs||{}).verified||[]).filter(r => r.sentence_id === sent.id);
+  const refsC = ((appData.verbs||{}).candidates||[]).filter(r => r.sentence_id === sent.id);
+  const refCard = (name, tag, reason) => `
+    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><strong>${name}</strong>${tag}</div>
+      ${reason ? `<div style="font-size:11px;color:#92400e;margin-top:2px;">理由: ${reason}</div>` : ''}
+    </div>`;
+  document.getElementById('drawerItemName').innerHTML = `句子 #${sent.id} <span style="font-weight:normal;font-size:13px;color:var(--muted);">(steps/01-sentences)</span>`;
+  document.getElementById('drawerContent').innerHTML = `
+    <div class="drawer-section">
+      <h3>1. 句子定位 (?t= 跳链)</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px;">
+        <span class="badge-count-pill">#${sent.id}</span>
+        <span>${sent.start || 'no-ts'} → ${sent.end || 'no-ts'}</span>
+        <span>${tlink}</span>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <h3>2. 全文与前后句 (只读 context 口径)</h3>
+      <div style="font-weight:600;margin-bottom:4px;">“${sent.text}”</div>
+      ${prev ? `<div style="font-size:11px;color:#999;">上一句: ${prev}</div>` : ''}
+      ${next ? `<div style="font-size:11px;color:#999;">下一句: ${next}</div>` : ''}
+    </div>
+
+    <div class="drawer-section">
+      <h3>3. 引用此句的动词判定 (step 02 反向穿透)</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+        <span class="badge badge-verified">${refsV.length} verified</span>
+        <span class="badge badge-candidate">${refsC.length} candidates</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${(refsV.length || refsC.length) ? refsV.map(r => refCard(r.object_norm, `<span class="badge badge-verified">动词: ${r.verb}</span>`, '')).join('') + refsC.map(r => refCard(r.normalized_to, r.inferred ? '<span class="badge badge-inferred">inferred:true</span>' : `<span class="badge badge-candidate">${r.surface_verb} → ${r.mapped_to}</span>`, r.reason || '')).join('') : '<div style="color:var(--muted);">无动词引用此句（路过句）</div>'}
+      </div>
+    </div>
+  `;
+  showDrawer();
+}
+
+// Step 02 verb detail: 判定明细 + 所在句子 + ?t= 跳链
+function openVerbDrawer(kind, item) {
+  state.selectedItem = item;
+  const isV = kind === 'verified';
+  const obj = item.object_norm || item.normalized_to;
+  const vurl = (appData.manifest && appData.manifest.sources && appData.manifest.sources[0]) ? appData.manifest.sources[0].url : '#';
+  const tlink = (item.t != null) ? `<a href="${vurl}${vurl.includes('?') ? '&' : '?'}t=${item.t}s" target="_blank">⏱${item.start || ('t='+item.t)}</a>` : '<span style="color:#aaa;">无时间戳</span>';
+  document.getElementById('drawerItemName').innerHTML = `${obj} <span style="font-weight:normal;font-size:13px;color:var(--muted);">(steps/02-verbs · ${isV ? 'verified' : 'candidate'})</span>`;
+  document.getElementById('drawerContent').innerHTML = `
+    <div class="drawer-section">
+      <h3>1. 判定类型与置信信号</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">
+        ${isV ? '<span class="badge badge-verified">Verified (机检锚点)</span>' : '<span class="badge badge-candidate">Candidates (自由裁量·标黄)</span>'}
+        ${(!isV && item.inferred) ? '<span class="badge badge-inferred">Inferred:true (无动词意图)</span>' : ''}
+        <span class="badge-count-pill">句子 #${item.sentence_id}</span>
+      </div>
+      <div style="font-size:12px;line-height:1.8;">
+        <div>对象: <strong>${obj}</strong></div>
+        <div>动词: <strong>${isV ? item.verb : (item.surface_verb || '—') + ' → ' + (item.mapped_to || '—')}</strong></div>
+        ${(!isV && item.surface) ? `<div>表面词: ${item.surface}</div>` : ''}
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <h3>2. 判定理由</h3>
+      <div style="font-size:12px;line-height:1.5;">${isV ? '精确英文名 + 闭集10动词 + 原文整句引用（机检锚点）' : (item.reason || '自由裁量')}</div>
+    </div>
+
+    <div class="drawer-section">
+      <h3>3. 原文引用 (?t= 跳链 + 只读 context)</h3>
+      <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;">
+        <div style="font-weight:700;color:var(--accent);margin-bottom:2px;">[#${item.sentence_id}] ${tlink}</div>
+        <div style="font-style:italic;">“${item.quote}”</div>
+        ${item.context ? `<div style="color:#999;margin-top:4px;">上下文: ${item.context}</div>` : ''}
+      </div>
+    </div>
+  `;
+  showDrawer();
 }
 
 function closeDrawer() {

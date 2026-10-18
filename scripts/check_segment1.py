@@ -82,9 +82,14 @@ def main(argv: list[str] | None = None) -> int:
         ids = [s.get("id") for s in sentences]
         if ids != list(range(1, len(sentences) + 1)):
             fail(f"sentences id must be 1..N continuous, got head {ids[:5]}", errors)
-        # 1496 ±10 (试点 1496, 重跑幂等)
-        if not (1486 <= len(sentences) <= 1506):
-            fail(f"sentences count must be 1496±10, got {len(sentences)}", errors)
+        # #43滚动折叠后: 411±100 (ultimate 411/danger-5 459/nightmare 442, 1496旧数作废)
+        if not (300 <= len(sentences) <= 600):
+            fail(f"sentences count must be 411±150折叠后 (300-600), got {len(sentences)}", errors)
+        # #43无半句复读: 相邻句不得完全相同 (自然复读如Incredible.允许隔句, 滚动半句复读为相邻重复)
+        texts = [s.get("text","") for s in sentences if isinstance(s, dict)]
+        adj = sum(1 for i in range(1,len(texts)) if texts[i]==texts[i-1])
+        if adj>0:
+            fail(f"sentences must have no adjacent dups折叠后无半句复读, got {adj}", errors)
         for s in sentences[:5]:
             if not isinstance(s.get("text"), str) or not s["text"].strip():
                 fail(f"sentence text empty: {s.get('id')}", errors)

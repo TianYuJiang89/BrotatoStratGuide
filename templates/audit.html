@@ -775,9 +775,9 @@ function render() {
           <span class="badge badge-count-pill">${s.length} 句样例文本</span>
         </div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">
-          清洗契约：时间戳保留（start/end，B-04 起统一加，点跳 YouTube <code>?t=</code>），去 HTML，单句限长 500 字符；复读原样保留（展示去重，count 不动）。
+          清洗契约：时间戳保留（start/end，B-04 起统一加，点跳 YouTube <code>?t=</code>），去 HTML，单句限长 500 字符；#43滚动折叠（去标签+词级重叠去重+标点切句，无半句复读）。
         </p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>inputs/source.vtt</code>（同基座四件共享）</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>inputs/source.vtt</code>（同基座四件共享，字幕源 <code>${(m.subs_source || (m.sources && m.sources[0] && m.sources[0].subs_source) || 'auto')}</code>：auto=滚动折叠后整句 / manual=原样）</p>
         <div style="max-height:340px;overflow-y:auto;background:#faf8f5;border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-family:monospace;font-size:11px;">
           ${s.map(it => {
             const vurl = (m.sources && m.sources[0] && m.sources[0].url) ? m.sources[0].url : '#';

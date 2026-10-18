@@ -7,7 +7,7 @@ Single-context glossary for BrotatoStratGuide (wayfinder map #33, ticket: 目录
 - **slug**: character English id (e.g. `cyborg`, `engineer`). Matches `data/roster.json` `id`.
 - **variant-id**: single source of truth for a variant directory name (e.g. `ultimate`, `danger-5`, `ultimate-nightmare`). Slugified from covers; merged multi-difficulty coverage uses one id with `-` join.
 - **covers**: display difficulty array (e.g. `["Ultimate"]`, `["Ultimate","Nightmare"]`). Lives inside `manifest.json` / `meta.json` only; never creates extra directories.
-- **inputs/**: per-variant read-only inputs under `G:/brotato-work/<slug>/<variant>/inputs/`. Fixed four files: `source.vtt`, `meta.json`, `registry-slice.json`, `manifest.json`. `top3.json` stays repo-side as selection evidence, not an input.
+- **inputs/**: per-variant read-only inputs under `G:/brotato-work/<slug>/<variant>/inputs/`. Fixed four files: `source.vtt`, `meta.json` (+`subs_source=auto/manual`), `registry-slice.json`, `manifest.json` (+`subs_source`). `top3.json` stays repo-side as selection evidence, not an input.
 - **steps/**: per-variant process data under `G:/brotato-work/<slug>/<variant>/steps/<step>/`. B链9步：`01-sentences/`、`02-verbs/`、`03-grouping/` + `04-attributes/`、`05-weapons/`、`06-phases/`、`07-priorities/`、`08-pitfalls/`、`09-assemble/`。
 - **步骤**: B链执行单位，一步一 session，对应一份 prompts/step0X + steps/0X-*/ 落盘 + check。
 _Avoid_: 段落，验收段
@@ -18,7 +18,7 @@ _Avoid_: 步骤
 - **过程审计视图**: `templates/audit.html` 常设资产，每步 check 与审计节一一对应；测试读 G 盘，正式随产物发布，不由 agent 生成。
 _Avoid_: 测试报告
 - **outputs/**: per-variant final product under `G:/brotato-work/<slug>/<variant>/outputs/`. Pilot: `groups.json`; B-段1加 `ratings.json` + `weapons.json` (与 steps/04-*/05-* 一致, sha 对上).
-- **sentence record**: `{id, text[, start, end]}`；start/end 可选（B-04 起统一加，供审计点跳 `?t=`）；VTT parse 复读原样保留，展示去重、count 口径不动； strips HTML, cap 500 chars, quotes cap 10 (along #17).
+- **sentence record**: `{id, text[, start, end]}`；start/end 可选（B-04 起统一加，供审计点跳 `?t=`）；VTT parse #43滚动折叠（去标签+词级重叠去重+标点切句，manual自动no-op），无半句复读； strips HTML, cap 500 chars, quotes cap 10 (along #17).
 - **context**: `quote` 外另加前后 1-2 cue 只读字段，只给人看，不进机检；`quote` 保持逐字原文（verified 锚点）。
 - **verb record**: `{verb, object_norm, sentence_id, quote}` + discretion fields (`surface_verb, mapped_to, inferred`); closed 10 verbs (take/buy/pick up/lock/get/roll for/ban/recycle/sell/skip) are lower bound, never extended.
 - **verified**: exact `name_en` match (case-insensitive) + closed verb + verbatim quote; machine-green anchor.

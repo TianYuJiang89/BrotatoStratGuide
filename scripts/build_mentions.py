@@ -173,8 +173,130 @@ def build_pattern_map(
     return out
 
 
+def detect_subs_source(text: str) -> str:
+    """字幕来源判定 (#43): 有 karaoke 词级标签即 auto, 否则 manual.
+
+    yt-dlp auto-sub raw 自带 `<c>` / `<00:xx>` 逐词时间戳 + 滚动窗口;
+    人工字幕无此类标签. 折叠函数据此之外的重叠率自动 no-op,
+    此处仅作 inputs 标注与审计展示用."""
+    if "<c>" in text or "<00:" in text or "<c." in text:
+        return "auto"
+    return "manual"
+
+
+def _overlap_len(prev_words: list[str], cur_words: list[str]) -> int:
+    """词级后缀-前缀最长重叠 (#43 滚动折叠核心)."""
+    maxk = min(len(prev_words), len(cur_words))
+    for kk in range(maxk, 0, -1):
+        if prev_words[-kk:] == cur_words[:kk]:
+            return kk
+    return 0
+
+
+def _is_rolling(cues: list[str]) -> bool:
+    """滚动判定: 重叠率>20% 即 auto 滚动窗口, 否则 manual/clean 直接沿用."""
+    if len(cues) < 3:
+        return False
+    hits = 0
+    for i in range(1, len(cues)):
+        pw = cues[i - 1].split()
+        cw = cues[i].split()
+        if not pw or not cw:
+            continue
+        if cues[i] == cues[i - 1]:
+            hits += 1
+        elif _overlap_len(pw, cw) >= 3:
+            hits += 1
+        elif cues[i] in cues[i - 1] or cues[i - 1] in cues[i]:
+            hits += 1
+    return (hits / max(1, len(cues) - 1)) > 0.2
+
+
+def fold_cue_texts(cues: list[str]) -> list[str]:
+    """滚动折叠 (无时间戳版, #43-A): 词级去重重建全文后按标点切句.
+
+    clean VTT 无重叠时自动 no-op 原样返回 (保测试与 manual 兼容)."""
+    # 掉头: WEBVTT 元数据残留 (Kind:/Language:) 不进正文.
+    cues = [c for c in cues if not c.strip().lower().startswith(("kind:", "language:"))]
+    if "kind: captions" in " ".join(cues[:1]).lower():
+        cues = cues[1:]
+    if not _is_rolling(cues):
+        return cues
+    full_words: list[str] = []
+    for cue in cues:
+        cur_w = cue.split()
+        if not cur_w:
+            continue
+        k = _overlap_len(full_words, cur_w)
+        full_words.extend(cur_w[k:])
+    if not full_words:
+        return cues
+    full_text = " ".join(full_words)
+    parts = re.split(r"(?<=[.!?])\s+", full_text)
+    sents = [p.strip() for p in parts if p.strip()]
+    out: list[str] = []
+    for s in sents:
+        if len(s) > 500:
+            s = s[:500]
+        out.append(s)
+    return out if out else cues
+
+
+def fold_timed_cues(cues: list[dict]) -> list[dict]:
+    """滚动折叠 (带时间戳版, #43-A): 同 fold_cue_texts 口径 + 句时间戳.
+
+    句 start/end 取首词 cue start / 尾词 cue end, t=int(start_s).
+    非滚动直接返回原 cues (manual 兼容)."""
+    texts = [c.get("text", "") for c in cues if isinstance(c, dict)]
+    if not _is_rolling([t for t in texts if t]):
+        return cues
+    # 掉无时间戳头 (Kind: captions 等), 保留其余原序.
+    timed = [c for c in cues if isinstance(c, dict) and c.get("start") is not None]
+    if not timed:
+        return cues
+    full_words: list[str] = []
+    word_times: list[tuple] = []
+    for c in timed:
+        cur_w = str(c.get("text", "")).split()
+        if not cur_w:
+            continue
+        k = _overlap_len(full_words, cur_w)
+        for w in cur_w[k:]:
+            full_words.append(w)
+            word_times.append((c.get("start"), c.get("end"), c.get("start_s"), c.get("end_s")))
+    if not full_words:
+        return cues
+    full_text = " ".join(full_words)
+    bounds = [m.end() for m in re.finditer(r"(?<=[.!?])\s+", full_text)]
+    off = 0
+    word_starts: list[int] = []
+    for w in full_words:
+        word_starts.append(off)
+        off += len(w) + 1
+    sent_bounds = [0]
+    for b in bounds:
+        for idx, ws in enumerate(word_starts):
+            if ws >= b:
+                if idx > sent_bounds[-1]:
+                    sent_bounds.append(idx)
+                break
+    sent_bounds.append(len(full_words))
+    folded: list[dict] = []
+    for i in range(len(sent_bounds) - 1):
+        a, b = sent_bounds[i], sent_bounds[i + 1]
+        if a >= b:
+            continue
+        txt = " ".join(full_words[a:b])
+        if len(txt) > 500:
+            txt = txt[:500]
+        st, ed, ss, _es = word_times[a][0], word_times[b - 1][1], word_times[a][2], word_times[b - 1][3]
+        folded.append({"text": txt, "start": st, "end": ed,
+                       "start_s": ss, "end_s": word_times[b - 1][3]})
+    return folded if folded else cues
+
+
 def parse_vtt(text: str) -> list[str]:
-    """VTT 解析: 按空行分块, 丢时间戳/序号/头, 每块 join 为一句原句."""
+    """VTT 解析: 按空行分块, 丢时间戳/序号/头, 每块 join 为一句原句 + #43 滚动折叠."""
     cues: list[str] = []
     # 统一换行, 按空行分块.
     blocks = re.split(r"\r?\n\s*\r?\n", text)
@@ -197,6 +319,8 @@ def parse_vtt(text: str) -> list[str]:
                 continue
             if re.fullmatch(r"\d+", ln):
                 continue
+            if ln.strip().lower().startswith(("kind:", "language:")):
+                continue
             # 去 HTML 标签.
             no_tag = re.sub(r"<[^>]+>", "", ln).strip()
             if no_tag:
@@ -207,7 +331,8 @@ def parse_vtt(text: str) -> list[str]:
             if len(cue) > 500:
                 cue = cue[:500]
             cues.append(cue)
-    return cues
+    # #43 滚动折叠: auto 滚动窗口折叠为整句, manual/clean 自动 no-op.
+    return fold_cue_texts(cues)
 
 
 def scan_cues(

@@ -6,3 +6,7 @@ cookies.txt
 cookies.*.txt
 *_cookies.txt
 www.youtube.com_cookies.txt
+
+# B链隔离: runtime 中间产物禁入全局 data (动态由 G work 产生, git 历史留底)
+data/mentions/
+data/builds/

@@ -17,7 +17,7 @@ _Avoid_: 步骤
 _Avoid_: 步骤
 - **过程审计视图**: `templates/audit.html` 常设资产，每步 check 与审计节一一对应；测试读 G 盘，正式随产物发布，不由 agent 生成。
 _Avoid_: 测试报告
-- **outputs/**: per-variant final product under `G:/brotato-work/<slug>/<variant>/outputs/`. Pilot: `groups.json`; B-段1加 `ratings.json` + `weapons.json` (与 steps/04-*/05-* 一致, sha 对上).
+- **outputs/**: per-variant final product under `G:/brotato-work/<slug>/<variant>/outputs/`. Pilot: `groups.json`; B-段1加 `ratings.json` + `weapons.json` (与 steps/04-*/05-* 一致, sha 对上). B-段2加 `phases.json` + `priorities.json` + `pitfalls.json` + `guide.json` (与 steps/06-*/07-*/08-*/09-* 一致, guide.sha 对上 manifest).
 - **sentence record**: `{id, text[, start, end]}`；start/end 可选（B-04 起统一加，供审计点跳 `?t=`）；VTT parse #43滚动折叠（去标签+词级重叠去重+标点切句，manual自动no-op），无半句复读； strips HTML, cap 500 chars, quotes 全量无cap (#42跟进: 去掉10条截断, 去重保留).
 - **context**: `quote` 外另加前后 1-2 cue 只读字段，只给人看，不进机检；`quote` 保持逐字原文（verified 锚点）。
 - **verb record**: `{verb, object_norm, sentence_id, quote}` + discretion fields (`surface_verb, mapped_to, inferred`); closed 10 verbs (take/buy/pick up/lock/get/roll for/ban/recycle/sell/skip) are lower bound, never extended.
@@ -29,4 +29,8 @@ _Avoid_: 测试报告
 - **ratings.json**: 04-attributes 输出, 39 全量 (主 17 + 次级 22). `count>0` 必 S-D (提过即算口径), `count==0` 必 `-` (作者未提及); `reason` 人话 + 原句短引, 禁计数泄漏; `quotes` 去重 + `quote_details` 只读.
 - **weapons.json**: 05-weapons 输出, `{t1[], t2[]}`. T1≥1 为验收线; `note` 含把数/目标阶/何波拿换 (原话数字不丢); `quotes` 去重 + `quote_details` 只读.
 - **base**: audit-HTML dynamic root. HTML resolves `inputs/` + `steps/*/` + `outputs/` by relative path under `?base=<slug>/<variant>` + directory picker; no hardcoded absolute drive letter.
-- **DAG层**: 审计视图分层 (沿 #39 Q6: `01→{02→03,04,05,06,08}→07→09`); L0 基座 (01) / L1 并行 (02→03,04,05,06,08) / L2 (07, 依赖 04/05/06) / L3 组装 (09). B-段2 未开工时 06-09 为空节占位 (缺节即 fail).
+- **DAG层**: 审计视图分层 (沿 #39 Q6: `01→{02→03,04,05,06,08}→07→09`); L0 基座 (01) / L1 并行 (02→03,04,05,06,08) / L2 (07, 依赖 04/05/06) / L3 组装 (09). B-段2 已实施后 06-09 为实节 (仍缺节即 fail).
+- **phases.json**: 06-phases 输出, 3 段固定 (W1-5/W6-12/W13-20). 每段 `{phase, waves, goal, focus, pivot, quotes, quote_details}`; `goal/focus/pivot` 人话 + 原句短引, 禁计数泄漏; `quotes` 去重 + `quote_details` 只读; 不照抄 `meta.chapters`.
+- **priorities.json**: 07-priorities 输出, `{upgrades[3], shop[3]}`. 升级 Top3 只认 ratings S/A 按 count 降序; 商店 Top3 只认 grouping must_take verified 按 count 降序 (Peacock 有拒绝原话诚实顺延); 每项 `{name, kind, why, how_to_get, quotes, quote_details}`, `how_to_get` 原话数字不丢.
+- **pitfalls.json**: 08-pitfalls 输出, 数组 >=3 (cyborg 4: 半波转换踩空/材料落地/站位撞出生点/Peacock刷怪). 每条 `{title, severity, why, how_to_avoid, quotes, quote_details}`; `severity` 为 `fatal|risky|trap`; 只认视频原话, ban 组不重复进.
+- **guide.json**: 09-assemble 输出 (= outputs/guide.json 双写一致). `{slug, variant, covers, sha, url, title, groups, ratings, weapons, phases, priorities, pitfalls}`; 六节逐字聚合 + `sha` 对上 manifest + source.vtt; 只聚合不重评.

@@ -928,7 +928,7 @@ function render() {
           <span class="badge badge-verified">check_06 对应节</span>
           <span class="badge" style="margin-left:4px;">DAG L1并行层</span>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">空节占位：待 B-段2 实施（#41）落地 prompts/step06-phases.md + <code>steps/06-phases/phases.json</code>；审计与实现同 PR 进，不接受功能先上审计后补。</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step06-phases.md + <code>steps/06-phases/phases.json</code>；审计与实现同 PR 进，不接受功能先上审计后补。</p>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（现场扫阶段 quotes） + 全局 <code>meta.json chapters</code> → <code>steps/06-phases/phases.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>，没读 02/03）</p>
         ${(appData.phases && appData.phases.length) ? `<div style="font-size:13px;">已载入 phases ${appData.phases.length} 段（live 全量经 picker/?base= 载入 steps/06-phases/phases.json）。</div>` : '<div style="color:#999;">待加载：请载入 steps/06-phases/phases.json（B-段2未开工，空节占位，缺节即 fail）。</div>'}
       </div>
@@ -944,7 +944,7 @@ function render() {
           <span class="badge badge-verified">check_08 对应节</span>
           <span class="badge" style="margin-left:4px;">DAG L1并行层</span>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">空节占位：待 B-段2 实施（#41）落地 prompts/step08-pitfalls.md + <code>steps/08-pitfalls/pitfalls.json</code>；可与段1并行先跑，验收按段1→段2两闸算。</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step08-pitfalls.md + <code>steps/08-pitfalls/pitfalls.json</code>；可与段1并行先跑，验收按段1→段2两闸算。</p>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（死亡/失误 quotes 现场扫） → <code>steps/08-pitfalls/pitfalls.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
         ${(appData.pitfalls && appData.pitfalls.length) ? `<div style="font-size:13px;">已载入 pitfalls ${appData.pitfalls.length} 条（live 全量经 picker/?base= 载入 steps/08-pitfalls/pitfalls.json）。</div>` : '<div style="color:#999;">待加载：请载入 steps/08-pitfalls/pitfalls.json（B-段2未开工，空节占位，缺节即 fail）。</div>'}
       </div>
@@ -961,7 +961,7 @@ function render() {
           </div>
           <span class="badge badge-verified">check_07 对应节</span>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">空节占位：待 B-段2 实施（#41）落地 prompts/step07-priorities.md + <code>steps/07-priorities/priorities.json</code>；07 须段1绿后才开。</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step07-priorities.md + <code>steps/07-priorities/priorities.json</code>；07 须段1绿后才开。</p>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/04-attributes/ratings.json</code> + <code>steps/05-weapons/weapons.json</code> + <code>steps/06-phases/phases.json</code> + 商店 quotes → <code>steps/07-priorities/priorities.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
         ${(appData.priorities && (appData.priorities.upgrades || appData.priorities.shop || appData.priorities.length)) ? `<div style="font-size:13px;">已载入 priorities（live 全量经 picker/?base= 载入 steps/07-priorities/priorities.json）。</div>` : '<div style="color:#999;">待加载：请载入 steps/07-priorities/priorities.json（B-段2未开工，空节占位，缺节即 fail）。</div>'}
       </div>
@@ -978,9 +978,9 @@ function render() {
           </div>
           <span class="badge badge-verified">check_09 对应节</span>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">空节占位：待 B-段2 实施（#41）落地 prompts/step09-assemble.md + <code>steps/09-assemble/guide.json</code>；09组装一致性（guide == 各步聚合，sha 对上）。</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step09-assemble.md + <code>steps/09-assemble/guide.json</code>；09组装一致性（guide == 各步聚合，sha 对上）。</p>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/03-grouping/grouping.json</code> + 04/05/06/07/08 聚合 → <code>steps/09-assemble/guide.json</code>（禁读旧链 <code>data/mentions</code>/<code>data/builds</code>）</p>
-        ${(appData.assemble && (appData.assemble.guide || appData.assemble.length)) ? `<div style="font-size:13px;">已载入 assemble（live 全量经 picker/?base= 载入 steps/09-assemble/guide.json）。</div>` : '<div style="color:#999;">待加载：请载入 steps/09-assemble/guide.json（B-段2未开工，空节占位，缺节即 fail）。</div>'}
+        ${(appData.assemble && appData.assemble.sha) ? `<div style="font-size:13px;">已载入 assemble（live 全量经 picker/?base= 载入 steps/09-assemble/guide.json）。</div>` : '<div style="color:#999;">待加载：请载入 steps/09-assemble/guide.json（B-段2未开工，空节占位，缺节即 fail）。</div>'}
       </div>
     </div>
   `;

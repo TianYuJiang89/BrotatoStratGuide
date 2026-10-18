@@ -778,13 +778,12 @@ function render() {
           清洗契约：时间戳保留（start/end，B-04 起统一加，点跳 YouTube <code>?t=</code>），去 HTML，单句限长 500 字符；复读原样保留（展示去重，count 不动）。
         </p>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>inputs/source.vtt</code>（同基座四件共享）</p>
-        <div style="max-height:140px;overflow-y:auto;background:#faf8f5;border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-family:monospace;font-size:11px;">
-          ${s.slice(0,200).map(it => {
+        <div style="max-height:340px;overflow-y:auto;background:#faf8f5;border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-family:monospace;font-size:11px;">
+          ${s.map(it => {
             const vurl = (m.sources && m.sources[0] && m.sources[0].url) ? m.sources[0].url : '#';
             const tlink = (it.t != null) ? `<a href="${vurl}${vurl.includes('?') ? '&' : '?'}t=${it.t}s" target="_blank" title="${it.start || ''} → ${it.end || ''}">⏱${it.start || ('t='+it.t)}</a>` : '<span style="color:#aaa;">no-ts</span>';
             return `<div class="sent-row" data-sent="${it.id}"><span style="color:#0b5fff;">[#${it.id}]</span> ${it.text} <span style="color:#999;">${tlink}</span></div>`;
           }).join('')}
-          ${s.length > 200 ? `<div style="color:#999;">… 仅显示前 200 / 共 ${s.length} 句（live 全量经 picker/?base= 载入）</div>` : ''}
         </div>
       </div>
     </div>

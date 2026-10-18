@@ -420,6 +420,8 @@ html { scroll-behavior: smooth; }
 .sent-row:hover { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
 .sent-row { transition: background 0.3s; scroll-margin: 8px; }
 .sent-row.flash { background: #fde68a; }
+.dep-row { cursor: pointer; background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 12px; display: flex; justify-content: space-between; gap: 8px; }
+.dep-row:hover { box-shadow: 0 1px 6px rgba(0,0,0,0.08); }
 
 .group-accordion {
   border: 1px solid var(--line);
@@ -918,7 +920,7 @@ function render() {
       </div>
     </div>
 
-    <!-- Pipeline Step 6: 06-phases 空节占位（B-段2未开工，缺节即 fail） -->
+    <!-- Pipeline Step 6: 06-phases（#41已落地，卡片+抽屉，缺节即 fail） -->
     <div class="pipeline-step completed" id="audit-06-phases" data-dag-layer="L1">
       <div class="card">
         <div class="card-header">
@@ -930,11 +932,11 @@ function render() {
         </div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step06-phases.md + <code>steps/06-phases/phases.json</code>；审计与实现同 PR 进，不接受功能先上审计后补。</p>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（现场扫阶段 quotes） + 全局 <code>meta.json chapters</code> → <code>steps/06-phases/phases.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>，没读 02/03）</p>
-        ${(appData.phases && appData.phases.length) ? `<div style="font-size:13px;">已载入 phases ${appData.phases.length} 段（live 全量经 picker/?base= 载入 steps/06-phases/phases.json）。</div>` : '<div style="color:#999;">待加载：请载入 steps/06-phases/phases.json（B-段2未开工，空节占位，缺节即 fail）。</div>'}
+        ${phasesSectionHtml()}
       </div>
     </div>
 
-    <!-- Pipeline Step 8: 08-pitfalls 空节占位（B-段2未开工，可与段1并行先跑） -->
+    <!-- Pipeline Step 8: 08-pitfalls（#41已落地，卡片+抽屉，缺节即 fail） -->
     <div class="pipeline-step completed" id="audit-08-pitfalls" data-dag-layer="L1">
       <div class="card">
         <div class="card-header">
@@ -946,7 +948,7 @@ function render() {
         </div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step08-pitfalls.md + <code>steps/08-pitfalls/pitfalls.json</code>；可与段1并行先跑，验收按段1→段2两闸算。</p>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（死亡/失误 quotes 现场扫） → <code>steps/08-pitfalls/pitfalls.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
-        ${(appData.pitfalls && appData.pitfalls.length) ? `<div style="font-size:13px;">已载入 pitfalls ${appData.pitfalls.length} 条（live 全量经 picker/?base= 载入 steps/08-pitfalls/pitfalls.json）。</div>` : '<div style="color:#999;">待加载：请载入 steps/08-pitfalls/pitfalls.json（B-段2未开工，空节占位，缺节即 fail）。</div>'}
+        ${pitfallsSectionHtml()}
       </div>
     </div>
 
@@ -963,7 +965,7 @@ function render() {
         </div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step07-priorities.md + <code>steps/07-priorities/priorities.json</code>；07 须段1绿后才开。</p>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/04-attributes/ratings.json</code> + <code>steps/05-weapons/weapons.json</code> + <code>steps/06-phases/phases.json</code> + 商店 quotes → <code>steps/07-priorities/priorities.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
-        ${(appData.priorities && (appData.priorities.upgrades || appData.priorities.shop || appData.priorities.length)) ? `<div style="font-size:13px;">已载入 priorities（live 全量经 picker/?base= 载入 steps/07-priorities/priorities.json）。</div>` : '<div style="color:#999;">待加载：请载入 steps/07-priorities/priorities.json（B-段2未开工，空节占位，缺节即 fail）。</div>'}
+        ${prioritiesSectionHtml()}
       </div>
     </div>
 
@@ -980,7 +982,7 @@ function render() {
         </div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step09-assemble.md + <code>steps/09-assemble/guide.json</code>；09组装一致性（guide == 各步聚合，sha 对上）。</p>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/03-grouping/grouping.json</code> + 04/05/06/07/08 聚合 → <code>steps/09-assemble/guide.json</code>（禁读旧链 <code>data/mentions</code>/<code>data/builds</code>）</p>
-        ${(appData.assemble && appData.assemble.sha) ? `<div style="font-size:13px;">已载入 assemble（live 全量经 picker/?base= 载入 steps/09-assemble/guide.json）。</div>` : '<div style="color:#999;">待加载：请载入 steps/09-assemble/guide.json（B-段2未开工，空节占位，缺节即 fail）。</div>'}
+        ${assembleSectionHtml()}
       </div>
     </div>
   `;
@@ -1011,7 +1013,8 @@ function updateSideNav() {
     return 0;
   };
   set('nav-phases-count', nz(appData.phases) ? nz(appData.phases) + '段' : '空节');
-  set('nav-priorities-count', nz(appData.priorities) ? nz(appData.priorities) + '项' : '空节');
+  const _pu = (((appData.priorities || {}).upgrades) || []).length + (((appData.priorities || {}).shop) || []).length;
+  set('nav-priorities-count', _pu ? _pu + '项' : '空节');
   set('nav-pitfalls-count', nz(appData.pitfalls) ? nz(appData.pitfalls) + '条' : '空节');
   set('nav-assemble-count', nz(appData.assemble) ? '已组装' : '空节');
 }
@@ -1077,6 +1080,136 @@ function renderItemCard(it) {
   `;
 }
 
+function manifestUrl() {
+  return (appData.manifest && appData.manifest.sources && appData.manifest.sources[0]) ? appData.manifest.sources[0].url : '#';
+}
+
+// 引用原文行: 全文quote + ?t= 跳链 + 📍句#n 跳原文句 + 全量前后句 (06/07/08共用)
+function quoteRowHtml(q, d) {
+  const mu = manifestUrl();
+  const tlink = (d && d.t != null) ? `<a href="${mu}${mu.includes('?') ? '&' : '?'}t=${d.t}s" target="_blank">⏱${d.start || ('t='+d.t)}</a>` : '<span style="color:#aaa;">无时间戳</span>';
+  const sid = sentenceIdForQuote(q);
+  return `
+    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;margin-bottom:6px;">
+      <div style="font-weight:700;color:var(--accent);margin-bottom:2px;">${tlink}${sentJumpLink(sid, q)}</div>
+      <div style="font-style:italic;">“${q}”</div>
+      ${fullContextHtml(sid, d && d.context)}
+    </div>`;
+}
+function quotesSectionHtml(quotes, details) {
+  const qd = (q) => ((details||[]).find(x => x.quote === q)) || null;
+  return ((quotes||[]).map(q => quoteRowHtml(q, qd(q))).join('')) || '<div style="color:var(--muted);">无引用原文</div>';
+}
+
+function phasesSectionHtml() {
+  const phs = appData.phases || [];
+  if (!phs.length) return '<div style="color:#999;">待加载：请载入 steps/06-phases/phases.json（缺节即 fail）。</div>';
+  return `
+    <div style="display:flex;flex-direction:column;gap:8px;">
+    ${phs.map((p, idx) => `
+      <div class="item-card" data-phase="${idx}" style="cursor:pointer;">
+        <div class="item-card-top">
+          <div class="item-card-name"><span>🗺️ ${p.phase}</span><span class="item-card-zh">${p.waves || ''}</span></div>
+          <div><span class="badge badge-verified">阶段卡</span><span class="badge-count-pill">${(p.quotes||[]).length} 引用</span></div>
+        </div>
+        <div class="item-card-reason"><strong>目标:</strong> ${p.goal || ''}</div>
+        ${(p.quotes && p.quotes.length) ? `<div class="item-card-quote">“${p.quotes[0]}”</div>` : ''}
+      </div>`).join('')}
+    </div>`;
+}
+
+function pitfallsSectionHtml() {
+  const ps = appData.pitfalls || [];
+  if (!ps.length) return '<div style="color:#999;">待加载：请载入 steps/08-pitfalls/pitfalls.json（缺节即 fail）。</div>';
+  const sevStyle = (sev) => sev === 'fatal'
+    ? 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca;'
+    : (sev === 'trap' ? 'background:#faf5ff;color:#7c3aed;border:1px solid #ddd6fe;'
+    : 'background:#fffbeb;color:#b45309;border:1px solid #fde68c;');
+  return `
+    <div style="display:flex;flex-direction:column;gap:8px;">
+    ${ps.map((x, idx) => `
+      <div class="item-card" data-pitfall="${idx}" style="cursor:pointer;">
+        <div class="item-card-top">
+          <div class="item-card-name"><span>⚠️ ${x.title}</span></div>
+          <div><span class="badge" style="${sevStyle(x.severity)}">${x.severity}</span><span class="badge-count-pill">${(x.quotes||[]).length} 引用</span></div>
+        </div>
+        <div class="item-card-reason"><strong>成因:</strong> ${x.why || ''}</div>
+        ${(x.quotes && x.quotes.length) ? `<div class="item-card-quote">“${x.quotes[0]}”</div>` : ''}
+      </div>`).join('')}
+    </div>`;
+}
+
+function prioritiesSectionHtml() {
+  const pr = appData.priorities || {};
+  const ups = pr.upgrades || [];
+  const shs = pr.shop || [];
+  if (!ups.length && !shs.length) return '<div style="color:#999;">待加载：请载入 steps/07-priorities/priorities.json（缺节即 fail）。</div>';
+  const card = (u, idx, kind) => `
+      <div class="item-card" data-priority="${kind}:${idx}" style="cursor:pointer;">
+        <div class="item-card-top">
+          <div class="item-card-name"><span>${kind === 'upgrades' ? 'U'+(idx+1) : 'S'+(idx+1)} · ${u.name}</span><span class="item-card-zh">${u.kind || ''}</span></div>
+          <div><span class="badge-count-pill">${(u.quotes||[]).length} 引用</span></div>
+        </div>
+        <div class="item-card-reason"><strong>为什么拿:</strong> ${u.why || ''}</div>
+        <div style="font-size:12px;margin-top:2px;"><strong>怎么拿:</strong> ${u.how_to_get || ''}</div>
+        ${(u.quotes && u.quotes.length) ? `<div class="item-card-quote">“${u.quotes[0]}”</div>` : ''}
+      </div>`;
+  return `
+    <div style="font-size:12px;font-weight:700;margin:6px 0 4px;">⬆️ 升级 Top3（依赖 04/05/06）</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">${ups.map((u, i) => card(u, i, 'upgrades')).join('')}</div>
+    <div style="font-size:12px;font-weight:700;margin:8px 0 4px;">🛒 商店 Top3（依赖 03 must_take + 04/05）</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">${shs.map((u, i) => card(u, i, 'shop')).join('')}</div>`;
+}
+
+function assembleSectionHtml() {
+  const a = appData.assemble;
+  if (!(a && a.sha)) return '<div style="color:#999;">待加载：请载入 steps/09-assemble/guide.json（缺节即 fail）。</div>';
+  const msha = (((appData.manifest || {}).sources) || [])[0] || {};
+  const shaOk = msha.sha1 && String(a.sha).toLowerCase().startsWith(String(msha.sha1).toLowerCase().slice(0, 8));
+  const w = appData.weapons || { t1: [], t2: [] };
+  const aw = a.weapons || { t1: [], t2: [] };
+  const pu = ((appData.priorities || {}).upgrades || []).length + ((appData.priorities || {}).shop || []).length;
+  const au = (((a.priorities || {}).upgrades) || []).length + (((a.priorities || {}).shop) || []).length;
+  const rows = [
+    ['03-grouping', (a.groups || []).length, (appData.items || []).length],
+    ['04-attributes', (a.ratings || []).length, (appData.ratings || []).length],
+    ['05-weapons', ((aw.t1 || []).length + (aw.t2 || []).length), ((w.t1 || []).length + (w.t2 || []).length)],
+    ['06-phases', (a.phases || []).length, (appData.phases || []).length],
+    ['07-priorities', au, pu],
+    ['08-pitfalls', (a.pitfalls || []).length, (appData.pitfalls || []).length],
+  ];
+  return `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+      <span class="badge ${shaOk ? 'badge-verified' : 'badge-candidate'}">sha ${String(a.sha).slice(0, 8)} ${shaOk ? '对上 manifest' : '未对上 manifest'}</span>
+      <span class="badge-count-pill">${a.slug}/${a.variant}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;">
+    ${rows.map(([k, ga, live]) => `
+      <div style="display:flex;justify-content:space-between;background:#fff;border:1px solid var(--line);border-radius:6px;padding:6px 10px;">
+        <span><strong>${k}</strong> <span style="color:var(--muted);">guide内嵌 ${ga} / live ${live}</span></span>
+        <span>${ga === live ? '✅ 一致' : '❌ 数量不一致'}</span>
+      </div>`).join('')}
+    </div>`;
+}
+
+// 07依赖来源穿透: 04 ratings / 05 weapons / 03 grouping 同名 + 06 phases 文本提及
+function priorityDepHtml(name) {
+  const key = (name || '').toLowerCase();
+  const r = (appData.ratings || []).find(x => (x.term_en || '').toLowerCase() === key);
+  const allw = [...(((appData.weapons || {}).t1) || []), ...(((appData.weapons || {}).t2) || [])];
+  const w0 = allw.find(x => (x.name_en || '').toLowerCase() === key);
+  const g = (appData.items || []).find(x => (x.name_en || '').toLowerCase() === key);
+  const phs = (appData.phases || []).map((p, i) => ({ p, i })).filter(({ p }) => ((p.goal || '') + ' ' + (p.focus || '') + ' ' + (p.pivot || '') + ' ' + (p.quotes || []).join(' ')).toLowerCase().includes(key));
+  const row = (dep, label, sub) => `<div class="dep-row" data-dep="${dep}" title="点开展示来源抽屉"><strong>${label}</strong><span style="color:var(--muted);">${sub}</span></div>`;
+  const rows = [];
+  if (r) rows.push(row(`rating:${r.term_en}`, `04 · ${r.term_en}`, `${r.term_zh || ''} · ${r.rating || ''} · ${r.count}次 → 点开展示04抽屉`));
+  if (w0) rows.push(row(`weapon:${w0.name_en}`, `05 · ${w0.name_en}`, `${w0.tier || ''} · ${w0.count}次 → 点开展示05抽屉`));
+  if (g) rows.push(row(`group:${g.name_en}`, `03 · ${g.name_en}`, `${g.group || ''} · ${g.count}次 → 点开展示03抽屉`));
+  phs.forEach(({ p, i }) => rows.push(row(`phase:${i}`, `06 · ${p.phase}`, `${p.waves || ''} 阶段提及 → 点开展示06抽屉`)));
+  if (!rows.length) return '<div style="color:var(--muted);">未在04/05/03/06中找到同名输入（以收录为准）</div>';
+  return `<div style="display:flex;flex-direction:column;gap:6px;">${rows.join('')}</div>`;
+}
+
 // Drawer Interactions
 function bindItemCardClicks() {
   document.querySelectorAll('[data-name]').forEach(el => {
@@ -1121,6 +1254,25 @@ function bindItemCardClicks() {
       if (e.target.closest('a')) return;
       const item = ((appData.verbs||{}).candidates||[])[+el.dataset.verbC];
       if (item) openVerbDrawer('candidate', item);
+    });
+  });
+  document.querySelectorAll('[data-phase]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      openPhaseDrawer(+el.dataset.phase);
+    });
+  });
+  document.querySelectorAll('[data-pitfall]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      openPitfallDrawer(+el.dataset.pitfall);
+    });
+  });
+  document.querySelectorAll('[data-priority]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      const parts = (el.dataset.priority || '').split(':');
+      if (parts.length === 2) openPriorityDrawer(parts[0], +parts[1]);
     });
   });
 }
@@ -1310,6 +1462,112 @@ function openVerbDrawer(kind, item) {
   showDrawer();
 }
 
+// Step 06 phase detail: 阶段定位 + 打法三问 + 引用原文
+function openPhaseDrawer(idx) {
+  const p = (appData.phases || [])[idx];
+  if (!p) return;
+  state.selectedItem = p;
+  document.getElementById('drawerItemName').innerHTML = `🗺️ ${p.phase} <span style="font-weight:normal;font-size:13px;color:var(--muted);">(steps/06-phases · ${p.waves || ''})</span>`;
+  document.getElementById('drawerContent').innerHTML = `
+    <div class="drawer-section">
+      <h3>1. 阶段定位</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;">
+        <span class="badge-count-pill">${p.phase}</span>
+        <span>${p.waves || ''}</span>
+        <span class="badge-count-pill">${(p.quotes || []).length} 引用</span>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <h3>2. 打法三问 (全文)</h3>
+      <div style="font-size:12px;line-height:1.8;">
+        <div><strong>目标:</strong> ${p.goal || ''}</div>
+        <div><strong>重心:</strong> ${p.focus || ''}</div>
+        <div><strong>转向点:</strong> ${p.pivot || ''}</div>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <h3>3. 引用原文 (?t= 跳链 + 📍句 跳原文句 + 全量前后句)</h3>
+      ${quotesSectionHtml(p.quotes, p.quote_details)}
+    </div>
+  `;
+  showDrawer();
+}
+
+// Step 08 pitfall detail: 定级 + 成因躲法 + 引用原文
+function openPitfallDrawer(idx) {
+  const x = (appData.pitfalls || [])[idx];
+  if (!x) return;
+  state.selectedItem = x;
+  const sevBadge = x.severity === 'fatal'
+    ? '<span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">fatal 致命</span>'
+    : (x.severity === 'trap'
+    ? '<span class="badge" style="background:#faf5ff;color:#7c3aed;border:1px solid #ddd6fe;">trap 陷阱</span>'
+    : '<span class="badge" style="background:#fffbeb;color:#b45309;border:1px solid #fde68c;">risky 风险</span>');
+  document.getElementById('drawerItemName').innerHTML = `⚠️ ${x.title} <span style="font-weight:normal;font-size:13px;color:var(--muted);">(steps/08-pitfalls)</span>`;
+  document.getElementById('drawerContent').innerHTML = `
+    <div class="drawer-section">
+      <h3>1. 定级</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;">
+        ${sevBadge}
+        <span class="badge-count-pill">${(x.quotes || []).length} 引用</span>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <h3>2. 成因与躲法</h3>
+      <div style="font-size:12px;line-height:1.8;">
+        <div><strong>为什么翻车:</strong> ${x.why || ''}</div>
+        <div><strong>怎么躲:</strong> ${x.how_to_avoid || ''}</div>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <h3>3. 引用原文 (?t= 跳链 + 📍句 跳原文句 + 全量前后句)</h3>
+      ${quotesSectionHtml(x.quotes, x.quote_details)}
+    </div>
+  `;
+  showDrawer();
+}
+
+// Step 07 priority detail: 排名拿法 + 为什么拿 + 依赖来源穿透 + 引用原文
+function openPriorityDrawer(kind, idx) {
+  const pr = appData.priorities || {};
+  const list = (kind === 'shop') ? (pr.shop || []) : (pr.upgrades || []);
+  const u = list[idx];
+  if (!u) return;
+  state.selectedItem = u;
+  const rank = (kind === 'shop' ? 'S' : 'U') + (idx + 1);
+  document.getElementById('drawerItemName').innerHTML = `${rank} · ${u.name} <span style="font-weight:normal;font-size:13px;color:var(--muted);">(steps/07-priorities · ${kind === 'shop' ? '商店' : '升级'})</span>`;
+  document.getElementById('drawerContent').innerHTML = `
+    <div class="drawer-section">
+      <h3>1. 排名与拿法</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;margin-bottom:6px;">
+        <span class="badge-count-pill">${kind === 'shop' ? '商店 Top' + (idx + 1) : '升级 Top' + (idx + 1)}</span>
+        <span class="badge-count-pill">${(u.quotes || []).length} 引用</span>
+      </div>
+      <div style="font-size:12px;line-height:1.8;"><strong>怎么拿:</strong> ${u.how_to_get || ''}</div>
+    </div>
+
+    <div class="drawer-section">
+      <h3>2. 为什么拿</h3>
+      <div style="font-size:12px;line-height:1.5;">${u.why || ''}</div>
+    </div>
+
+    <div class="drawer-section">
+      <h3>3. 依赖来源穿透 (点行跳对应来源抽屉)</h3>
+      ${priorityDepHtml(u.name)}
+    </div>
+
+    <div class="drawer-section">
+      <h3>4. 引用原文 (?t= 跳链 + 📍句 跳原文句 + 全量前后句)</h3>
+      ${quotesSectionHtml(u.quotes, u.quote_details)}
+    </div>
+  `;
+  showDrawer();
+}
+
 function closeDrawer() {
   document.getElementById('drawerBackdrop').classList.remove('open');
   document.getElementById('itemDrawer').classList.remove('open');
@@ -1339,6 +1597,30 @@ document.addEventListener('click', (e) => {
       if (sec) sec.scrollIntoView({ behavior: 'smooth' });
     }
   });
+});
+
+// 依赖穿透行: 跳对应来源抽屉 (07→04/05/03/06), 主列表与抽屉内同样可用
+// (document 级委托, 抽屉内容重绘无需重绑)
+document.addEventListener('click', (e) => {
+  const dep = e.target && e.target.closest ? e.target.closest('[data-dep]') : null;
+  if (!dep) return;
+  const raw = dep.dataset.dep || '';
+  const ci = raw.indexOf(':');
+  if (ci < 0) return;
+  const kind = raw.slice(0, ci), low = raw.slice(ci + 1).toLowerCase();
+  if (kind === 'rating') {
+    const r = (appData.ratings || []).find(x => (x.term_en || '').toLowerCase() === low);
+    if (r) openDrawer({ name_en: r.term_en, name_zh: (r.term_zh || '') + ' · ' + (r.type || ''), count: r.count, confidence: r.confidence === 'none' ? 'candidate' : r.confidence, inferred: false, tier: r.rating, discretion_reason: '来源：07依赖穿透←04-attributes', reason: r.reason, quotes: r.quotes || [], quote_details: r.quote_details || [] });
+  } else if (kind === 'weapon') {
+    const all = [...(((appData.weapons || {}).t1) || []), ...(((appData.weapons || {}).t2) || [])];
+    const w = all.find(x => (x.name_en || '').toLowerCase() === low);
+    if (w) openDrawer({ name_en: w.name_en, name_zh: w.tier || '', count: w.count, confidence: w.confidence || 'verified', inferred: false, tier: w.tier, discretion_reason: '来源：07依赖穿透←05-weapons', reason: w.note || '', quotes: w.quotes || [], quote_details: w.quote_details || [] });
+  } else if (kind === 'group') {
+    const g = (appData.items || []).find(x => (x.name_en || '').toLowerCase() === low);
+    if (g) openDrawer(g);
+  } else if (kind === 'phase') {
+    openPhaseDrawer(+low);
+  }
 });
 
 // Directory Picker (File System Access API)

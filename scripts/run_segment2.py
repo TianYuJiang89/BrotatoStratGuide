@@ -52,9 +52,9 @@ def _quote_lookup(sentences: list[dict]):
     return mp
 
 
-def _collect(sentences: list[dict], keywords: list[str], cap: int = 10,
+def _collect(sentences: list[dict], keywords: list[str],
               id_min: int | None = None, id_max: int | None = None) -> tuple[list[str], list[dict]]:
-    """现场扫: 任一关键词 substring (case-insensitive) 命中即收, 保序去重, cap 10.
+    """现场扫: 任一关键词 substring (case-insensitive) 命中即收, 保序去重, 全量 (去cap #42跟进).
 
     id 窗 (可选): 视频按波次顺序讲解, W1-5 偏前段 / W6-12 偏中段 / W13-20 偏后段.
     窗只做去重前的预筛, 不改关键词口径, 不编数字.
@@ -69,8 +69,6 @@ def _collect(sentences: list[dict], keywords: list[str], cap: int = 10,
         if any(k.lower() in low for k in keywords):
             if s["text"] not in seen:
                 seen.append(s["text"])
-                if len(seen) >= cap:
-                    break
     qlookup = _quote_lookup(sentences)
     details = []
     for q in seen:
@@ -216,7 +214,7 @@ def step08(workdir: Path, sentences: list[dict]) -> list[dict]:
     ]
     pitfalls = []
     for title, sev, keys, why_tail, avoid in specs:
-        qs, qd = _collect(sentences, keys, cap=10)
+        qs, qd = _collect(sentences, keys)
         if not qs:
             raise SystemExit(f"step08 现场扫不足 {title}: keywords={keys}")
         pitfalls.append({

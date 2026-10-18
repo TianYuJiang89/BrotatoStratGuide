@@ -57,16 +57,15 @@ def sections_in(html: str) -> list[str]:
 
 
 def make_isolated(tmp_path: Path) -> tuple[Path, Path, Path]:
-    """Isolated data/templates/out with fixture cyborg build (clean-slate compatible)."""
+    """Isolated data/templates/out with fixture cyborg build (#31 1可点覆盖)."""
     work = tmp_path / "work"
     if work.exists():
         shutil.rmtree(work)
     shutil.copytree(REPO / "data", work / "data")
     shutil.copytree(REPO / "templates", work / "templates")
     build_file = work / "data" / "builds" / "cyborg.json"
-    if not build_file.exists():
-        build_file.parent.mkdir(parents=True, exist_ok=True)
-        build_file.write_text(FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
+    build_file.parent.mkdir(parents=True, exist_ok=True)
+    build_file.write_text(FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
     out = tmp_path / "out"
     out.mkdir(parents=True, exist_ok=True)
     return (work / "data", work / "templates", out)
@@ -93,28 +92,30 @@ def test_per_slug_build_produces_ordered_sections(tmp_path: Path) -> None:
 
 
 def test_index_links_to_character_page() -> None:
-    """干净起点索引 0 可点: 无角色链, 无死链 (#19)."""
+    """#31 1可点: cyborg 已建链, engineer 未建无死链."""
     r = run_build("--all")
     assert r.returncode == 0, f"build --all failed: {r.stderr[-2000:]}"
     index = (REPO / "docs" / "index.html").read_text(encoding="utf-8")
-    assert "./cyborg.html" not in index, "clean slate must not link cyborg"
-    assert "./engineer.html" not in index, "clean slate must not link engineer"
+    assert "./cyborg.html" in index, "cyborg built must link"
+    assert "./engineer.html" not in index, "unbuilt engineer must not link"
 
 
 def test_full_and_per_slug_builds_both_run(tmp_path: Path) -> None:
-    """全量构建可跑 (0 页) + 隔离单页构建可跑; 缺 build 的 slug 在 repo 上必须 fail."""
+    """全量构建可跑 (1页) + 隔离单页构建可跑; 缺 build 的 slug 在 repo 上必须 fail."""
     r2 = run_build("--all")
     assert r2.returncode == 0, r2.stderr[-2000:]
     assert (REPO / "docs" / "index.html").exists()
-    assert not (REPO / "docs" / "cyborg.html").exists(), "clean slate has no char pages"
+    assert (REPO / "docs" / "cyborg.html").exists(), "#31 cyborg built"
     # 隔离单页仍可跑 (seam 不回归).
     data_dir, templates_dir, out = make_isolated(tmp_path)
     r1 = build_isolated(data_dir, templates_dir, out)
     assert r1.returncode == 0, r1.stderr[-2000:]
     assert (out / "cyborg.html").exists()
-    # repo 上无数据时 --slug cyborg 必须 fail (未知/缺 build).
+    # repo 上有数据时 --slug cyborg 必须 pass; 未知 slug 必须 fail.
     r3 = run_build("--slug", "cyborg")
-    assert r3.returncode != 0, "missing build on clean slate must fail"
+    assert r3.returncode == 0, "cyborg built must pass"
+    r4 = run_build("--slug", "mage")
+    assert r4.returncode != 0, "missing build mage must fail"
 
 
 def test_honest_empty_sections_are_shown_not_hidden(tmp_path: Path) -> None:

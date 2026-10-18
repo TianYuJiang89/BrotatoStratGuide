@@ -1152,6 +1152,7 @@ function prioritiesSectionHtml() {
         </div>
         <div class="item-card-reason"><strong>为什么拿:</strong> ${u.why || ''}</div>
         <div style="font-size:12px;margin-top:2px;"><strong>怎么拿:</strong> ${u.how_to_get || ''}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${inheritLineHtml(kind, u.name)}</div>
         ${(u.quotes && u.quotes.length) ? `<div class="item-card-quote">“${u.quotes[0]}”</div>` : ''}
       </div>`;
   return `
@@ -1190,6 +1191,21 @@ function assembleSectionHtml() {
         <span>${ga === live ? '✅ 一致' : '❌ 数量不一致'}</span>
       </div>`).join('')}
     </div>`;
+}
+
+// 07继承自上游结果 (非自创): 升级←04 S/A, 商店←03 must_take+verified (与 run_segment2 口径一致)
+function inheritLineHtml(kind, name) {
+  const key = (name || '').toLowerCase();
+  if (kind === 'shop') {
+    const cands = (appData.items || []).filter(x => x.group === 'must_take' && x.confidence === 'verified').sort((a, b) => b.count - a.count);
+    const i = cands.findIndex(x => (x.name_en || '').toLowerCase() === key);
+    const g = i >= 0 ? cands[i] : (appData.items || []).find(x => (x.name_en || '').toLowerCase() === key);
+    if (!g) return '';
+    return `继承自 03 · must_take${i >= 0 ? ' #' + (i + 1) : ''} · ${g.confidence || ''} · ${g.count}次`;
+  }
+  const r = (appData.ratings || []).find(x => (x.term_en || '').toLowerCase() === key);
+  if (!r) return '';
+  return `继承自 04 · ${r.rating || ''}级 · ${r.count}次`;
 }
 
 // 07依赖来源穿透: 04 ratings / 05 weapons / 03 grouping 同名 + 06 phases 文本提及
@@ -1547,6 +1563,7 @@ function openPriorityDrawer(kind, idx) {
         <span class="badge-count-pill">${kind === 'shop' ? '商店 Top' + (idx + 1) : '升级 Top' + (idx + 1)}</span>
         <span class="badge-count-pill">${(u.quotes || []).length} 引用</span>
       </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">${inheritLineHtml(kind, u.name)}</div>
       <div style="font-size:12px;line-height:1.8;"><strong>怎么拿:</strong> ${u.how_to_get || ''}</div>
     </div>
 

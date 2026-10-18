@@ -15,7 +15,13 @@ Read `docs/sop/character-issue-template.md` (the issue body contract) and `docs/
 
 Completion: role fixed, template loaded.
 
-### 2. Open the issue, then stop
+### 2. Confirm tags, then stop if unclear
+
+Check what already exists for this slug: `git log --oneline -- data/builds/<slug>.json`, `ls data/work/<slug>`, variant tags in the last builds file. Write into the ticket: 本次首建/重跑 + 开工清空范围 (`rm -rf data/work/<slug>` + old `data/builds/<slug>.json docs/<slug>.html`, executed by the runner at start). You never decide content, only record state.
+
+Completion: 首建/重跑 + 清空范围 in hand.
+
+### 3. Open the issue, then stop
 
 ```bash
 gh issue create --title "角色攻略：<角色名> (<EN>)" --label "ready-for-agent" --body-file <filled-template>
@@ -24,7 +30,7 @@ gh issue create --title "角色攻略：<角色名> (<EN>)" --label "ready-for-a
 Body rules (single source of truth stays in the repo; the ticket only points):
 
 - Role slots filled from the template (`目标角色`节); the `选定取材` section stays slotted: the executor retrieves Top3 per §4, the human picks, then the executor fills. You fill no video IDs.
-- Requirements section points at, never copies: `docs/sop/new-character-guide.md` (一事一过 8 步 + note rules + 三道闸), `docs/sop/reviewer-checklist.md` (four checks), `.agents/skills/brotato-guide/` is you — do not reference yourself.
+- Requirements section points at, never copies: `docs/sop/new-character-guide.md` (一事一过 8 步 + note rules + 三道闸), `docs/sop/reviewer-checklist.md` (six checks), `.agents/skills/brotato-guide/` is you — do not reference yourself.
 - Constraints line, verbatim: cookie collaboration (human provides repo-root `cookies.txt`, never committed; executor asks on block), TDD seams only (CLI exit codes + `docs/*.html` + `data/*.json` bytes), products human-never-hand-edits, no third-party transcription without a separate ticket.
 - Acceptance: reviewer gate + human 3-questions (选片对不对 / 转述忠不忠实 / 评级违不违手感). Guide tickets stay out of wayfinding: no wayfinder labels, no `Part of` map line.
 - Apply the AFK-ready triage label (`ready-for-agent` per `docs/agents/triage-labels.md`).

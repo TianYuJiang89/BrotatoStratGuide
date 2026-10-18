@@ -22,13 +22,14 @@ Part of #16
 * 自动字幕：`yt-dlp --write-auto-sub --sub-langs en-orig --sub-format vtt --skip-download -o "data/subs/<slug>__<variant-id>.%(ext)s" <URL>`（每变体独立存，variant-id 为 covers slug 化）。被风控时加 `--cookies cookies.txt`（人用扩展只导 `youtube.com` 放仓库根，已 gitignore，失效 agent 提示重出）。
 * 不做：Whisper 重转写、看画面帧、多模态整视频理解、Data API、第三方转写。无字幕不猜，标待补/换候选。
 
-## 执行步骤（锁死：抽取→交叉表清零→填表）
+## 执行步骤（锁死：清空→抽取→交叉表清零→填表）
 
-1. 入库字幕到 `data/subs/<slug>__<variant-id>.en-orig.vtt`（每变体独立）；专名对照 wiki 纠拼写（Brotato/武器/道具以 wiki 为准）。
-2. 跑交叉表并清零：`python scripts/build_mentions.py --slug <slug>` 建 `data/mentions/<slug>__<variant-id>.json`（每变体独立跑），再 `python scripts/check_mentions.py --slug <slug>` 自清（提到未定级补定级、定级无命中挂名注明标题/描述/chapters，否则疑为编；只 warn 不 fail，缺表才 FAIL 必须补）。
-3. 只基于字幕 + 标题/描述/chapters + 交叉表写骨架：属性优先级、武器 T1/T2（把数不限，每把一句话只认视频口径）、道具（三组：先扫拿取/拒绝动词建清单再分组，必拿分档/提过未拿说原因/ban 说依据，拿取清单全收不设上限）、转向、商店/升级 Top3（两层：先 Top3 再点名，升级在前）、避坑 1–3（只收通用会死人的错）、高难特例（只收 Nightmare / Ultimate 变招）。不复述流水账、不翻原文、不搬截图。
-4. 按 10 段模板诚实填 `data/builds/<slug>.json` 内 `variants` 数组（每变体 `covers` + `label` + 独立 Top3+双标注+10段，动态诚实标签：有几份证据做几个变体，合讲合并，单变体退覆盖徽章；旧单层键废除）：提过即算口径（顺手拿给 C 写明原话，全程未出现才空出 `— / 作者未提及`）；每条 rating 必须有出处（字幕原句或标题/描述/chapters 注明，无出处视为疑为编）；`中文 (English)`；DLC 角标；S–F 上色。不编、不藏段。
-5. 跑 `python scripts/build.py --slug <slug>`；绝不手改 `docs/`。机检全绿（`check.py` + `check_updates.py` + `check_resources.py` + `check_mentions.py` 只 warn）再送 reviewer 块级审（drafter 不审己稿，见 `docs/sop/reviewer-checklist.md`），改完再送人三问。交单必须声明版本（现查 SOP 三件 + skill 的 commit，不许凭记忆）并附中间产物（动词清单等）+ 相对上一单 diff 摘要（首填写首填）；缺声明视为没交单。
+1. 开工先清空并建工作区：`rm -rf data/work/<slug>` + 删本 slug 旧产出（`data/builds/<slug>.json docs/<slug>.html`，以票内清空范围为准）；建 `data/work/<slug>/` 并写 `manifest.json`（本票字幕路径 + sha1 + 取材 URL）；中间产物（动词清单/推导链）全落这里。输入只认工作区 + 本票字幕 + 标题/描述/chapters + 交叉表 + SOP/脚本；历史提交/其它 issue/聊天记录一律不作数。
+2. 入库字幕到 `data/subs/<slug>__<variant-id>.en-orig.vtt`（每变体独立）；专名对照 wiki 纠拼写（Brotato/武器/道具以 wiki 为准）。
+3. 跑交叉表并清零：`python scripts/build_mentions.py --slug <slug>` 建 `data/mentions/<slug>__<variant-id>.json`（每变体独立跑），再 `python scripts/check_mentions.py --slug <slug>` 自清（提到未定级补定级、定级无命中挂名注明标题/描述/chapters，否则疑为编；只 warn 不 fail，缺表才 FAIL 必须补）。
+4. 只基于字幕 + 标题/描述/chapters + 交叉表写骨架：属性优先级、武器 T1/T2（把数不限，每把一句话只认视频口径）、道具（三组：先扫拿取/拒绝动词建清单再分组，必拿分档/提过未拿说原因/ban 说依据，拿取清单全收不设上限）、转向、商店/升级 Top3（两层：先 Top3 再点名，升级在前）、避坑 1–3（只收通用会死人的错）、高难特例（只收 Nightmare / Ultimate 变招）。不复述流水账、不翻原文、不搬截图。
+5. 按 10 段模板诚实填 `data/builds/<slug>.json` 内 `variants` 数组（每变体 `covers` + `label` + 独立 Top3+双标注+10段，动态诚实标签：有几份证据做几个变体，合讲合并，单变体退覆盖徽章；旧单层键废除）：提过即算口径（顺手拿给 C 写明原话，全程未出现才空出 `— / 作者未提及`）；每条 rating 必须有出处（字幕原句或标题/描述/chapters 注明，无出处视为疑为编）；`中文 (English)`；DLC 角标；S–F 上色。不编、不藏段。
+6. 跑 `python scripts/build.py --slug <slug>`；绝不手改 `docs/`。机检全绿（`check.py` + `check_updates.py` + `check_resources.py` + `check_mentions.py` 只 warn）再送 reviewer 块级审（drafter 不审己稿，见 `docs/sop/reviewer-checklist.md`），推导链（quotes→清单→分组）落盘 `data/work/<slug>/` 备查，改完再送人三问。
 
 ## 禁止
 

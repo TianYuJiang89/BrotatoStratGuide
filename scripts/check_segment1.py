@@ -280,6 +280,16 @@ def main(argv: list[str] | None = None) -> int:
             fail(f"audit.html 缺 DAG 分层标记 (#42): {marker}", errors)
     if "DAG L1" not in audit_html:
         fail("audit.html 缺 DAG L1 并行层标注 (#42: 04/05 已按层)", errors)
+    # 左侧 DAG 导航 (长页跳转: 按 DAG 分层列全 10 节, 缺节即 fail)
+    if 'id="sideNav"' not in audit_html:
+        fail("audit.html 缺左侧导航 (#42跟进): 缺 id=sideNav", errors)
+    for marker in ("audit-inputs", "audit-01-sentences", "audit-02-verbs", "audit-03-grouping",
+                   "audit-04-attributes", "audit-05-weapons", "audit-06-phases", "audit-08-pitfalls",
+                   "audit-07-priorities", "audit-09-assemble"):
+        if marker not in audit_html:
+            fail(f"audit.html 左侧导航缺锚点 (#42跟进): {marker}", errors)
+        if f'href="#{marker}"' not in audit_html:
+            fail(f"audit.html 左侧导航缺链接 (#42跟进): #{marker}", errors)
     # ratings/weapons mock 常设 (离线可读, live 经 picker/?base= 全量)
     for marker in ("MOCK_RATINGS", "MOCK_WEAPONS"):
         if marker not in audit_html:

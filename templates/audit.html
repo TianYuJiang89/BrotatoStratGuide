@@ -211,6 +211,88 @@ button { font-family: inherit; cursor: pointer; }
   padding: 20px 16px;
 }
 
+html { scroll-behavior: smooth; }
+
+/* Layout with left DAG nav */
+.layout {
+  display: flex;
+  max-width: 1400px;
+  margin: 0 auto;
+  align-items: flex-start;
+}
+.layout .container {
+  margin: 0;
+  max-width: none;
+}
+.main-content {
+  flex: 1;
+  min-width: 0;
+}
+.sidenav {
+  width: 208px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 70px;
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+  margin: 20px 0 20px 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 10px;
+  font-size: 12px;
+}
+.sidenav-title {
+  font-weight: 700;
+  font-size: 13px;
+  padding: 2px 8px 8px 8px;
+}
+.sidenav-group {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 8px 8px 2px 8px;
+}
+.sidenav a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  color: var(--ink);
+}
+.sidenav a:hover { background: #f0ebe0; }
+.sidenav a.active {
+  background: #1f1b16;
+  color: #fff;
+  font-weight: 700;
+}
+.sidenav a.active .sidenav-count { color: #fff; }
+.sidenav-count {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pipeline-step, .dag-layer { scroll-margin-top: 76px; }
+@media (max-width: 900px) {
+  .layout { flex-direction: column; }
+  .sidenav {
+    width: auto;
+    position: static;
+    max-height: none;
+    margin: 12px 12px 0 12px;
+    display: flex;
+    overflow-x: auto;
+    gap: 4px;
+    align-items: center;
+  }
+  .sidenav-title, .sidenav-group { display: none; }
+  .sidenav a { white-space: nowrap; }
+  .sidenav-count { display: none; }
+}
+
 /* Badges */
 .badge {
   display: inline-flex;
@@ -549,10 +631,29 @@ button { font-family: inherit; cursor: pointer; }
   </div>
 </section>
 
-<!-- Content Container -->
-<main class="container" id="mainContainer">
-  <!-- Rendered dynamically -->
-</main>
+<!-- Content Layout with left DAG nav -->
+<div class="layout">
+  <nav class="sidenav" id="sideNav" aria-label="DAG步骤导航">
+    <div class="sidenav-title">DAG导航</div>
+    <div class="sidenav-group">L0 · 基座</div>
+    <a href="#audit-inputs" data-nav="audit-inputs">📦 inputs</a>
+    <a href="#audit-01-sentences" data-nav="audit-01-sentences">📝 01-sentences <span class="sidenav-count" id="nav-sent-count"></span></a>
+    <div class="sidenav-group">L1 · 并行层</div>
+    <a href="#audit-02-verbs" data-nav="audit-02-verbs">⚡ 02-verbs <span class="sidenav-count" id="nav-verbs-count"></span></a>
+    <a href="#audit-03-grouping" data-nav="audit-03-grouping">📊 03-grouping <span class="sidenav-count" id="nav-groups-count"></span></a>
+    <a href="#audit-04-attributes" data-nav="audit-04-attributes">📈 04-attributes <span class="sidenav-count" id="nav-ratings-count"></span></a>
+    <a href="#audit-05-weapons" data-nav="audit-05-weapons">🔫 05-weapons <span class="sidenav-count" id="nav-weapons-count"></span></a>
+    <a href="#audit-06-phases" data-nav="audit-06-phases">🗺️ 06-phases <span class="sidenav-count" id="nav-phases-count">空节</span></a>
+    <a href="#audit-08-pitfalls" data-nav="audit-08-pitfalls">⚠️ 08-pitfalls <span class="sidenav-count" id="nav-pitfalls-count">空节</span></a>
+    <div class="sidenav-group">L2 · 综合</div>
+    <a href="#audit-07-priorities" data-nav="audit-07-priorities">🛒 07-priorities <span class="sidenav-count" id="nav-priorities-count">空节</span></a>
+    <div class="sidenav-group">L3 · 组装</div>
+    <a href="#audit-09-assemble" data-nav="audit-09-assemble">📦 09-assemble <span class="sidenav-count" id="nav-assemble-count">空节</span></a>
+  </nav>
+  <main class="container main-content" id="mainContainer">
+    <!-- Rendered dynamically -->
+  </main>
+</div>
 
 <!-- Slide-over Drawer for Item Audit Trail -->
 <div class="drawer-backdrop" id="drawerBackdrop"></div>
@@ -627,6 +728,7 @@ function render() {
     const isMock = state.dataSource === 'mock';
     container.innerHTML = `<div class="card"><div class="card-header"><div class="card-title"><span>${isMock ? '⚠️ 当前为 MOCK 样例，不可作为验收依据' : '⏳ 待加载 live 数据'}</span></div></div>`
       + `<p style="font-size:13px;color:var(--muted);">${isMock ? '你点的是“恢复 Mock 数据”（离线样例）。验收必须切 live：点顶部“选择工作区目录”选 G:/brotato-work/&lt;slug&gt;/&lt;variant&gt;/，顶栏变蓝点“本地工作区”才算数。' : '未读到 live：请点顶部“选择工作区目录”选 G:/brotato-work/&lt;slug&gt;/&lt;variant&gt;/；失败不回落 mock。 formal 发布形态才用 ?base=（audit 随 outputs/ 同级发布）。'}</p></div>`;
+    updateSideNav();
     return;
   }
   const filtered = getFilteredItems();
@@ -640,7 +742,7 @@ function render() {
     <!-- DAG-L0 基座层：inputs + 01-sentences -->
     <div class="dag-layer" data-dag-layer="L0">DAG L0 · 基座层：01-sentences <small>（inputs/source.vtt 现场扫；下游 02→03 / 04 / 05 / 06 / 08 皆依赖 01）</small></div>
     <!-- Pipeline Step 0: Inputs & Manifest -->
-    <div class="pipeline-step completed" data-dag-layer="L0">
+    <div class="pipeline-step completed" id="audit-inputs" data-dag-layer="L0">
       <div class="pipeline-step-node">0</div>
       <div class="card">
         <div class="card-header">
@@ -659,7 +761,7 @@ function render() {
     </div>
 
     <!-- Pipeline Step 1: 01-sentences -->
-    <div class="pipeline-step completed" data-dag-layer="L0">
+    <div class="pipeline-step completed" id="audit-01-sentences" data-dag-layer="L0">
       <div class="pipeline-step-node">1</div>
       <div class="card">
         <div class="card-header">
@@ -686,7 +788,7 @@ function render() {
     <!-- DAG-L1 并行层：02→03 · 04 · 05 · 06 · 08（依赖 01，可并行） -->
     <div class="dag-layer" data-dag-layer="L1">DAG L1 · 并行层：02→03 · 04-attributes · 05-weapons · 06-phases · 08-pitfalls <small>（依赖 01，可并行；07 须段1绿后才开）</small></div>
     <!-- Pipeline Step 2: 02-verbs -->
-    <div class="pipeline-step completed" data-dag-layer="L1">
+    <div class="pipeline-step completed" id="audit-02-verbs" data-dag-layer="L1">
       <div class="pipeline-step-node">2</div>
       <div class="card">
         <div class="card-header">
@@ -733,7 +835,7 @@ function render() {
     </div>
 
     <!-- Pipeline Step 3: 03-grouping & outputs -->
-    <div class="pipeline-step completed" data-dag-layer="L1">
+    <div class="pipeline-step completed" id="audit-03-grouping" data-dag-layer="L1">
       <div class="pipeline-step-node">3</div>
       <div class="card">
         <div class="card-header">
@@ -880,6 +982,55 @@ function render() {
 
   container.innerHTML = html;
   bindItemCardClicks();
+  updateSideNav();
+  setupScrollSpy();
+}
+
+// Left DAG nav: live counts + scroll-spy
+function updateSideNav() {
+  const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt || ''; };
+  const s = appData.sentences || [];
+  const v = appData.verbs || { verified: [], candidates: [] };
+  const items = appData.items || [];
+  const ratings = appData.ratings || [];
+  const w = appData.weapons || { t1: [], t2: [] };
+  set('nav-sent-count', s.length ? s.length + '句' : '');
+  set('nav-verbs-count', (v.verified.length || v.candidates.length) ? (v.verified.length + '+' + v.candidates.length) : '');
+  set('nav-groups-count', items.length ? items.length + '件' : '');
+  set('nav-ratings-count', ratings.length ? ratings.length + '/39' : '');
+  set('nav-weapons-count', ((w.t1 || []).length + (w.t2 || []).length) ? ('T1:' + (w.t1 || []).length + ' T2:' + (w.t2 || []).length) : '');
+  const nz = (x) => {
+    if (Array.isArray(x)) return x.length;
+    if (x && typeof x === 'object') return Object.keys(x).length;
+    return 0;
+  };
+  set('nav-phases-count', nz(appData.phases) ? nz(appData.phases) + '段' : '空节');
+  set('nav-priorities-count', nz(appData.priorities) ? nz(appData.priorities) + '项' : '空节');
+  set('nav-pitfalls-count', nz(appData.pitfalls) ? nz(appData.pitfalls) + '条' : '空节');
+  set('nav-assemble-count', nz(appData.assemble) ? '已组装' : '空节');
+}
+
+let navObserver = null;
+function setupScrollSpy() {
+  if (navObserver) navObserver.disconnect();
+  const links = document.querySelectorAll('#sideNav a[data-nav]');
+  if (!links.length) return;
+  const map = {};
+  links.forEach(a => { map[a.dataset.nav] = a; });
+  if (!('IntersectionObserver' in window)) return;
+  navObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(a => a.classList.remove('active'));
+        const a = map[e.target.id];
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-80px 0px -70% 0px', threshold: 0 });
+  Object.keys(map).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) navObserver.observe(el);
+  });
 }
 
 function renderGroupAccordion(title, items) {

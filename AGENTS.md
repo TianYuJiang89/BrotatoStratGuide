@@ -11,3 +11,7 @@ Default five canonical triage labels. See `docs/agents/triage-labels.md`.
 ### Domain docs
 
 Single-context layout. See `docs/agents/domain.md`.
+
+## Python environment
+
+Python runs only via repo-local `.venv`. See `docs/agents/python-env.md`.

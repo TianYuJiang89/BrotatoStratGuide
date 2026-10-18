@@ -1288,7 +1288,7 @@ document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer)
 // Directory Picker (File System Access API)
 // 默认工作区 G:\brotato-work: 浏览器安全限制不允许网页直写任意路径,
 // 用固定 id + IndexedDB 持久化上次目录句柄 —— 首次手选一次 G:\brotato-work\<slug>\<variant>,
-// 之后点按钮直接恢复上次目录 (权限仍在), 换目录才弹框且从上次位置开始 (startIn)
+// 之后每次弹框起点都落在上次位置 (startIn): 直接点"选择"即沿用, 导航到别处即换目录
 const WORKSPACE_PICKER_ID = 'brotato-work-root';
 function idbOpenAudit() {
   return new Promise((resolve, reject) => {
@@ -1330,16 +1330,8 @@ document.getElementById('btnPickDir').addEventListener('click', async () => {
     const opts = { id: WORKSPACE_PICKER_ID, mode: 'read' };
     try {
       const last = await idbGetWorkdir();
-      if (last && last.name) {
-        const qp = (typeof last.queryPermission === 'function') ? await last.queryPermission({ mode: 'read' }) : 'prompt';
-        const ok = (qp === 'granted') || ((typeof last.requestPermission === 'function') && (await last.requestPermission({ mode: 'read' })) === 'granted');
-        if (ok) {
-          await loadFromDirectoryHandle(last);
-          return;
-        }
-        opts.startIn = last;
-      }
-    } catch (e) { console.warn('恢复上次目录失败，走重新选择', e); }
+      if (last && last.name) opts.startIn = last;
+    } catch (e) { console.warn('读取上次目录失败', e); }
     const dirHandle = await window.showDirectoryPicker(opts);
     await idbSetWorkdir(dirHandle);
     await loadFromDirectoryHandle(dirHandle);
@@ -1550,7 +1542,7 @@ window.addEventListener('DOMContentLoaded', () => {
   idbGetWorkdir().then(last => {
     if (last && last.name) {
       const btn = document.getElementById('btnPickDir');
-      btn.title = `默认工作区 G:\brotato-work · 上次: ${last.name}（点此继续）`;
+      btn.title = `默认工作区 G:\brotato-work · 上次: ${last.name}（点此从上次位置选择，直接确认即沿用，导航即换目录）`;
     }
   });
   // 缺省不吃广告纸: 不自动载 mock, 只显示待加载; live 经 picker/?base 进来, mock 仅点按钮显式进

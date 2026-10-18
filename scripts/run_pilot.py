@@ -21,7 +21,6 @@ import argparse
 import hashlib
 import json
 import re
-import shutil
 import sys
 from pathlib import Path
 
@@ -79,76 +78,36 @@ def sha1_of(path: Path) -> str:
 
 
 def ensure_inputs(slug: str, vid: str, workdir: Path) -> dict:
-    """拷必要文件进工作区 (只拷四件, 不整仓拷贝). 返回 manifest dict."""
+    """inputs 校验 + slice 刷新 (#44: Step00 后只认 inputs, 不读旧链).
+
+    四件须已由 scripts/fetch_inputs.py 产出. 本步只做存在性 + sha 校验 +
+    registry-slice 动态刷新 (全局 + runtime VTT). meta/manifest 不覆写."""
     inputs = workdir / "inputs"
-    inputs.mkdir(parents=True, exist_ok=True)
-    repo_vtt = REPO / "data" / "subs" / f"{slug}__{vid}.en-orig.vtt"
-    if not repo_vtt.exists():
-        raise SystemExit(f"missing repo VTT: {repo_vtt}")
-    shutil.copy2(repo_vtt, inputs / "source.vtt")
-    sha = sha1_of(inputs / "source.vtt")
-
-    # meta.json: 标题/描述/chapters/双标注五元组 (沿 top3 + manifest sources)
-    top3 = json.loads((REPO / "data" / "work" / slug / "top3.json").read_text(encoding="utf-8"))
-    work_manifest = json.loads((REPO / "data" / "work" / slug / "manifest.json").read_text(encoding="utf-8"))
-    src = next((s for s in work_manifest.get("sources", []) if s.get("variant") == vid), None)
-    if src is None:
-        raise SystemExit(f"missing source for {slug}__{vid} in data/work manifest")
-    meta = {
-        "title": src.get("title", ""),
-        "description": f"Brotato {src.get('description_version','')} {src.get('difficulty','')} Guide for {slug}",
-        "game_version": src.get("game_version", ""),
-        "published": src.get("published", ""),
-        "chapters": [c.strip() for c in str(src.get("chapters_note", "")).split("/") if c.strip()],
-        "video_id": src.get("video_id", ""),
-        "url": src.get("url", ""),
-        "difficulty": src.get("difficulty", ""),
-    }
-    (inputs / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-    # registry-slice.json: 本变体武器+道具子集 (count>0 全集, 沿 mentions 口径)
-    mentions_path = REPO / "data" / "mentions" / f"{slug}__{vid}.json"
-    mentions = json.loads(mentions_path.read_text(encoding="utf-8"))
-    weapons_pos = sorted([k for k, v in mentions.get("weapons", {}).items() if v.get("count", 0) > 0])
-    items_pos = sorted([k for k, v in mentions.get("items", {}).items() if v.get("count", 0) > 0])
-    # 全量武器名备查 (slice 只含命中子集, 未命中 172 件不进表)
+    for _f in ("source.vtt", "meta.json", "registry-slice.json", "manifest.json"):
+        if not (inputs / _f).exists():
+            raise SystemExit(
+                f"missing inputs/{_f} for {slug}/{vid}: "
+                f"先跑 scripts/fetch_inputs.py --url <youtube-url> "
+                f"--slug {slug} --variant {vid} 取证")
+    manifest = json.loads((inputs / "manifest.json").read_text(encoding="utf-8"))
+    actual_sha = sha1_of(inputs / "source.vtt")
+    expect_sha = (manifest.get("sources") or [{}])[0].get("sha1", "")
+    if actual_sha != expect_sha:
+        raise SystemExit(
+            f"sha mismatch for {slug}/{vid}: manifest {str(expect_sha)[:8]} "
+            f"vs actual {actual_sha[:8]} (重跑 Step00 取证)")
+    # registry-slice 动态刷新 (全局 wiki-cache + terms + runtime source.vtt)
+    from build_mentions import scan_cues as _scan_cues
+    _terms = load_terms(REPO / "data")
+    _wall, _iall = load_registry_names(REPO / "data")
+    _pmap = build_pattern_map(_terms, _wall, _iall)
+    _cues = parse_vtt((inputs / "source.vtt").read_text(encoding="utf-8"))
+    _sc = _scan_cues(_cues, _pmap)
+    weapons_pos = sorted([w for w in _wall if _sc.get(f"weapon:{w}", (0, []))[0] > 0])
+    items_pos = sorted([it for it in _iall if _sc.get(f"item:{it}", (0, []))[0] > 0])
     reg_slice = {"weapons": weapons_pos, "items": items_pos}
     (inputs / "registry-slice.json").write_text(
         json.dumps(reg_slice, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
-
-    # manifest.json: sha1 + 取材 URL + issue 号
-    sop_ver = ""
-    try:
-        import subprocess as sp
-        p = sp.run(
-            ["git", "log", "-1", "--format=%H", "--", "docs/sop/new-character-guide.md"],
-            cwd=str(REPO), capture_output=True, text=True,
-        )
-        sop_ver = p.stdout.strip()
-    except Exception:
-        sop_ver = ""
-    manifest = {
-        "slug": slug,
-        "variant": vid,
-        "covers": ["Ultimate"] if vid == "ultimate" else [vid],
-        "sop_version": sop_ver,
-        "issue": 38,
-        "sources": [
-            {
-                "difficulty": src.get("difficulty", ""),
-                "title": src.get("title", ""),
-                "url": src.get("url", ""),
-                "sha1": sha,
-                "vtt": "inputs/source.vtt",
-                "duration": src.get("duration", ""),
-                "game_version": src.get("game_version", ""),
-                "video_id": src.get("video_id", ""),
-            }
-        ],
-    }
-    (inputs / "manifest.json").write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     return manifest
 
@@ -528,7 +487,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"[pilot] workdir={workdir} (cwd 锁定, 只读写相对路径)")
     manifest = ensure_inputs(slug, vid, workdir)
-    print(f"[pilot] inputs 四件落盘, sha1={manifest['sources'][0]['sha1'][:8]}...")
+    print(f"[pilot] inputs 四件校验通过 (Step00 取证), sha1={manifest['sources'][0]['sha1'][:8]}...")
     sentences = step01(workdir)
     print(f"[pilot] 01-sentences: {len(sentences)} 句 -> steps/01-sentences/sentences.json")
     verbs = step02(workdir, sentences)

@@ -34,7 +34,6 @@ import csv
 import hashlib
 import json
 import re
-import shutil
 import sys
 from pathlib import Path
 from collections import defaultdict, Counter
@@ -150,40 +149,29 @@ def sha1_of(path: Path) -> str:
 
 
 def ensure_inputs(slug: str, vid: str, workdir: Path) -> dict:
-    """拷必要文件进工作区 (只拷四件). issue 记 40 (B-段1). 幂等: sha 不变."""
+    """inputs 校验 + slice 刷新 (#44: Step00 后新链只认 inputs, 不读旧链).
+
+    四件须已由 scripts/fetch_inputs.py 产出. 本步只做:
+    - 四件存在性校验 (缺件即报错, 指引先跑 fetch_inputs 取证)
+    - sha 对上校验 (manifest.sources[0].sha1 == source.vtt 实际 sha)
+    - registry-slice 动态刷新 (全局 wiki-cache + terms + runtime source.vtt, 幂等)
+    meta/manifest 为 Step00 取证产物, 本步不覆写 (provenance 只认取证).
+    """
     inputs = workdir / "inputs"
-    inputs.mkdir(parents=True, exist_ok=True)
-    repo_vtt = REPO / "data" / "subs" / f"{slug}__{vid}.en-orig.vtt"
-    if not repo_vtt.exists():
-        raise SystemExit(f"missing repo VTT: {repo_vtt}")
-    shutil.copy2(repo_vtt, inputs / "source.vtt")
-    sha = sha1_of(inputs / "source.vtt")
-    # #43 subs_source
-    try:
-        from build_mentions import detect_subs_source as _detect_src
-        subs_source = _detect_src((inputs / "source.vtt").read_text(encoding="utf-8"))
-    except Exception:
-        subs_source = "auto"
-
-    top3 = json.loads((REPO / "data" / "work" / slug / "top3.json").read_text(encoding="utf-8"))
-    work_manifest = json.loads((REPO / "data" / "work" / slug / "manifest.json").read_text(encoding="utf-8"))
-    src = next((s for s in work_manifest.get("sources", []) if s.get("variant") == vid), None)
-    if src is None:
-        raise SystemExit(f"missing source for {slug}__{vid}")
-    meta = {
-        "title": src.get("title", ""),
-        "description": f"Brotato {src.get('description_version','')} {src.get('difficulty','')} Guide for {slug}",
-        "game_version": src.get("game_version", ""),
-        "published": src.get("published", ""),
-        "chapters": [c.strip() for c in str(src.get("chapters_note", "")).split("/") if c.strip()],
-        "video_id": src.get("video_id", ""),
-        "url": src.get("url", ""),
-        "difficulty": src.get("difficulty", ""),
-        "subs_source": subs_source,
-    }
-    (inputs / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-    # registry-slice 动态推导 (全局 wiki-cache + terms + runtime source.vtt, 禁读 data/mentions)
+    for _f in ("source.vtt", "meta.json", "registry-slice.json", "manifest.json"):
+        if not (inputs / _f).exists():
+            raise SystemExit(
+                f"missing inputs/{_f} for {slug}/{vid}: "
+                f"先跑 scripts/fetch_inputs.py --url <youtube-url> "
+                f"--slug {slug} --variant {vid} 取证")
+    manifest = json.loads((inputs / "manifest.json").read_text(encoding="utf-8"))
+    actual_sha = sha1_of(inputs / "source.vtt")
+    expect_sha = (manifest.get("sources") or [{}])[0].get("sha1", "")
+    if actual_sha != expect_sha:
+        raise SystemExit(
+            f"sha mismatch for {slug}/{vid}: manifest {str(expect_sha)[:8]} "
+            f"vs actual {actual_sha[:8]} (重跑 Step00 取证)")
+    # registry-slice 动态刷新 (全局 wiki-cache + terms + runtime source.vtt, 幂等)
     from build_mentions import load_registry_names as _load_reg, load_terms as _load_terms, build_pattern_map as _build_pmap, parse_vtt as _parse_vtt, scan_cues as _scan_cues
     _terms = _load_terms(REPO / "data")
     _wall, _iall = _load_reg(REPO / "data")
@@ -195,28 +183,6 @@ def ensure_inputs(slug: str, vid: str, workdir: Path) -> dict:
     reg_slice = {"weapons": weapons_pos, "items": items_pos}
     (inputs / "registry-slice.json").write_text(
         json.dumps(reg_slice, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-    sop_ver = ""
-    try:
-        import subprocess as sp
-        p = sp.run(["git", "log", "-1", "--format=%H", "--",
-                    "docs/sop/new-character-guide.md"],
-                   cwd=str(REPO), capture_output=True, text=True)
-        sop_ver = p.stdout.strip()
-    except Exception:
-        sop_ver = ""
-    manifest = {
-        "slug": slug, "variant": vid,
-        "covers": ["Ultimate"] if vid == "ultimate" else [vid],
-        "sop_version": sop_ver, "issue": 40, "subs_source": subs_source,
-        "sources": [{"difficulty": src.get("difficulty", ""), "title": src.get("title", ""),
-                     "url": src.get("url", ""), "sha1": sha,
-                     "vtt": "inputs/source.vtt", "duration": src.get("duration", ""),
-                     "game_version": src.get("game_version", ""),
-                     "video_id": src.get("video_id", "")}],
-    }
-    (inputs / "manifest.json").write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return manifest
 
 
@@ -740,7 +706,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"[segment1] workdir={workdir} (cwd 锁定, 只读写相对路径)")
     ensure_inputs(slug, vid, workdir)
-    print("[segment1] inputs 四件落盘 (issue 40)")
+    print("[segment1] inputs 四件校验通过 (Step00 取证, 只认 inputs)")
     sentences = step01(workdir)
     print(f"[segment1] 01-sentences: {len(sentences)} 句 (start/end 新 schema) -> steps/01-sentences/sentences.json")
     verbs = step02(workdir, sentences)

@@ -878,13 +878,13 @@ function render() {
           <span class="badge badge-count-pill">${(appData.ratings || []).length} / 39 terms</span>
         </div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">
-          提过即算口径：count&gt;0 必 S–D，count==0 才许 -；reason 禁计数泄漏；quotes 展示去重；quote_details 供 ?t= 跳链 + 只读 context。
+          锚+裁量（#47，删写死）：S=升级二选一赢家（over 最长匹配，Ranged Damage），A=有拿取锚（buy/upgrade/take/pick up 闭集逐字，同句窗30，机检只认逐字）；B/C=无锚裁量按 count 排名上半顺手/下半妥协；D=无锚+负面；count==0 才许 -；reason 禁计数泄漏；quotes 去重；quote_details 供 ?t= 跳链 + 只读 context。
         </p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（现场扫 count/quotes） + 全局 <code>data/terms.csv</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>，没读 02/03）</p>
-        ${(appData.ratings || []).length ? (()=>{ const rs=(appData.ratings||[]); const vurl=(m.sources&&m.sources[0]&&m.sources[0].url)?m.sources[0].url:'#'; const grp=(rt)=>rs.filter(r=>r.rating===rt); const sec=(title,arr)=>{ if(!arr.length) return ''; return `<div class="group-accordion"><div class="group-acc-head"><span>${title}</span><span class="badge-count-pill">${arr.length} 项</span></div><div class="group-acc-body">`+arr.map(r=>{ const q0=(r.quotes&&r.quotes[0])?r.quotes[0]:''; const d0=(r.quote_details&&r.quote_details[0])?r.quote_details[0]:null; const tlink=(d0&&d0.t!=null)?`<a href="${vurl}${vurl.includes('?')?'&':'?'}t=${d0.t}s" target="_blank">⏱${d0.start||('t='+d0.t)}</a>`:''; return `<div class="item-card ${r.confidence==='candidate'?'is-candidate':''}" data-rating="${r.term_en}">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（现场扫 count/quotes，Ranged 含 range damage 别名） + 全局 <code>data/terms.csv</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>，没读 02/03；拿取动词不含 get/lock/roll，否定动词跳过，over 赢家最长匹配）</p>
+        ${(appData.ratings || []).length ? (()=>{ const rs=(appData.ratings||[]); const vurl=(m.sources&&m.sources[0]&&m.sources[0].url)?m.sources[0].url:'#'; const grp=(rt)=>rs.filter(r=>r.rating===rt); const sec=(title,arr)=>{ if(!arr.length) return ''; return `<div class="group-accordion"><div class="group-acc-head"><span>${title}</span><span class="badge-count-pill">${arr.length} 项</span></div><div class="group-acc-body">`+arr.map(r=>{ const q0=(r.quotes&&r.quotes[0])?r.quotes[0]:''; const d0=(r.quote_details&&r.quote_details[0])?r.quote_details[0]:null; const tlink=(d0&&d0.t!=null)?`<a href="${vurl}${vurl.includes('?')?'&':'?'}t=${d0.t}s" target="_blank">⏱${d0.start||('t='+d0.t)}</a>`:''; const isDisc=(r.kind==='discretion'||r.inferred===true); const anch=((r.anchors||[]).length?`<span class="badge badge-verified">锚:${(r.anchors||[]).join('/')}</span> `:''); return `<div class="item-card ${isDisc?'is-candidate':''}" data-rating="${r.term_en}">
             <div class="item-card-top"><div class="item-card-name"><span>${r.term_en}</span><span class="item-card-zh">${r.term_zh||''} · ${r.type||''}</span></div>
-            <div><span class="badge ${r.rating==='-'?'badge-count-pill':'badge-verified'}">${r.rating}</span> <span class="badge-count-pill">${r.count}次</span> <span class="badge ${r.confidence==='verified'?'badge-verified':'badge-candidate'}">${r.confidence}</span></div></div>
-            <div style="font-size:11px;color:var(--muted);">来源：terms.csv定义（${r.type||''}/${r.term_zh||''}）+ mentions count=${r.count} + builds基准评级</div>
+            <div><span class="badge ${r.rating==='-'?'badge-count-pill':'badge-verified'}">${r.rating}</span> <span class="badge-count-pill">${r.count}次</span> <span class="badge ${r.confidence==='verified'?'badge-verified':'badge-candidate'}">${r.confidence}</span>${isDisc?' <span class="badge badge-candidate">裁量</span>':''}</div></div>
+            <div style="font-size:11px;color:var(--muted);">来源：terms.csv定义 + 现场扫count=${r.count} + 拿取锚信号（${(r.anchors||[]).join('/')||'无锚裁量'}）${anch}</div>
             <div class="item-card-reason">${r.reason} ${tlink}</div>
             ${q0?`<div class="item-card-quote">"${q0}"</div>`:'<div class="item-card-quote">作者未提及</div>'}
             ${(d0&&d0.context)?`<div style="font-size:11px;color:#999;">上下文: ${d0.context}</div>`:''}
@@ -904,16 +904,18 @@ function render() {
           <span class="badge" style="margin-left:4px;">DAG L1并行层</span>
         </div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">
-          T1≥1 有口径为验收线；note 含把数/目标阶/何波拿换（原话数字不丢）；quotes 展示去重；quote_details 供 ?t= 跳链。
+          锚+裁量+排名制（#47，删 is_core_gun/绝对阈值/按名模板）：T1 锚=verified 拿取动词 + 把数/波次原话数字逐字出自 quotes（机检只认逐字）；T1 按 score=count+verified+5 排名最大断层切分，不卡绝对数；T1≥1；T2 过渡/备选裁量标黄；quotes 去重；quote_details 供 ?t= 跳链。
         </p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（现场扫 count/quotes） + <code>inputs/registry-slice.json</code>（动态推导） + <code>steps/02-verbs/verbs.json</code>（仅置信度，禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（现场扫 count/quotes） + <code>inputs/registry-slice.json</code>（子集排名） + <code>steps/02-verbs/verbs.json</code>（verified 拿取动词锚，禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
         ${(()=>{ const w = appData.weapons || {t1:[],t2:[]}; const all=[...(w.t1||[]),...(w.t2||[])]; if(!all.length) return '<div style="color:#999;">待加载：请载入 steps/05-weapons/weapons.json。</div>'; const vurl=(m.sources && m.sources[0] && m.sources[0].url)?m.sources[0].url:'#'; return ['T1','T2'].map(tier=>{
           const arr = (tier==='T1'? w.t1 : w.t2) || [];
           return `<h4 style="font-size:13px;margin:8px 0;">${tier}（${arr.length}）</h4>` + arr.map(it=>{
             const q0=(it.quotes&&it.quotes[0])?it.quotes[0]:''; const d0=(it.quote_details&&it.quote_details[0])?it.quote_details[0]:null;
             const tlink=(d0&&d0.t!=null)?`<a href="${vurl}${vurl.includes('?')?'&':'?'}t=${d0.t}s" target="_blank">⏱${d0.start||('t='+d0.t)}</a>`:'';
-            return `<div class="item-card ${it.confidence==='candidate'?'is-candidate':''}" data-weapon="${it.name_en}">"
-              <div class="item-card-top"><div class="item-card-name"><span>${it.name_en}</span></div><div><span class="badge badge-verified">${it.tier}</span> <span class="badge-count-pill">${it.count}次</span></div></div>
+            const isDisc=(it.kind==='discretion'||it.inferred===true); const anch=((it.anchors||[]).length?`<span class="badge badge-verified">锚:${(it.anchors||[]).join('/')}</span> `:'');
+            return `<div class="item-card ${isDisc?'is-candidate':''}" data-weapon="${it.name_en}">"
+              <div class="item-card-top"><div class="item-card-name"><span>${it.name_en}</span></div><div><span class="badge badge-verified">${it.tier}</span> <span class="badge-count-pill">${it.count}次</span>${isDisc?' <span class="badge badge-candidate">裁量</span>':''}</div></div>
+              <div style="font-size:11px;color:var(--muted);">来源：registry-slice + 现场扫count=${it.count} + 动词信号（${(it.anchors||[]).join('/')||'无锚裁量'}） ${anch}</div>
               <div class="item-card-reason">${it.note} ${tlink}</div>
               ${q0?`<div class="item-card-quote">"${q0}"</div>`:''}
               ${(d0&&d0.context)?`<div style="font-size:11px;color:#999;">上下文: ${d0.context}</div>`:''}
@@ -1289,7 +1291,7 @@ function bindItemCardClicks() {
     el.addEventListener('click', () => {
       const key = el.dataset.rating;
       const r = (appData.ratings||[]).find(x => x.term_en === key);
-      if (r) openDrawer({name_en: r.term_en, name_zh: (r.term_zh||'')+' · '+(r.type||''), count: r.count, confidence: r.confidence==='none'?'candidate':r.confidence, inferred: false, tier: r.rating, discretion_reason: '来源：terms.csv定义 + mentions count='+r.count+' + builds基准评级', reason: r.reason, quotes: r.quotes||[], quote_details: r.quote_details||[]});
+      if (r) openDrawer({name_en: r.term_en, name_zh: (r.term_zh||'')+' · '+(r.type||''), count: r.count, confidence: r.confidence==='none'?'candidate':r.confidence, inferred: (r.inferred===true), tier: r.rating, discretion_reason: '来源：terms.csv定义 + 现场扫count='+r.count+' + 拿取锚信号（'+((r.anchors||[]).join('/')||'无锚裁量')+'）', reason: r.reason, quotes: r.quotes||[], quote_details: r.quote_details||[]});
     });
   });
   document.querySelectorAll('[data-weapon]').forEach(el => {
@@ -1297,7 +1299,7 @@ function bindItemCardClicks() {
       const key = el.dataset.weapon;
       const all = [...((appData.weapons||{}).t1||[]), ...((appData.weapons||{}).t2||[])];
       const w = all.find(x => x.name_en === key);
-      if (w) openDrawer({name_en: w.name_en, name_zh: w.tier||'', count: w.count, confidence: w.confidence, inferred: false, tier: w.tier, discretion_reason: '来源：registry-slice + mentions count='+w.count+' + builds weapons_t1/t2', reason: w.note||'', quotes: w.quotes||[], quote_details: w.quote_details||[]});
+      if (w) openDrawer({name_en: w.name_en, name_zh: w.tier||'', count: w.count, confidence: w.confidence, inferred: (w.inferred===true), tier: w.tier, discretion_reason: '来源：registry-slice + 现场扫count='+w.count+' + 动词信号（'+((w.anchors||[]).join('/')||'无锚裁量')+'）', reason: w.note||'', quotes: w.quotes||[], quote_details: w.quote_details||[]});
     });
   });
 

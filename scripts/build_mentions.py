@@ -95,7 +95,7 @@ TERM_PATTERNS: dict[str, list[str]] = {
     "Life Steal": [r"\blife\s*steals?\b", r"\blifesteals?\b", r"\blife[\s\-]*steals?\b"],
     "Damage": [r"\bdamages?\b"],
     "Melee Damage": [r"\bmelees?\b"],
-    "Ranged Damage": [r"\branged\b"],
+    "Ranged Damage": [r"\branged\b", r"\brange\s+damages?\b"],
     "Elemental Damage": [r"\belemental\b"],
     "Attack Speed": [r"\battack\s*speeds?\b"],
     "Crit Chance": [r"\bcrits?\b", r"\bcriticals?\b", r"\bcrit\s*chances?\b", r"\bcrit\s*rates?\b"],

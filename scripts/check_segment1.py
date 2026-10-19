@@ -200,11 +200,21 @@ def main(argv: list[str] | None = None) -> int:
         if set(x[0] for x in got) != set(x[0] for x in expect):
             fail("ratings must cover all 39 terms (主17+次级22)", errors)
         for r in ratings:
-            for k in ("term_en", "type", "count", "rating", "reason", "quotes"):
+            for k in ("term_en", "type", "count", "rating", "reason", "quotes", "kind", "inferred", "anchors"):
                 if k not in r:
                     fail(f"ratings missing {k}: {r.get('term_en')}", errors)
             cnt = r.get("count")
             rt = r.get("rating")
+            kind = r.get("kind")
+            inferred = r.get("inferred")
+            anchors = r.get("anchors")
+            if not isinstance(anchors, list) or any(not isinstance(a, str) for a in anchors):
+                fail(f"ratings anchors must be string array: {r.get('term_en')}", errors)
+                anchors = []
+            if not isinstance(inferred, bool):
+                fail(f"ratings inferred must be bool: {r.get('term_en')}", errors)
+            if kind not in ("anchor", "discretion", "none"):
+                fail(f"ratings kind must be anchor/discretion/none: {r.get('term_en')}", errors)
             if isinstance(cnt, int) and cnt > 0:
                 if rt not in ("S", "A", "B", "C", "D"):
                     fail(f"count>0 must have S-D rating: {r.get('term_en')}={rt}", errors)
@@ -212,11 +222,45 @@ def main(argv: list[str] | None = None) -> int:
                     fail(f"count>0 must have quotes: {r.get('term_en')}", errors)
                 if len(str(r.get("reason", "")).strip()) < 8:
                     fail(f"ratings reason too short: {r.get('term_en')}", errors)
+                # #47 闭集强约束: S/A 须锚 (anchors 非空逐字出自 quotes + inferred false + verified + kind anchor)
+                if rt in ("S", "A"):
+                    if kind != "anchor":
+                        fail(f"ratings S/A kind须anchor: {r.get('term_en')}", errors)
+                    if inferred is not False:
+                        fail(f"ratings S/A inferred须false: {r.get('term_en')}", errors)
+                    if r.get("confidence") != "verified":
+                        fail(f"ratings S/A confidence须verified: {r.get('term_en')}", errors)
+                    if not anchors:
+                        fail(f"ratings S/A anchors须非空 (作者亲口买/锁/升级+赢过谁逐字): {r.get('term_en')}", errors)
+                    else:
+                        qall = " ".join(r.get("quotes", []) if isinstance(r.get("quotes"), list) else []).lower()
+                        for a in anchors:
+                            if not a or a.lower() not in qall:
+                                fail(f"ratings anchor须出自本条quotes逐字: {r.get('term_en')}={a}", errors)
+                                break
+                else:
+                    # 裁量只查格式: B/C/D 须 discretion + inferred true + anchors 空, 内容不硬查 (顺手/妥协位)
+                    if kind != "discretion":
+                        fail(f"ratings B/C/D kind须discretion: {r.get('term_en')}", errors)
+                    if inferred is not True:
+                        fail(f"ratings B/C/D inferred须true (审计标黄): {r.get('term_en')}", errors)
+                    if anchors:
+                        fail(f"ratings B/C/D anchors须空 (裁量无锚): {r.get('term_en')}", errors)
+                    if r.get("confidence") != "candidate":
+                        fail(f"ratings B/C/D confidence须candidate (审计标黄): {r.get('term_en')}", errors)
             elif cnt == 0:
                 if rt != "-":
                     fail(f"count==0 must be '-': {r.get('term_en')}={rt}", errors)
                 if r.get("quotes"):
                     fail(f"count==0 must have empty quotes: {r.get('term_en')}", errors)
+                if kind != "none":
+                    fail(f"count==0 kind须none: {r.get('term_en')}", errors)
+                if inferred is not False:
+                    fail(f"count==0 inferred须false: {r.get('term_en')}", errors)
+                if anchors:
+                    fail(f"count==0 anchors须空: {r.get('term_en')}", errors)
+                if r.get("confidence") != "none":
+                    fail(f"count==0 confidence须none: {r.get('term_en')}", errors)
             rs = str(r.get("reason", ""))
             if "字幕" in rs and "次" in rs and "原话" not in rs:
                 warns.append(f"WARN: ratings 疑计数泄漏: {r.get('term_en')}")
@@ -245,10 +289,59 @@ def main(argv: list[str] | None = None) -> int:
         fail(f"weapons t1+t2 must equal registry-slice weapons {sorted(wset)}, got {sorted(got_w)}", errors)
     if len(t1) < 1:
         fail("weapons T1>=1 (验收线)", errors)
+    # #47 排名制: registry 子集内按 score=count+动词信号 (verified+5) 排, 不卡绝对数; T1 须为 top 断层 (最小 T1 score >= 最大 T2 score)
+    try:
+        _score = {}
+        for w in (t1 + t2):
+            if isinstance(w, dict) and isinstance(w.get("name_en"), str):
+                _score[w["name_en"]] = int(w.get("count", 0) or 0) + (5 if w.get("confidence") == "verified" else 0)
+        if t1 and t2:
+            _min_t1 = min(_score.get(w.get("name_en"), 0) for w in t1 if isinstance(w, dict))
+            _max_t2 = max(_score.get(w.get("name_en"), 0) for w in t2 if isinstance(w, dict))
+            if _min_t1 < _max_t2:
+                fail(f"weapons T1须为排名制top (最小T1 score {_min_t1} < 最大T2 score {_max_t2}, 不卡绝对数)", errors)
+    except Exception:
+        pass
     for w in (t1 + t2):
-        for k in ("name_en", "count", "tier", "note", "quotes"):
+        for k in ("name_en", "count", "tier", "note", "quotes", "kind", "inferred", "anchors"):
             if k not in w:
                 fail(f"weapons missing {k}: {w.get('name_en')}", errors)
+        if not isinstance(w.get("anchors"), list) or any(not isinstance(a, str) for a in w.get("anchors", [])):
+            fail(f"weapons anchors must be string array: {w.get('name_en')}", errors)
+        if not isinstance(w.get("inferred"), bool):
+            fail(f"weapons inferred must be bool: {w.get('name_en')}", errors)
+        if w.get("kind") not in ("anchor", "discretion"):
+            fail(f"weapons kind must be anchor/discretion: {w.get('name_en')}", errors)
+        want_kind = "anchor" if w.get("tier") == "T1" else "discretion"
+        if w.get("kind") != want_kind:
+            fail(f"weapons kind须与tier一致 (T1 anchor/T2 discretion): {w.get('name_en')}", errors)
+        if want_kind == "anchor" and w.get("inferred") is not False:
+            fail(f"weapons T1 inferred须false: {w.get('name_en')}", errors)
+        if want_kind == "discretion" and w.get("inferred") is not True:
+            fail(f"weapons T2 inferred须true (审计标黄): {w.get('name_en')}", errors)
+        if want_kind == "anchor" and not w.get("anchors"):
+            fail(f"weapons T1 anchors须非空 (verified拿取动词+把数/波次逐字): {w.get('name_en')}", errors)
+        if want_kind == "discretion" and w.get("anchors"):
+            fail(f"weapons T2 anchors须空 (裁量无锚): {w.get('name_en')}", errors)
+        if want_kind == "anchor":
+            qall = " ".join(w.get("quotes", []) if isinstance(w.get("quotes"), list) else []).lower()
+            for a in (w.get("anchors") or []):
+                if not a or str(a).lower() not in qall:
+                    fail(f"weapons T1 anchor须出自本把quotes逐字: {w.get('name_en')}={a}", errors)
+                    break
+            # T1 锚: verified 拿取动词 (confidence verified) + 把数/波次原话不丢 (note 含 quotes 内数字词逐字)
+            if w.get("confidence") != "verified":
+                fail(f"weapons T1 confidence须verified (拿取动词锚): {w.get('name_en')}", errors)
+            import re as _re_num
+            _num_words = ["one", "two", "three", "four", "five", "second", "level", "wave", "1", "2", "3", "4", "5"]
+            note_low = str(w.get("note", "")).lower()
+            if not any(nw in note_low for nw in _num_words):
+                fail(f"weapons T1 note须含把数/波次原话数字 (不丢): {w.get('name_en')}", errors)
+            else:
+                # 数字须逐字出自 quotes (原话不丢, 机检只认逐字)
+                qall2 = " ".join(w.get("quotes", []) if isinstance(w.get("quotes"), list) else []).lower()
+                if not any((nw in note_low and nw in qall2) for nw in _num_words):
+                    fail(f"weapons T1 note数字须逐字出自quotes: {w.get('name_en')}", errors)
         if not w.get("note") or len(str(w.get("note")).strip()) < 8:
             fail(f"weapons note too short (把数/波次不丢): {w.get('name_en')}", errors)
         if not w.get("quotes"):

@@ -134,6 +134,21 @@ def main(argv: list[str] | None = None) -> int:
                 if len(qs) > 10:
                     fail(f"phases 非空段 quotes cap10, got {len(qs)}: {p.get('phase')}", errors)
                 _check_quotes(f"phases {p.get('phase')}", qs, qd)
+                # #45跟进: 三问人话质检 (FAIL=整句复制; WARN=模板黑话/无实体)
+                for k in ("goal", "focus", "pivot"):
+                    v = str(p.get(k, "")).strip()
+                    if v in qs:
+                        fail(f"phases {k} 整句复制 quote (须综合非复读): {p.get('phase')}", errors)
+                blob = str(p.get("goal", "")) + str(p.get("focus", "")) + str(p.get("pivot", ""))
+                if ("按本章节奏来" in blob or "转向下一章衔接点" in blob) and "原话" in blob:
+                    warns.append(f"WARN: phases 疑模板黑话 (须具体动作+条件): {p.get('phase')}")
+                low = blob.lower()
+                entities = ("screwdriver", "minigun", "smg", "submachine", "nuke", "turret",
+                            "pocket factory", "peacock", "whale", "elite", "boss", "horde",
+                            "engineering", "ranged", "life steal", "coffee", "scar", "beanie",
+                            "whistle", "tentacle", "scope", "wave 16", "wave 20", "halfway")
+                if not any(e in low for e in entities):
+                    warns.append(f"WARN: phases 无具体实体词 (武器/怪/波次至少一个): {p.get('phase')}")
     if phases != phases_out:
         fail("outputs/phases.json must equal steps/06-phases/phases.json", errors)
 

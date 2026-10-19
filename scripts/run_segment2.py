@@ -133,18 +133,52 @@ def _bucket_by_chapter(sentences: list[dict], chapters: list[dict],
     return out
 
 
-def step06(workdir: Path, sentences: list[dict]) -> list[dict]:
-    # #45: 作者 8 chapters 一章一段 (N=8, phase 名=章标题原文), 时间窗确定性分桶
+def step06_buckets(workdir: Path, sentences: list[dict]) -> tuple[list[dict], list[tuple[list[str], list[dict]]]]:
+    """#45跟进: 确定性分桶 (代码, 无 judgment). 写 buckets.json 供 agent 输入."""
     chapters = _load_chapters(workdir)
     buckets = _bucket_by_chapter(sentences, chapters, cap=10)
+    outdir = workdir / "steps" / "06-phases"
+    outdir.mkdir(parents=True, exist_ok=True)
+    dump = [{"phase": str(ch["title"]), "waves": f"{ch['start']}-{ch['end']}s",
+             "quotes": qs, "quote_details": qd}
+            for ch, (qs, qd) in zip(chapters, buckets)]
+    (outdir / "buckets.json").write_text(json.dumps(dump, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return chapters, buckets
+
+
+def _load_wordings(workdir: Path, chapters: list[dict]) -> list[dict]:
+    """#45跟进: agent judgment (人话三问). 缺件即 fail, 指引跑 prompts/step06-phases.md."""
+    p = workdir / "steps" / "06-phases" / "wordings.json"
+    if not p.exists():
+        raise SystemExit(
+            "step06 缺 wordings.json (agent 三问未写): 按 prompts/step06-phases.md "
+            "读 steps/06-phases/buckets.json 写 wordings.json (只写 goal/focus/pivot, 不改 quotes)")
+    try:
+        w = json.loads(p.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise SystemExit(f"step06 wordings.json 解析失败: {e}")
+    if not isinstance(w, list) or len(w) != len(chapters):
+        raise SystemExit(f"step06 wordings 须 N={len(chapters)} (一章一段), got {len(w) if isinstance(w, list) else type(w)}")
+    for i, (ch, entry) in enumerate(zip(chapters, w)):
+        if not isinstance(entry, dict) or entry.get("phase") != str(ch["title"]):
+            raise SystemExit(f"step06 wordings[{i}] phase 须=章标题原文 {str(ch['title'])!r}")
+        for k in ("goal", "focus", "pivot"):
+            v = entry.get(k)
+            if not isinstance(v, str) or len(v.strip()) < 8:
+                raise SystemExit(f"step06 wordings {entry.get('phase')} 缺 {k} (人话一句≥8字)")
+    return w
+
+
+def step06_merge(workdir: Path, chapters: list[dict],
+                 buckets: list[tuple[list[str], list[dict]]],
+                 wordings: list[dict]) -> list[dict]:
+    """#45跟进: 确定性合并 (代码, 无 judgment). buckets(quotes) + wordings(三问) → phases.json."""
     phases: list[dict] = []
     for i, ch in enumerate(chapters):
         title = str(ch["title"])
         waves = f"{ch['start']}-{ch['end']}s"
         qs, qd = buckets[i]
-        nxt = str(chapters[i + 1]["title"]) if i + 1 < len(chapters) else ""
         if not qs:
-            # 诚实空出 (类比 ratings `-`): 非打法章不硬凑, quotes==[]
             phases.append({
                 "phase": title, "waves": waves,
                 "goal": f"本章（{title}）为非打法章，作者未给可执行打法，仅作背景/回顾，不硬凑（类比 ratings `-`）。",
@@ -153,34 +187,27 @@ def step06(workdir: Path, sentences: list[dict]) -> list[dict]:
                 "quotes": [], "quote_details": [],
             })
             continue
-        # goal/focus 引实质句 (跳过过短 filler, 仍为本窗原句, 保诚实人话)
-        def _substantive(pool: list[str], skip: set[int] | None = None) -> int:
-            skip = skip or set()
-            for idx, q in enumerate(pool):
-                if idx in skip:
-                    continue
-                if len(q.strip()) >= 20:
-                    return idx
-            for idx in range(len(pool)):
-                if idx not in skip:
-                    return idx
-            return 0
-        i0 = _substantive(qs)
-        i1 = _substantive(qs, {i0})
-        q0 = _short(qs[i0])
-        q1 = _short(qs[i1])
-        qlast = _short(qs[-1])
-        if nxt:
-            pivot = f"转向下一章（{nxt}）衔接点；原话“{qlast}…”"
-        else:
-            pivot = f"终章收束复盘，不编数字；原话“{qlast}…”"
+        entry = wordings[i]
         phases.append({
             "phase": title, "waves": waves,
-            "goal": f"本章（{title}）作者打法：{q0}…原话“{q0}…”",
-            "focus": f"配装/走位重心按本章节奏来，原话数字不丢；原话“{q1}…”",
-            "pivot": pivot,
+            "goal": str(entry["goal"]).strip(),
+            "focus": str(entry["focus"]).strip(),
+            "pivot": str(entry["pivot"]).strip(),
             "quotes": qs, "quote_details": qd,
         })
+    outdir = workdir / "steps" / "06-phases"
+    outdir.mkdir(parents=True, exist_ok=True)
+    (outdir / "phases.json").write_text(json.dumps(phases, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (workdir / "outputs").mkdir(parents=True, exist_ok=True)
+    (workdir / "outputs" / "phases.json").write_text(json.dumps(phases, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return phases
+
+
+def step06(workdir: Path, sentences: list[dict]) -> list[dict]:
+    # #45跟进: 分桶(代码) + 三问(agent) + 合并(代码). quotes 不可由 agent 改写.
+    chapters, buckets = step06_buckets(workdir, sentences)
+    wordings = _load_wordings(workdir, chapters)
+    return step06_merge(workdir, chapters, buckets, wordings)
     outdir = workdir / "steps" / "06-phases"
     outdir.mkdir(parents=True, exist_ok=True)
     (outdir / "phases.json").write_text(json.dumps(phases, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

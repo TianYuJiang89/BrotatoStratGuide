@@ -131,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
                 if "非打法章" not in str(p.get("goal", "")):
                     fail(f"phases 空段 goal 须写明非打法章: {p.get('phase')}", errors)
             else:
-                # C: 窗内cap10前缀须等于buckets, 窗外补≤2须标out_of_window
+                # C: 窗内全量前缀须等于buckets, 窗外补不限条须标out_of_window
                 try:
                     _bk = json.loads((work / "steps" / "06-phases" / "buckets.json").read_text(encoding="utf-8"))
                 except Exception:
@@ -144,8 +144,7 @@ def main(argv: list[str] | None = None) -> int:
                 if _bq and list(qs[:len(_bq)]) != list(_bq):
                     fail(f"phases 窗内前缀须等于buckets (不可改写): {p.get('phase')}", errors)
                 _in_n = len(_bq) if _bq else len(qs)
-                if _bq and len(qs) > len(_bq) + 2:
-                    fail(f"phases 窗外补引用超2条: {p.get('phase')}", errors)
+
                 _check_quotes(f"phases {p.get('phase')}", qs, qd)
                 # 窗外补须标out_of_window:true
                 for d in (qd[_in_n:] if isinstance(qd, list) else []):

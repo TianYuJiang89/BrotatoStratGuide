@@ -169,8 +169,8 @@ def _load_wordings(workdir: Path, chapters: list[dict]) -> list[dict]:
         ex = entry.get("extra_quotes", [])
         if ex is None:
             ex = []
-        if not isinstance(ex, list) or len(ex) > 2 or any(not isinstance(q, str) for q in ex):
-            raise SystemExit(f"step06 wordings {entry.get('phase')} extra_quotes 须≤2条字符串 (窗外补引用, 无则[])")
+        if not isinstance(ex, list) or any(not isinstance(q, str) for q in ex):
+            raise SystemExit(f"step06 wordings {entry.get('phase')} extra_quotes须字符串数组 (窗外补引用, 无则[])")
     return w
 
 
@@ -194,8 +194,6 @@ def step06_merge(workdir: Path, chapters: list[dict],
             continue
         entry = wordings[i]
         extra: list[str] = list(entry.get("extra_quotes") or [])
-        if len(extra) > 2:
-            raise SystemExit(f"step06 {title} extra_quotes 超2条")
         by_text = {s["text"]: s for s in sentences if isinstance(s, dict)}
         qlookup = _quote_lookup(sentences)
         ex_details: list[dict] = []

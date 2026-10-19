@@ -143,11 +143,9 @@ def main(argv: list[str] | None = None) -> int:
                         break
                 if _bq and list(qs[:len(_bq)]) != list(_bq):
                     fail(f"phases 窗内前缀须等于buckets (不可改写): {p.get('phase')}", errors)
-                _in_n = len(_bq) if _bq else min(len(qs), 10)
+                _in_n = len(_bq) if _bq else len(qs)
                 if _bq and len(qs) > len(_bq) + 2:
                     fail(f"phases 窗外补引用超2条: {p.get('phase')}", errors)
-                if not _bq and len(qs) > 12:
-                    fail(f"phases 非空段 quotes 上限12 (窗内10+窗外2), got {len(qs)}: {p.get('phase')}", errors)
                 _check_quotes(f"phases {p.get('phase')}", qs, qd)
                 # 窗外补须标out_of_window:true
                 for d in (qd[_in_n:] if isinstance(qd, list) else []):

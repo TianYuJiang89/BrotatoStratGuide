@@ -102,8 +102,8 @@ def _load_chapters(workdir: Path) -> list[dict]:
 
 
 def _bucket_by_chapter(sentences: list[dict], chapters: list[dict],
-                       cap: int = 10) -> list[tuple[list[str], list[dict]]]:
-    """#45: 按 chapter 时间窗确定性分桶 (sentence.start_s 落窗即收, 保序去重 cap10).
+                       cap: int | None = None) -> list[tuple[list[str], list[dict]]]:
+    """#45+C: 按 chapter 时间窗确定性分桶 (sentence.start_s 落窗即收, 保序去重, 不cap全量).
 
     窗口左闭右开 [start, end), 末章含 end (ss>=start). 空窗诚实空出 (quotes==[])."""
     for s in sentences:
@@ -121,7 +121,7 @@ def _bucket_by_chapter(sentences: list[dict], chapters: list[dict],
             hit = (ss >= s and ss <= e) if is_last else (ss >= s and ss < e)
             if hit and sent["text"] not in seen:
                 seen.append(sent["text"])
-                if len(seen) >= cap:
+                if cap is not None and len(seen) >= cap:
                     break
         details = []
         for q in seen:
@@ -136,7 +136,7 @@ def _bucket_by_chapter(sentences: list[dict], chapters: list[dict],
 def step06_buckets(workdir: Path, sentences: list[dict]) -> tuple[list[dict], list[tuple[list[str], list[dict]]]]:
     """#45跟进: 确定性分桶 (代码, 无 judgment). 写 buckets.json 供 agent 输入. N=章节数 (cyborg=8, 他例按实际)."""
     chapters = _load_chapters(workdir)
-    buckets = _bucket_by_chapter(sentences, chapters, cap=10)
+    buckets = _bucket_by_chapter(sentences, chapters, cap=None)
     outdir = workdir / "steps" / "06-phases"
     outdir.mkdir(parents=True, exist_ok=True)
     dump = [{"phase": str(ch["title"]), "waves": f"{ch['start']}-{ch['end']}s",

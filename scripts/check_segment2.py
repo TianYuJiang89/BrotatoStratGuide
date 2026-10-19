@@ -4,9 +4,8 @@
 沿 check_segment1.py (schema + 去重 + quote 对句 + sha + audit 一一对应), 加:
 - 06: N=8 作者 chapters 一章一段 (phase 名=章标题原文), 非空段 goal/focus/pivot + quotes 去重 + 对句,
   空段 quotes==[] + quote_details==[] + goal 写明非打法章 (类比 ratings `-`)
-- 07 (#49 去 Top3 写死 + Peacock 按名顺延): upgrades 3 沿用 (全在 ratings S/A 内) + shop N 动态 (全在新 grouping must_take verified 内,
-  无拒绝动词 + 最大断层 TopN + 保底 Top1), 每项 why/how_to_get/quotes[0]
-- 08: >=3 条, severity 全在 fatal/risky/trap 内, 每条 why/how_to_avoid/quotes[0]
+- 07 (#49 去 Top3 写死 + Peacock 按名顺延; #50 升级侧同商店刀法去 sa[:3] 写死): upgrades N 动态 + shop N 动态 (全在 ratings S/A / 新 grouping must_take verified 内,
+  通用拒绝顺延 + 最大断层 TopN + 保底 Top1), 每项 why/how_to_get/quotes[0]
 - 08: >=3 条, severity 全在 fatal/risky/trap 内, 每条 why/how_to_avoid/quotes[0]
 - 09: 双写一致 + 六节聚合一致 + sha 对上 manifest + source.vtt
 - audit 常设对应节 (check 与审计节一一对应, 缺节即 fail; 06-09 须为实节非空占位)

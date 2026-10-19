@@ -31,5 +31,5 @@
 
 ## 验收
 
-- 机检：`wordings` 数组 ≥3；`severity` 合法；`seeds` 非空且全出自种子池逐字；`extra` 全出自 sentences 逐字且与 seeds 不交；`anchors` 每条在本条种子句里逐字出现；`quotes=seeds+extra` 原序、锚定条 `quotes[0]` 是种子；锚定条 `inferred=false`、裁量条 `true`；无 glass cannon；去重。
-- 人看：抽 2 条，验合并讲得通（扩展真跟 seed 同一事件）+ 分级站得住（trap 必有“看着赚”论证）+ 人话可执行即过。
+- 机检：`wordings` 数组 ≥3；`severity` 合法；`seeds` 非空且全出自种子池逐字；`extra` 全出自 sentences 逐字且与 seeds 不交；`anchors` 每条在本条种子句里逐字出现；`quotes=seeds+extra` 原序、锚定条 `quotes[0]` 是种子；锚定条 `inferred=false`、裁量条 `true`；去重。take 系 verified 已拿取由 agent 提名时剔除（通用不点名，机检不管，靠人看抽）。
+- 人看：抽 2 条，验合并讲得通（扩展真跟 seed 同一事件）+ 分级站得住（trap 必有“看着赚”论证）+ take 系已拿取确未入坑 + 人话可执行即过。

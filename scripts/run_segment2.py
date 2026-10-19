@@ -364,6 +364,25 @@ def _collect_anchors(sentences: list[dict], anchor_keys: list[str]) -> tuple[lis
     return _collect(sentences, _anchor_phrases(anchor_keys))
 
 
+def _collect_anchor_hits(sentences: list[dict], anchor_keys: list[str]) -> list[dict]:
+    """事件锚触发实况: 逐句扫锚短语, 保序去重, 每hit带sentence_id(审计跳原文句)."""
+    phrases = _anchor_phrases(anchor_keys)
+    hits: list[dict] = []
+    seen: list[str] = []
+    for s in sentences:
+        low = s["text"].lower()
+        if any(p.lower() in low for p in phrases):
+            if s["text"] not in seen:
+                seen.append(s["text"])
+                hits.append({
+                    "sentence_id": s["id"],
+                    "quote": s["text"],
+                    "start": s.get("start"), "end": s.get("end"),
+                    "t": int(s["start_s"]) if s.get("start_s") is not None else None,
+                })
+    return hits
+
+
 def _collect_discretion(sentences: list[dict], keywords: list[str]) -> tuple[list[str], list[dict]]:
     """裁量收集: 关键词命中 + 排除闭集锚(保证黄vs绿可分) + 排除glass cannon, 全量去重."""
     seen: list[str] = []
@@ -446,6 +465,13 @@ def step08(workdir: Path, sentences: list[dict]) -> list[dict]:
     (outdir / "pitfalls.json").write_text(json.dumps(pitfalls, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (workdir / "outputs").mkdir(parents=True, exist_ok=True)
     (workdir / "outputs" / "pitfalls.json").write_text(json.dumps(pitfalls, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    # 事件锚触发实况落盘 (#42跟进): 闭集9锚全列(0触发也列, 覆盖率可见), 审计面板直读
+    anchors = []
+    for ak in CLOSED_PIT_ANCHORS:
+        hits = _collect_anchor_hits(sentences, [ak])
+        anchors.append({"anchor": ak, "phrases": PIT_ANCHOR_PHRASES[ak], "hits": hits, "count": len(hits)})
+    (outdir / "anchors.json").write_text(json.dumps(anchors, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (workdir / "outputs" / "anchors.json").write_text(json.dumps(anchors, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return pitfalls
 
 

@@ -422,6 +422,9 @@ html { scroll-behavior: smooth; }
 .sent-row.flash { background: #fde68a; }
 .dep-row { cursor: pointer; background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 12px; display: flex; justify-content: space-between; gap: 8px; }
 .dep-row:hover { box-shadow: 0 1px 6px rgba(0,0,0,0.08); }
+.anchor-chip { cursor: pointer; background: #fff; border: 1px solid #7dd3fc; color: #0369a1; border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+.anchor-chip:hover { background: #e0f2fe; }
+.anchor-chip.empty { border-color: var(--line); color: var(--muted); background: #f8fafc; }
 
 .group-accordion {
   border: 1px solid var(--line);
@@ -1119,14 +1122,30 @@ function phasesSectionHtml() {
     </div>`;
 }
 
+function anchorPanelHtml() {
+  const an = appData.anchors || [];
+  if (!an.length) return '';
+  const fired = an.filter(a => a.count > 0).length;
+  const total = an.reduce((s, a) => s + (a.count || 0), 0);
+  return `
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px;">⚓ 事件锚触发（闭集9锚 · runtime） <span style="color:var(--muted);font-weight:normal;">覆盖 ${fired}/9 · 总触发 ${total}次 · 点锚看逐字证据</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${an.map((a, i) => `<span class="anchor-chip${a.count ? '' : ' empty'}" data-anchor="${i}" title="短语: ${(a.phrases || []).join(' / ')} · ${a.count}次 · 点开展示">${a.anchor} ${a.count}</span>`).join('')}
+      </div>
+    </div>`;
+}
+
 function pitfallsSectionHtml() {
   const ps = appData.pitfalls || [];
   if (!ps.length) return '<div style="color:#999;">待加载：请载入 steps/08-pitfalls/pitfalls.json（缺节即 fail）。</div>';
+  const panel = anchorPanelHtml();
   const sevStyle = (sev) => sev === 'fatal'
     ? 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca;'
     : (sev === 'trap' ? 'background:#faf5ff;color:#7c3aed;border:1px solid #ddd6fe;'
     : 'background:#fffbeb;color:#b45309;border:1px solid #fde68c;');
   return `
+    ${panel}
     <div style="display:flex;flex-direction:column;gap:8px;">
     ${ps.map((x, idx) => `
       <div class="item-card ${x.kind === 'discretion' ? 'is-candidate' : ''}" data-pitfall="${idx}" style="cursor:pointer;${x.kind === 'discretion' ? 'border-color:#f59e0b;background:#fffbeb;' : ''}">
@@ -1134,6 +1153,7 @@ function pitfallsSectionHtml() {
           <div class="item-card-name"><span>⚠️ ${x.title}</span></div>
           <div><span class="badge" style="${sevStyle(x.severity)}">${x.severity}</span>${x.kind === 'discretion' ? '<span class="badge badge-candidate">裁量黄</span>' : '<span class="badge badge-verified">锚定绿</span>'}<span class="badge-count-pill">${(x.quotes||[]).length} 引用</span></div>
         </div>
+        ${(x.anchors && x.anchors.length) ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">${x.anchors.map(a => `⚓${a}`).join(' · ')}</div>` : ''}
         <div class="item-card-reason"><strong>成因:</strong> ${x.why || ''}</div>
         ${(x.quotes && x.quotes.length) ? `<div class="item-card-quote">“${x.quotes[0]}”</div>` : ''}
       </div>`).join('')}
@@ -1172,13 +1192,17 @@ function assembleSectionHtml() {
   const aw = a.weapons || { t1: [], t2: [] };
   const pu = ((appData.priorities || {}).upgrades || []).length + ((appData.priorities || {}).shop || []).length;
   const au = (((a.priorities || {}).upgrades) || []).length + (((a.priorities || {}).shop) || []).length;
+  const pitA = (arr) => (arr || []).filter(p => (p.kind || 'anchor') !== 'discretion').length;
+  const pitD = (arr) => (arr || []).filter(p => (p.kind || 'anchor') === 'discretion').length;
+  const gA = pitA(a.pitfalls), gD = pitD(a.pitfalls);
+  const lA = pitA(appData.pitfalls), lD = pitD(appData.pitfalls);
   const rows = [
-    ['03-grouping', (a.groups || []).length, (appData.items || []).length],
-    ['04-attributes', (a.ratings || []).length, (appData.ratings || []).length],
-    ['05-weapons', ((aw.t1 || []).length + (aw.t2 || []).length), ((w.t1 || []).length + (w.t2 || []).length)],
-    ['06-phases', (a.phases || []).length, (appData.phases || []).length],
-    ['07-priorities', au, pu],
-    ['08-pitfalls', (a.pitfalls || []).length, (appData.pitfalls || []).length],
+    ['03-grouping', `内嵌 ${(a.groups || []).length} / live ${(appData.items || []).length}`, (a.groups || []).length === (appData.items || []).length],
+    ['04-attributes', `内嵌 ${(a.ratings || []).length} / live ${(appData.ratings || []).length}`, (a.ratings || []).length === (appData.ratings || []).length],
+    ['05-weapons', `内嵌 ${((aw.t1 || []).length + (aw.t2 || []).length)} / live ${((w.t1 || []).length + (w.t2 || []).length)}`, (((aw.t1 || []).length + (aw.t2 || []).length) === (((w.t1 || []).length + (w.t2 || []).length)))],
+    ['06-phases', `内嵌 ${(a.phases || []).length} / live ${(appData.phases || []).length}`, (a.phases || []).length === (appData.phases || []).length],
+    ['07-priorities', `内嵌 ${au} / live ${pu}`, au === pu],
+    ['08-pitfalls', `内嵌 ${gA + gD} (锚${gA}+裁${gD}🟡) / live ${lA + lD} (锚${lA}+裁${lD}🟡)`, (gA === lA && gD === lD)],
   ];
   return `
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
@@ -1186,10 +1210,10 @@ function assembleSectionHtml() {
       <span class="badge-count-pill">${a.slug}/${a.variant}</span>
     </div>
     <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;">
-    ${rows.map(([k, ga, live]) => `
+    ${rows.map(([k, txt, ok]) => `
       <div style="display:flex;justify-content:space-between;background:#fff;border:1px solid var(--line);border-radius:6px;padding:6px 10px;">
-        <span><strong>${k}</strong> <span style="color:var(--muted);">guide内嵌 ${ga} / live ${live}</span></span>
-        <span>${ga === live ? '✅ 一致' : '❌ 数量不一致'}</span>
+        <span><strong>${k}</strong> <span style="color:var(--muted);">guide${txt}</span></span>
+        <span>${ok ? '✅ 一致' : '❌ 数量不一致'}</span>
       </div>`).join('')}
     </div>`;
 }
@@ -1290,6 +1314,11 @@ function bindItemCardClicks() {
       if (e.target.closest('a')) return;
       const parts = (el.dataset.priority || '').split(':');
       if (parts.length === 2) openPriorityDrawer(parts[0], +parts[1]);
+    });
+  });
+  document.querySelectorAll('[data-anchor]').forEach(el => {
+    el.addEventListener('click', () => {
+      openAnchorDrawer(+el.dataset.anchor);
     });
   });
 }
@@ -1530,6 +1559,7 @@ function openPitfallDrawer(idx) {
         ${sevBadge}
         ${(x.kind === 'discretion') ? '<span class="badge badge-candidate">裁量黄永不进绿</span>' : '<span class="badge badge-verified">锚定绿</span>'}
         <span class="badge-count-pill">${(x.quotes || []).length} 引用</span>
+        ${(x.anchors && x.anchors.length) ? `<span style="font-size:11px;color:var(--muted);">${x.anchors.map(a => `⚓${a}`).join(' · ')}</span>` : ''}
       </div>
     </div>
 
@@ -1542,8 +1572,10 @@ function openPitfallDrawer(idx) {
       </div>
     </div>
 
+    ${anchorEvidenceSectionHtml(x)}
+
     <div class="drawer-section">
-      <h3>3. 引用原文 (?t= 跳链 + 📍句 跳原文句 + 全量前后句)</h3>
+      <h3>4. 引用原文 (?t= 跳链 + 📍句 跳原文句 + 全量前后句)</h3>
       ${quotesSectionHtml(x.quotes, x.quote_details)}
     </div>
   `;
@@ -1583,6 +1615,68 @@ function openPriorityDrawer(kind, idx) {
     <div class="drawer-section">
       <h3>4. 引用原文 (?t= 跳链 + 📍句 跳原文句 + 全量前后句)</h3>
       ${quotesSectionHtml(u.quotes, u.quote_details)}
+    </div>
+  `;
+  showDrawer();
+}
+
+// 锚证据(锚定条) / 裁量黄条(discretion条): 逐锚逐字命中率 + 永不进绿
+function anchorEvidenceSectionHtml(x) {
+  if ((x.kind || 'anchor') !== 'discretion') {
+    const aks = x.anchors || [];
+    if (!aks.length) return '';
+    const phrasesOf = (ak) => {
+      const a = (appData.anchors || []).find(y => y.anchor === ak);
+      return (a && a.phrases) || [ak];
+    };
+    const rows = aks.map(ak => {
+      const phs = phrasesOf(ak);
+      const n = (x.quotes || []).filter(q => phs.some(p => q.toLowerCase().includes(p.toLowerCase()))).length;
+      return `<div style="font-size:12px;">⚓ <strong>${ak}</strong> <span style="color:var(--muted);">(${(phs || []).join(' / ')}) — ${n}/${(x.quotes || []).length}条含锚逐字</span></div>`;
+    }).join('');
+    return `
+    <div class="drawer-section">
+      <h3>3. 锚证据 (逐字原话机检口径)</h3>
+      <div style="display:flex;flex-direction:column;gap:4px;">${rows}</div>
+    </div>`;
+  }
+  return `
+    <div class="drawer-section">
+      <h3>3. 裁量说明 (黄永不进绿)</h3>
+      <div style="background:#fffbeb;border:1px solid #fde68c;border-radius:6px;padding:8px 10px;font-size:12px;margin-bottom:6px;">⚠️ 裁量判断，非原话锚定 — 待人点，永不进绿</div>
+      <div style="font-size:12px;line-height:1.8;">
+        <div><strong>代表原话:</strong> “${x.quote || ((x.quotes || [])[0] || '')}”</div>
+        <div><strong>为什么算坑:</strong> ${x.reason || ''}</div>
+        <div><strong>inferred:</strong> ${x.inferred === true ? 'true (判断)' : String(x.inferred)}</div>
+      </div>
+    </div>`;
+}
+
+// 事件锚抽屉: 触发证据 + 认领条目 (08 anchors.json 直读)
+function openAnchorDrawer(idx) {
+  const a = (appData.anchors || [])[idx];
+  if (!a) return;
+  state.selectedItem = a;
+  const owners = (appData.pitfalls || []).map((p, i) => ({ p, i })).filter(({ p }) => ((p.anchors || []).includes(a.anchor)));
+  document.getElementById('drawerItemName').innerHTML = `⚓ ${a.anchor} <span style="font-weight:normal;font-size:13px;color:var(--muted);">(steps/08-pitfalls/anchors.json · ${(a.phrases || []).join(' / ')})</span>`;
+  document.getElementById('drawerContent').innerHTML = `
+    <div class="drawer-section">
+      <h3>1. 锚与触发次数</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;">
+        <span class="badge-count-pill">${a.anchor}</span>
+        <span>${a.count} 次触发</span>
+        ${owners.length ? `<span style="color:var(--muted);">${owners.length} 条目认领</span>` : '<span style="color:#dc2626;">无人认领（有触发无条目）</span>'}
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <h3>2. 认领条目 (点行跳条目抽屉)</h3>
+      ${owners.length ? `<div style="display:flex;flex-direction:column;gap:6px;">${owners.map(({ p, i }) => `<div class="dep-row" data-dep="pitfall:${i}" title="点开展示条目抽屉"><strong>${p.kind === 'discretion' ? '🟡' : '🟢'} ${p.title}</strong><span style="color:var(--muted);">${p.severity} · ${(p.quotes || []).length}引用</span></div>`).join('')}</div>` : '<div style="color:var(--muted);">暂无条目认领此锚</div>'}
+    </div>
+
+    <div class="drawer-section">
+      <h3>3. 全部触发证据 (?t= 跳链 + 📍句 跳原文句 + 全量前后句)</h3>
+      ${(a.hits && a.hits.length) ? a.hits.map(h => quoteRowHtml(h.quote, h)).join('') : '<div style="color:var(--muted);">本视频未触发</div>'}
     </div>
   `;
   showDrawer();
@@ -1640,6 +1734,8 @@ document.addEventListener('click', (e) => {
     if (g) openDrawer(g);
   } else if (kind === 'phase') {
     openPhaseDrawer(+low);
+  } else if (kind === 'pitfall') {
+    openPitfallDrawer(+low);
   }
 });
 
@@ -1731,6 +1827,8 @@ async function loadFromDirectoryHandle(dirHandle) {
       if (p7) appData.priorities = p7;
       const p8 = await readJsonFile(dirHandle, 'steps', '08-pitfalls', 'pitfalls.json');
       if (p8) appData.pitfalls = p8;
+      const pA = await readJsonFile(dirHandle, 'steps', '08-pitfalls', 'anchors.json');
+      if (pA) appData.anchors = pA;
       const p9 = await readJsonFile(dirHandle, 'steps', '09-assemble', 'guide.json');
       if (p9) appData.assemble = p9;
       state.dataSource = 'live';
@@ -1784,6 +1882,8 @@ document.getElementById('fallbackDirInput').addEventListener('change', async (e)
   if (p7) appData.priorities = p7;
   const p8 = await readBySuffix('steps/08-pitfalls/pitfalls.json');
   if (p8) appData.pitfalls = p8;
+  const pA = await readBySuffix('steps/08-pitfalls/anchors.json');
+  if (pA) appData.anchors = pA;
   const p9 = await readBySuffix('steps/09-assemble/guide.json');
   if (p9) appData.assemble = p9;
   state.dataSource = 'live';
@@ -1825,6 +1925,8 @@ async function loadFromHttpBase(base) {
       if (p7) appData.priorities = p7;
       const p8 = await fetchJson(`${base}/steps/08-pitfalls/pitfalls.json`);
       if (p8) appData.pitfalls = p8;
+      const pA = await fetchJson(`${base}/steps/08-pitfalls/anchors.json`);
+      if (pA) appData.anchors = pA;
       const p9 = await fetchJson(`${base}/steps/09-assemble/guide.json`);
       if (p9) appData.assemble = p9;
       state.dataSource = 'live';
@@ -1904,7 +2006,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
   // 缺省不吃广告纸: 不自动载 mock, 只显示待加载; live 经 picker/?base 进来, mock 仅点按钮显式进
-  appData = {manifest: null, sentences: [], verbs: {verified: [], candidates: []}, items: [], ratings: [], weapons: {t1: [], t2: []}, phases: [], priorities: {}, pitfalls: [], assemble: {}};
+  appData = {manifest: null, sentences: [], verbs: {verified: [], candidates: []}, items: [], ratings: [], weapons: {t1: [], t2: []}, phases: [], priorities: {}, pitfalls: [], anchors: [], assemble: {}};
   state.dataSource = 'empty';
   const params = new URLSearchParams(window.location.search);
   const baseParam = params.get('base');

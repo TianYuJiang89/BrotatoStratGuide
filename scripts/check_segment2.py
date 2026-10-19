@@ -47,6 +47,8 @@ def main(argv: list[str] | None = None) -> int:
         work / "outputs" / "priorities.json",
         work / "steps" / "08-pitfalls" / "pitfalls.json",
         work / "outputs" / "pitfalls.json",
+        work / "steps" / "08-pitfalls" / "anchors.json",
+        work / "outputs" / "anchors.json",
         work / "steps" / "09-assemble" / "guide.json",
         work / "outputs" / "guide.json",
         work / "steps" / "01-sentences" / "sentences.json",
@@ -71,6 +73,8 @@ def main(argv: list[str] | None = None) -> int:
     priorities_out = json.loads((work / "outputs" / "priorities.json").read_text(encoding="utf-8"))
     pitfalls = json.loads((work / "steps" / "08-pitfalls" / "pitfalls.json").read_text(encoding="utf-8"))
     pitfalls_out = json.loads((work / "outputs" / "pitfalls.json").read_text(encoding="utf-8"))
+    anchors = json.loads((work / "steps" / "08-pitfalls" / "anchors.json").read_text(encoding="utf-8"))
+    anchors_out = json.loads((work / "outputs" / "anchors.json").read_text(encoding="utf-8"))
     guide = json.loads((work / "steps" / "09-assemble" / "guide.json").read_text(encoding="utf-8"))
     guide_out = json.loads((work / "outputs" / "guide.json").read_text(encoding="utf-8"))
     manifest = json.loads((work / "inputs" / "manifest.json").read_text(encoding="utf-8"))
@@ -280,6 +284,25 @@ def main(argv: list[str] | None = None) -> int:
                     fail(f"pitfalls discretion inferred must be bool: {p.get('title')}", errors)
     if pitfalls != pitfalls_out:
         fail("outputs/pitfalls.json must equal steps/08-pitfalls/pitfalls.json", errors)
+
+    # --- 08-anchors.json (事件锚触发实况, #42跟进: 9锚全列, 审计面板直读) ---
+    if anchors != anchors_out:
+        fail("outputs/anchors.json must equal steps/08-pitfalls/anchors.json (双写一致)", errors)
+    _CLOSED9 = ["mistake", "dying", "do not want", "avoid", "too dangerous",
+                "knock back", "materials", "transition-swap", "peacock-spawn"]
+    if [a.get("anchor") for a in anchors] != _CLOSED9:
+        fail(f"anchors must list 闭集9锚全列(0触发也列): {[a.get('anchor') for a in anchors if isinstance(a, dict)]}", errors)
+    else:
+        _sids = {s.get("id") for s in sentences if isinstance(s, dict)}
+        _stext = {s.get("id"): s.get("text") for s in sentences if isinstance(s, dict)}
+        for a in anchors:
+            if a.get("count") != len(a.get("hits", [])):
+                fail(f"anchors count须==len(hits): {a.get('anchor')}", errors)
+            for h in (a.get("hits", []) if isinstance(a.get("hits"), list) else []):
+                if h.get("sentence_id") not in _sids:
+                    fail(f"anchors hit sentence_id须对句: {a.get('anchor')}#{h.get('sentence_id')}", errors)
+                elif h.get("quote") != _stext.get(h.get("sentence_id")):
+                    fail(f"anchors hit quote须逐字对句: {a.get('anchor')}#{h.get('sentence_id')}", errors)
 
     # --- 09-assemble ---
     if guide != guide_out:

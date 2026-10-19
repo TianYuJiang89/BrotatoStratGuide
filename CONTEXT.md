@@ -15,6 +15,13 @@ _Avoid_: 段落，验收段
 _Avoid_: 步骤
 - **验收段**: 验收闸单位；段1 = 04+05先验，段2 = 06-09后验。
 _Avoid_: 步骤
+- **重试**: 同输入同 cwd 不改 workflow 再调一次子 agent（transient/缺件/格式错，预算内自动）；check 红灯永不重试。
+_Avoid_: 重跑
+- **重修**: 改 prompt/代码后再跑；check 红灯唯一正路。
+_Avoid_: 重跑，重试
+- **复用**: 已绿步骤跳过不跑（存在 + schema 绿即 SKIP）；`--force-step` 才覆盖。
+_Avoid_: 跳过，缓存
+- **幂等**: 同输入同代码必出同文件；确定性代码步覆盖须逐字节一致，否则 fail；sentences 1496/折叠后 411 为不变式，偏差即 fail。
 - **过程审计视图**: `templates/audit.html` 常设资产，每步 check 与审计节一一对应；测试读 G 盘，正式随产物发布，不由 agent 生成。
 _Avoid_: 测试报告
 - **outputs/**: per-variant final product under `G:/brotato-work/<slug>/<variant>/outputs/`. Pilot: `groups.json`; B-段1加 `ratings.json` + `weapons.json` (与 steps/04-*/05-* 一致, sha 对上). B-段2加 `phases.json` + `priorities.json` + `pitfalls.json` + `guide.json` (与 steps/06-*/07-*/08-*/09-* 一致, guide.sha 对上 manifest).

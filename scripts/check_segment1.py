@@ -309,7 +309,7 @@ def main(argv: list[str] | None = None) -> int:
     for marker in ("data-phase", "data-pitfall", "data-priority",
                    "openPhaseDrawer", "openPitfallDrawer", "openPriorityDrawer",
                    "依赖来源", "继承自",
-                   "data-anchor", "openAnchorDrawer", "事件锚触发"):
+                   "recallPanelHtml", "recallEvidenceSectionHtml", "种子漏斗"):
         if marker not in audit_html:
             fail(f"audit.html 缺06-09审计 (#42): {marker}", errors)
     # 默认工作区 (picker 从 G:\brotato-work/上次目录开始: 固定 id + IndexedDB 存句柄)

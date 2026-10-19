@@ -315,165 +315,136 @@ def step07(workdir: Path, sentences: list[dict], ratings: list[dict],
     return priorities
 
 
-# #46: 08换筐(事件锚定N不定, 沿grilling Q1=A): 筐由作者亲口警告定, 有锚才有条.
-# 闭集9锚逐字原话, 机检只认这个; cyborg现货5组全留; glass cannon系take排除.
-CLOSED_PIT_ANCHORS = [
-    "mistake",
-    "dying",
-    "do not want",
-    "avoid",
-    "too dangerous",
-    "knock back",
-    "materials",
-    "transition-swap",
-    "peacock-spawn",
+# 08两跳召回((a)方案): 第一跳纯警告标记产种子池(零游戏名词) + agent提名主题扩展 + merge种子链约束.
+# 标记只认警告言语行为(禁止/义务/翻车/风险/后悔), materials/swap/peacock等地名式名词一律不进;
+# 主题由agent从seed出发提名, 每条锚定坑至少一句种子直引(链回seed), 扩展须出自sentences逐字.
+MARKER_SIGNALS = [
+    "mistake", "wrong", "fail", "failed", "fault",
+    "dying", "die", "died", "death", "hurt", "hurts", "painful",
+    "lose", "lost", "losing", "took damage", "taking damage", "too late",
+    "went wrong", "given up", "gave up",
+    "don't", "do not", "never", "can't", "cannot", "shouldn't", "should not", "must not",
+    "need to", "needs to", "have to", "has to", "got to", "gotta", "must", "should", "had to",
+    "make sure", "make certain", "be sure", "remember",
+    "dangerous", "risky", "risk", "trap", "careful", "worry", "worried", "warn", "warning",
+    "watch out", "beware", "awkward", "problem", "struggle", "survive", "barely", "hard",
+    "wish", "should have", "could have", "would have", "if only", "supposed to",
+    "avoid", "'d ",
 ]
 
-# 复合锚展开为逐字短语(机检验逐字包含, 大小写不敏感;
-# transition-swap = transition OR swap, peacock-spawn = peacock OR spawn)
-PIT_ANCHOR_PHRASES: dict[str, list[str]] = {
-    "mistake": ["mistake"],
-    "dying": ["dying"],
-    "do not want": ["do not want"],
-    "avoid": ["avoid"],
-    "too dangerous": ["too dangerous"],
-    "knock back": ["knock back"],
-    "materials": ["materials"],
-    "transition-swap": ["transition", "swap"],
-    "peacock-spawn": ["peacock", "spawn"],
-}
+
+def _recall_08(workdir: Path, sentences: list[dict]) -> list[dict]:
+    """第一跳(代码, 无判断): 任一警告标记逐字命中即收为种子, 保序去重全量, 落candidates.json(种子池)."""
+    qs, qd = _collect(sentences, MARKER_SIGNALS)
+    by_q = {d["quote"]: d for d in qd if isinstance(d, dict)}
+    cands: list[dict] = []
+    for q in qs:
+        low = q.lower()
+        sigs = sorted({s for s in MARKER_SIGNALS if s.lower() in low})
+        d = by_q.get(q, {})
+        cands.append({"quote": q, "signals": sigs, "start": d.get("start"),
+                      "end": d.get("end"), "t": d.get("t"),
+                      "context": d.get("context", q[:300])})
+    outdir = workdir / "steps" / "08-pitfalls"
+    outdir.mkdir(parents=True, exist_ok=True)
+    (outdir / "candidates.json").write_text(json.dumps(cands, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return cands
 
 
-def _anchor_phrases(keys: list[str]) -> list[str]:
-    out: list[str] = []
-    for k in keys:
-        out.extend(PIT_ANCHOR_PHRASES.get(k, [k]))
-    return out
-
-
-def _has_closed_anchor(text: str) -> bool:
-    low = text.lower()
-    for plist in PIT_ANCHOR_PHRASES.values():
-        if any(p.lower() in low for p in plist):
-            return True
-    return False
-
-
-def _collect_anchors(sentences: list[dict], anchor_keys: list[str]) -> tuple[list[str], list[dict]]:
-    """闭集锚收集: 任一锚短语逐字命中即收(glass cannon已在_collect内排除)."""
-    return _collect(sentences, _anchor_phrases(anchor_keys))
-
-
-def _collect_anchor_hits(sentences: list[dict], anchor_keys: list[str]) -> list[dict]:
-    """事件锚触发实况: 逐句扫锚短语, 保序去重, 每hit带sentence_id(审计跳原文句)."""
-    phrases = _anchor_phrases(anchor_keys)
-    hits: list[dict] = []
-    seen: list[str] = []
-    for s in sentences:
-        low = s["text"].lower()
-        if any(p.lower() in low for p in phrases):
-            if s["text"] not in seen:
-                seen.append(s["text"])
-                hits.append({
-                    "sentence_id": s["id"],
-                    "quote": s["text"],
-                    "start": s.get("start"), "end": s.get("end"),
-                    "t": int(s["start_s"]) if s.get("start_s") is not None else None,
-                })
-    return hits
-
-
-def _collect_discretion(sentences: list[dict], keywords: list[str]) -> tuple[list[str], list[dict]]:
-    """裁量收集: 关键词命中 + 排除闭集锚(保证黄vs绿可分) + 排除glass cannon, 全量去重."""
-    seen: list[str] = []
-    for s in sentences:
-        low = s["text"].lower()
-        if "glass cannon" in low:
-            continue
-        if _has_closed_anchor(s["text"]):
-            continue
-        if any(k.lower() in low for k in keywords):
-            if s["text"] not in seen:
-                seen.append(s["text"])
-    qlookup = _quote_lookup(sentences)
-    details = []
-    for q in seen:
-        hits = qlookup.get(q, [])
-        h = hits[0] if hits else {"start": None, "end": None, "t": None, "context": q[:300]}
-        details.append({"quote": q, "start": h["start"], "end": h["end"], "t": h["t"], "context": h["context"]})
-    return seen, details
+def _load_wordings_08(workdir: Path) -> list[dict]:
+    """判断(agent): 缺件或旧schema即fail, 指引跑 prompts/step08-pitfalls.md."""
+    p = workdir / "steps" / "08-pitfalls" / "wordings.json"
+    if not p.exists():
+        raise SystemExit(
+            "step08 缺 wordings.json (agent判断未写): 按 prompts/step08-pitfalls.md "
+            "读 steps/08-pitfalls/candidates.json (种子池) + sentences.json (扩展备查) 写 wordings.json "
+            "(seeds提名+extra扩展+anchor/why/how_to_avoid/reason只写判断, glass cannon禁入)")
+    try:
+        w = json.loads(p.read_text(encoding="utf-8"))
+    except Exception as err:
+        raise SystemExit(f"step08 wordings.json 解析失败: {err}")
+    if not isinstance(w, list) or len(w) < 3:
+        raise SystemExit(f"step08 wordings须数组>=3条(N不定但设底线), got {len(w) if isinstance(w, list) else type(w)}")
+    for i, e in enumerate(w):
+        if not isinstance(e, dict):
+            raise SystemExit(f"step08 wordings[{i}]须对象")
+        if not isinstance(e.get("title"), str) or not e["title"].strip():
+            raise SystemExit(f"step08 wordings[{i}]缺title")
+        if e.get("severity") not in ("fatal", "risky", "trap"):
+            raise SystemExit(f"step08 wordings[{i}] severity须fatal/risky/trap")
+        if not isinstance(e.get("anchors"), list) or any(not isinstance(a, str) for a in e["anchors"]):
+            raise SystemExit(f"step08 wordings[{i}] anchors须字符串数组(无则[])")
+        if not isinstance(e.get("seeds"), list) or any(not isinstance(q, str) for q in e["seeds"]):
+            raise SystemExit(f"step08 wordings[{i}] seeds须字符串数组")
+        if e.get("anchors") and not e["seeds"]:
+            raise SystemExit(f"step08 wordings[{i}] 锚定条seeds须非空(至少一句链回seed)")
+        if not isinstance(e.get("extra"), list) or any(not isinstance(q, str) for q in e["extra"]):
+            raise SystemExit(f"step08 wordings[{i}] extra须字符串数组(无则[])")
+        for k in ("why", "how_to_avoid"):
+            if not isinstance(e.get(k), str) or len(e[k].strip()) < 8:
+                raise SystemExit(f"step08 wordings[{i}]缺{k}(人话一句>=8字)")
+        if not isinstance(e.get("reason"), str) or len(e["reason"].strip()) < 4:
+            raise SystemExit(f"step08 wordings[{i}]缺reason(分组/扩展依据, 锚定条也要)")
+        if not isinstance(e.get("inferred"), bool):
+            raise SystemExit(f"step08 wordings[{i}] inferred须bool")
+    return w
 
 
 def step08(workdir: Path, sentences: list[dict]) -> list[dict]:
-    # 5锚定组(覆盖全部9闭集锚, cyborg现货全留) + 2裁量(不限条, 黄永不进绿)
-    anchored_specs = [
-        ("半波转换踩空", "fatal", ["transition-swap"],
-         "前半波没打完elite/boss, 转换后变近战刮痧",
-         "看顶栏halfway, 前半波集火elite, engineering half靠螺丝刀+结构补"),
-        ("材料落地不捡", "risky", ["materials"],
-         "中期材料落地不捡, 经济崩盘",
-         "材料顺路捡, 不跨波囤, 中期必清地"),
-        ("失误丢击退", "risky", ["mistake", "knock back"],
-         "走位撞投射物出生点失误 + 击退丢了难处理",
-         "开局记出生点, 不贴左墙; 丢击退后靠走位拉扯"),
-        ("刷怪站位失控", "trap", ["peacock-spawn", "do not want"],
-         "Peacock波+30%伤 + 刷怪失控 + 站位撞刷怪点",
-         "horde波提前合核弹清场, peacock波控刷怪数, 开局远离刷怪点"),
-        ("高难警告别硬顶", "risky", ["dying", "avoid", "too dangerous"],
-         "经济没成型硬顶会死 + 非武器伤别碰 + 危险波次别硬拿",
-         "经济先保命再贪收入; 非武器伤直接避开; horde波不拿scarf锁企鹅过波"),
-    ]
-    discretion_specs = [
-        ("尸潮核弹清场", "risky", ["horde", "nuke"],
-         "horde波没核弹清不动, 拖到尸潮堆起来会崩",
-         "horde波前合核弹(nuke launcher), 留咖啡/穿透打清场",
-         "裁量: horde波靠核弹清场是判断(无闭集锚, 标黄待人点)"),
-        ("精英集火补伤", "risky", ["elite", "boss"],
-         "精英/boss不集火压不住, 后半变刮痧",
-         "前半远程补第二把枪, 精英优先点掉, 留伤进boss波",
-         "裁量: 精英/boss集火是判断(无闭集锚, 标黄待人点)"),
-    ]
+    # 第一跳(代码) + 判断(agent) + 合并校验(代码): 锚定条至少一句种子直引, 扩展须出自sentences逐字.
+    cands = _recall_08(workdir, sentences)
+    seedpool = {c["quote"] for c in cands if isinstance(c, dict)}
+    senttexts = {s["text"] for s in sentences if isinstance(s, dict)}
+    wordings = _load_wordings_08(workdir)
+    qlookup = _quote_lookup(sentences)
     pitfalls: list[dict] = []
-    for title, sev, akeys, why_tail, avoid in anchored_specs:
-        for k in akeys:
-            if k not in CLOSED_PIT_ANCHORS:
-                raise SystemExit(f"step08 anchor非闭集: {k}")
-        qs, qd = _collect_anchors(sentences, akeys)
-        if not qs:
-            raise SystemExit(f"step08现场扫不足 {title}: anchors={akeys}")
+    for e in wordings:
+        seeds: list[str] = list(e["seeds"])
+        extra: list[str] = list(e["extra"])
+        if len(set(seeds)) != len(seeds) or len(set(extra)) != len(extra):
+            raise SystemExit(f"step08 seeds/extra须去重: {e.get('title')}")
+        if set(seeds) & set(extra):
+            raise SystemExit(f"step08 seeds/extra须不交: {e.get('title')}")
+        for q in seeds:
+            if q not in seedpool:
+                raise SystemExit(f"step08 seed须出自种子池逐字: {e.get('title')} :: {q[:40]}")
+            if "glass cannon" in q.lower():
+                raise SystemExit(f"step08 glass cannon系take排除: {e.get('title')}")
+        for q in extra:
+            if q not in senttexts:
+                raise SystemExit(f"step08 extra须出自sentences逐字: {e.get('title')} :: {q[:40]}")
+            if "glass cannon" in q.lower():
+                raise SystemExit(f"step08 glass cannon系take排除: {e.get('title')}")
+        akeys = list(e["anchors"])
+        for a in akeys:
+            low_a = a.lower()
+            if not any(low_a in q.lower() for q in seeds):
+                raise SystemExit(f"step08 anchor须出自本条种子句逐字: {e.get('title')}={a}")
+        kind = "anchor" if akeys else "discretion"
+        if kind == "anchor" and e["inferred"] is not False:
+            raise SystemExit(f"step08 锚定条inferred须false(警告锚定非推断): {e.get('title')}")
+        if kind == "discretion" and e["inferred"] is not True:
+            raise SystemExit(f"step08 裁量条inferred须true: {e.get('title')}")
+        qs = seeds + extra
+        qd = []
+        for q in qs:
+            hits = qlookup.get(q, [])
+            h = hits[0] if hits else {"start": None, "end": None, "t": None, "context": q[:300]}
+            qd.append({"quote": q, "start": h["start"], "end": h["end"], "t": h["t"], "context": h["context"]})
         pitfalls.append({
-            "title": title, "severity": sev, "kind": "anchor",
-            "anchor": akeys[0], "anchors": akeys,
-            "why": f"{why_tail}；原话“{_short(qs[0])}…”",
-            "how_to_avoid": f"{avoid}；原话“{_short(qs[1] if len(qs) > 1 else qs[0])}…”",
+            "title": str(e["title"]), "severity": str(e["severity"]), "kind": kind,
+            "anchor": akeys[0] if akeys else None, "anchors": akeys,
+            "seeds": seeds, "extra": extra,
+            "why": str(e["why"]).strip(), "how_to_avoid": str(e["how_to_avoid"]).strip(),
             "quotes": qs, "quote_details": qd,
-        })
-    for title, sev, keys, why_tail, avoid, reason in discretion_specs:
-        qs, qd = _collect_discretion(sentences, keys)
-        if not qs:
-            raise SystemExit(f"step08裁量扫不足 {title}: keywords={keys}")
-        pitfalls.append({
-            "title": title, "severity": sev, "kind": "discretion",
-            "anchor": None, "anchors": [],
-            "why": f"{why_tail}；原话“{_short(qs[0])}…”",
-            "how_to_avoid": f"{avoid}；原话“{_short(qs[1] if len(qs) > 1 else qs[0])}…”",
-            "quotes": qs, "quote_details": qd,
-            "quote": qs[0], "reason": reason, "inferred": True,
+            "quote": qs[0], "reason": str(e["reason"]).strip(), "inferred": bool(e["inferred"]),
         })
     outdir = workdir / "steps" / "08-pitfalls"
     outdir.mkdir(parents=True, exist_ok=True)
     (outdir / "pitfalls.json").write_text(json.dumps(pitfalls, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (workdir / "outputs").mkdir(parents=True, exist_ok=True)
     (workdir / "outputs" / "pitfalls.json").write_text(json.dumps(pitfalls, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    # 事件锚触发实况落盘 (#42跟进): 闭集9锚全列(0触发也列, 覆盖率可见), 审计面板直读
-    anchors = []
-    for ak in CLOSED_PIT_ANCHORS:
-        hits = _collect_anchor_hits(sentences, [ak])
-        anchors.append({"anchor": ak, "phrases": PIT_ANCHOR_PHRASES[ak], "hits": hits, "count": len(hits)})
-    (outdir / "anchors.json").write_text(json.dumps(anchors, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (workdir / "outputs" / "anchors.json").write_text(json.dumps(anchors, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return pitfalls
-
 
 def step09(workdir: Path, grouping, ratings, weapons, phases, priorities, pitfalls) -> dict:
     manifest = _load(workdir, "inputs/manifest.json")

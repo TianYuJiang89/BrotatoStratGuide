@@ -47,8 +47,7 @@ def main(argv: list[str] | None = None) -> int:
         work / "outputs" / "priorities.json",
         work / "steps" / "08-pitfalls" / "pitfalls.json",
         work / "outputs" / "pitfalls.json",
-        work / "steps" / "08-pitfalls" / "anchors.json",
-        work / "outputs" / "anchors.json",
+        work / "steps" / "08-pitfalls" / "candidates.json",
         work / "steps" / "09-assemble" / "guide.json",
         work / "outputs" / "guide.json",
         work / "steps" / "01-sentences" / "sentences.json",
@@ -73,8 +72,7 @@ def main(argv: list[str] | None = None) -> int:
     priorities_out = json.loads((work / "outputs" / "priorities.json").read_text(encoding="utf-8"))
     pitfalls = json.loads((work / "steps" / "08-pitfalls" / "pitfalls.json").read_text(encoding="utf-8"))
     pitfalls_out = json.loads((work / "outputs" / "pitfalls.json").read_text(encoding="utf-8"))
-    anchors = json.loads((work / "steps" / "08-pitfalls" / "anchors.json").read_text(encoding="utf-8"))
-    anchors_out = json.loads((work / "outputs" / "anchors.json").read_text(encoding="utf-8"))
+    candidates = json.loads((work / "steps" / "08-pitfalls" / "candidates.json").read_text(encoding="utf-8"))
     guide = json.loads((work / "steps" / "09-assemble" / "guide.json").read_text(encoding="utf-8"))
     guide_out = json.loads((work / "outputs" / "guide.json").read_text(encoding="utf-8"))
     manifest = json.loads((work / "inputs" / "manifest.json").read_text(encoding="utf-8"))
@@ -210,99 +208,96 @@ def main(argv: list[str] | None = None) -> int:
     if priorities != priorities_out:
         fail("outputs/priorities.json must equal steps/07-priorities/priorities.json", errors)
 
-    # --- 08-pitfalls (#46: 事件锚定N不定 + 裁量不限条) ---
-    # 闭集9锚沿 run_segment2.CLOSED_PIT_ANCHORS, 机检只认这个(逐字原话); 裁量只查格式.
-    _CLOSED = ["mistake", "dying", "do not want", "avoid", "too dangerous",
-               "knock back", "materials", "transition-swap", "peacock-spawn"]
-    _PHRASES: dict[str, list[str]] = {
-        "mistake": ["mistake"], "dying": ["dying"], "do not want": ["do not want"],
-        "avoid": ["avoid"], "too dangerous": ["too dangerous"], "knock back": ["knock back"],
-        "materials": ["materials"], "transition-swap": ["transition", "swap"],
-        "peacock-spawn": ["peacock", "spawn"],
-    }
-    def _pit_has_anchor(q: str, keys: list[str]) -> bool:
-        low = q.lower()
-        for k in keys:
-            for ph in _PHRASES.get(k, [k]):
-                if ph.lower() in low:
-                    return True
-        return False
+    # --- 08-pitfalls (两跳: 种子池 + 种子链约束, 闭集词表已废) ---
+    try:
+        _cands = json.loads((work / "steps" / "08-pitfalls" / "candidates.json").read_text(encoding="utf-8"))
+    except Exception:
+        fail("missing steps/08-pitfalls/candidates.json (先跑 step08 第一跳召回)", errors)
+        _cands = []
+    _pool = {c.get("quote") for c in (_cands if isinstance(_cands, list) else []) if isinstance(c, dict)}
     if not isinstance(pitfalls, list) or len(pitfalls) < 3:
         fail(f"pitfalls must be >=3, got {len(pitfalls) if isinstance(pitfalls, list) else type(pitfalls)}", errors)
     else:
-        _n_anchor = sum(1 for p in pitfalls if isinstance(p, dict) and p.get("kind") == "anchor")
-        _n_disc = sum(1 for p in pitfalls if isinstance(p, dict) and p.get("kind") == "discretion")
-        if _n_anchor < 1:
-            fail("pitfalls must have >=1 anchor kind (闭集锚保底)", errors)
-        if _n_disc < 1:
-            fail("pitfalls must have >=1 discretion kind (裁量不限条)", errors)
         for p in pitfalls:
-            for k in ("title", "severity", "why", "how_to_avoid", "quotes", "kind"):
-                if k not in p or (isinstance(p[k], str) and not p[k].strip()):
-                    if k == "kind" and "kind" not in p:
-                        fail(f"pitfalls missing kind (anchor/discretion): {p.get('title')}", errors)
-                        continue
-                    if k not in p or (isinstance(p[k], str) and not p[k].strip()):
-                        fail(f"pitfalls missing {k}: {p.get('title')}", errors)
+            for k in ("title", "severity", "why", "how_to_avoid", "quotes", "kind", "quote", "reason", "inferred", "seeds", "extra"):
+                if k not in p:
+                    fail(f"pitfalls missing {k}: {p.get('title')}", errors)
             if p.get("severity") not in ("fatal", "risky", "trap"):
                 fail(f"pitfalls severity must be fatal/risky/trap: {p.get('title')}", errors)
             if p.get("kind") not in ("anchor", "discretion"):
                 fail(f"pitfalls kind must be anchor/discretion: {p.get('title')}", errors)
-                continue
+            akeys = p.get("anchors", [])
+            if not isinstance(akeys, list):
+                fail(f"pitfalls anchors must be array: {p.get('title')}", errors)
+                akeys = []
+            seeds = p.get("seeds", [])
+            extra = p.get("extra", [])
+            if not isinstance(seeds, list) or not isinstance(extra, list):
+                fail(f"pitfalls seeds/extra must be arrays: {p.get('title')}", errors)
+                seeds, extra = [], []
+            want_kind = "anchor" if akeys else "discretion"
+            if p.get("kind") != want_kind:
+                fail(f"pitfalls kind须与anchors一致 (有锚anchor/无锚discretion): {p.get('title')}", errors)
+            if (p.get("anchor") or None) != (akeys[0] if akeys else None):
+                fail(f"pitfalls anchor须=anchors[0]: {p.get('title')}", errors)
+            if list(p.get("quotes", []) if isinstance(p.get("quotes"), list) else []) != list(seeds) + list(extra):
+                fail(f"pitfalls quotes须=seeds+extra原序: {p.get('title')}", errors)
             if len(str(p.get("why", ""))) < 8 or len(str(p.get("how_to_avoid", ""))) < 8:
                 fail(f"pitfalls why/how_to_avoid too short: {p.get('title')}", errors)
+            if not isinstance(p.get("reason"), str) or len(p["reason"].strip()) < 4:
+                fail(f"pitfalls missing reason (分组/扩展依据, 锚定条也要): {p.get('title')}", errors)
+            if not isinstance(p.get("inferred"), bool):
+                fail(f"pitfalls inferred must be bool: {p.get('title')}", errors)
+            if want_kind == "anchor" and p.get("inferred") is not False:
+                fail(f"pitfalls 锚定条inferred须false: {p.get('title')}", errors)
+            if want_kind == "discretion" and p.get("inferred") is not True:
+                fail(f"pitfalls 裁量条inferred须true: {p.get('title')}", errors)
             _check_quotes(f"pitfalls {p.get('title')}", p.get("quotes", []), p.get("quote_details", []))
+            if p.get("quote") not in (p.get("quotes", []) if isinstance(p.get("quotes"), list) else []):
+                fail(f"pitfalls quote须等于quotes成员: {p.get('title')}", errors)
+            if want_kind == "anchor" and (p.get("quotes", []) or [None])[0] not in seeds:
+                fail(f"pitfalls 锚定条quotes[0]须是种子直引: {p.get('title')}", errors)
             for q in (p.get("quotes", []) if isinstance(p.get("quotes"), list) else []):
                 if "glass cannon" in str(q).lower():
                     fail(f"pitfalls glass cannon系take排除: {p.get('title')}", errors)
                     break
-            if p.get("kind") == "anchor":
-                akeys = p.get("anchors", [])
-                if not isinstance(akeys, list) or not akeys:
-                    fail(f"pitfalls anchor must have non-empty anchors list: {p.get('title')}", errors)
-                    continue
-                for k in akeys:
-                    if k not in _CLOSED:
-                        fail(f"pitfalls anchor非闭集 (机检只认9锚): {p.get('title')}={k}", errors)
-                        break
-                if p.get("anchor") not in _CLOSED:
-                    fail(f"pitfalls anchor主锚须在闭集内: {p.get('title')}", errors)
-                # 闭集格式强约束: 每条quote须含至少一锚短语逐字原话
-                for q in (p.get("quotes", []) if isinstance(p.get("quotes"), list) else []):
-                    if not _pit_has_anchor(str(q), akeys if isinstance(akeys, list) else []):
-                        fail(f"pitfalls anchor quote须含锚逐字原话: {p.get('title')} :: {str(q)[:40]}", errors)
-                        break
-            else:
-                # 裁量只查格式: 必带quote+reason+inferred, 审计标黄永不进绿(机检永不标绿)
-                if not isinstance(p.get("quote"), str) or not p["quote"].strip():
-                    fail(f"pitfalls discretion missing quote: {p.get('title')}", errors)
-                elif p.get("quote") not in (p.get("quotes", []) if isinstance(p.get("quotes"), list) else []):
-                    fail(f"pitfalls discretion quote须等于quotes[0]: {p.get('title')}", errors)
-                if not isinstance(p.get("reason"), str) or len(p["reason"].strip()) < 4:
-                    fail(f"pitfalls discretion missing reason: {p.get('title')}", errors)
-                if not isinstance(p.get("inferred"), bool):
-                    fail(f"pitfalls discretion inferred must be bool: {p.get('title')}", errors)
+            if want_kind == "anchor" and not seeds:
+                fail(f"pitfalls 锚定条至少一句链回seed: {p.get('title')}", errors)
+            for q in seeds:
+                if q not in _pool:
+                    fail(f"pitfalls seed须出自种子池逐字: {p.get('title')} :: {str(q)[:40]}", errors)
+                    break
+            for q in extra:
+                if q not in sent_texts:
+                    fail(f"pitfalls extra须出自sentences逐字: {p.get('title')} :: {str(q)[:40]}", errors)
+                    break
+            for a in akeys:
+                if not any(str(a).lower() in str(q).lower() for q in seeds):
+                    fail(f"pitfalls anchor须出自本条种子句逐字: {p.get('title')}={a}", errors)
+                    break
     if pitfalls != pitfalls_out:
         fail("outputs/pitfalls.json must equal steps/08-pitfalls/pitfalls.json", errors)
 
-    # --- 08-anchors.json (事件锚触发实况, #42跟进: 9锚全列, 审计面板直读) ---
-    if anchors != anchors_out:
-        fail("outputs/anchors.json must equal steps/08-pitfalls/anchors.json (双写一致)", errors)
-    _CLOSED9 = ["mistake", "dying", "do not want", "avoid", "too dangerous",
-                "knock back", "materials", "transition-swap", "peacock-spawn"]
-    if [a.get("anchor") for a in anchors] != _CLOSED9:
-        fail(f"anchors must list 闭集9锚全列(0触发也列): {[a.get('anchor') for a in anchors if isinstance(a, dict)]}", errors)
+    # --- 08-candidates.json (召回池实况: 全捞不取舍, 审计漏斗面板直读) ---
+    if not isinstance(candidates, list) or not candidates:
+        fail("candidates must be non-empty array (代码召回全捞)", errors)
     else:
-        _sids = {s.get("id") for s in sentences if isinstance(s, dict)}
-        _stext = {s.get("id"): s.get("text") for s in sentences if isinstance(s, dict)}
-        for a in anchors:
-            if a.get("count") != len(a.get("hits", [])):
-                fail(f"anchors count须==len(hits): {a.get('anchor')}", errors)
-            for h in (a.get("hits", []) if isinstance(a.get("hits"), list) else []):
-                if h.get("sentence_id") not in _sids:
-                    fail(f"anchors hit sentence_id须对句: {a.get('anchor')}#{h.get('sentence_id')}", errors)
-                elif h.get("quote") != _stext.get(h.get("sentence_id")):
-                    fail(f"anchors hit quote须逐字对句: {a.get('anchor')}#{h.get('sentence_id')}", errors)
+        _cquotes = [c.get("quote") for c in candidates if isinstance(c, dict)]
+        if len(_cquotes) != len(set(_cquotes)):
+            fail("candidates quotes must be deduped", errors)
+        for c in candidates:
+            if not isinstance(c, dict) or not isinstance(c.get("quote"), str) or not c["quote"].strip():
+                fail("candidates entry must have quote", errors)
+                break
+            if c["quote"] not in sent_texts:
+                fail(f"candidates quote must equal sentences text: {str(c['quote'])[:60]}", errors)
+                break
+            if not isinstance(c.get("signals"), list) or not c["signals"]:
+                fail("candidates entry must have non-empty signals", errors)
+                break
+            if "glass cannon" in c["quote"].lower():
+                fail("candidates glass cannon系take排除", errors)
+                break
 
     # --- 09-assemble ---
     if guide != guide_out:
@@ -334,11 +329,11 @@ def main(argv: list[str] | None = None) -> int:
     for marker in ("audit-06-phases", "audit-07-priorities", "audit-08-pitfalls", "audit-09-assemble",
                    "steps/06-phases", "steps/07-priorities", "steps/08-pitfalls", "steps/09-assemble",
                    "steps/06-phases/phases.json", "steps/07-priorities/priorities.json",
-                   "steps/08-pitfalls/pitfalls.json", "steps/09-assemble/guide.json"):
+                   "steps/08-pitfalls/pitfalls.json", "steps/08-pitfalls/candidates.json", "steps/09-assemble/guide.json"):
         if marker not in audit_html:
             fail(f"audit.html 缺对应节 (一一对应): {marker}", errors)
     # 实节渲染 (非空占位): 须有卡片渲染逻辑, 不只待加载文案
-    for marker in ("appData.phases", "appData.priorities", "appData.pitfalls", "appData.assemble"):
+    for marker in ("appData.phases", "appData.priorities", "appData.pitfalls", "appData.assemble", "appData.candidates08"):
         if marker not in audit_html:
             fail(f"audit.html 缺 06-09 实节渲染 (须读 live 数据): {marker}", errors)
 

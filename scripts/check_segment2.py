@@ -173,14 +173,14 @@ def main(argv: list[str] | None = None) -> int:
     if phases != phases_out:
         fail("outputs/phases.json must equal steps/06-phases/phases.json", errors)
 
-    # --- 07-priorities (#49: upgrades 3 沿用 + shop N 动态断层 + 通用顺延, 去 Top3 写死 + 按名特判) ---
+    # --- 07-priorities (#50: upgrades/shop 双断层动态, 去 Top3 写死 + 按名特判) ---
     if not isinstance(priorities, dict) or "upgrades" not in priorities or "shop" not in priorities:
-        fail("priorities must be {upgrades[3], shop[N]} (升级沿用3 + 商店断层动态N>=1)", errors)
+        fail("priorities must be {upgrades[N], shop[N]} (升级断层动态N>=1 + 商店断层动态N>=1)", errors)
         ups, shs = [], []
     else:
         ups, shs = priorities["upgrades"], priorities["shop"]
-    if not (isinstance(ups, list) and len(ups) == 3):
-        fail(f"priorities upgrades must be 3 沿用, got {len(ups) if isinstance(ups, list) else type(ups)}", errors)
+    if not (isinstance(ups, list) and len(ups) >= 1):
+        fail(f"priorities upgrades must be N>=1 动态 (保底 Top1), got {len(ups) if isinstance(ups, list) else type(ups)}", errors)
     if not (isinstance(shs, list) and len(shs) >= 1):
         fail(f"priorities shop must be N>=1 动态 (保底 Top1), got {len(shs) if isinstance(shs, list) else type(shs)}", errors)
     sa_names = {r.get("term_en") for r in ratings if r.get("rating") in ("S", "A")}
@@ -201,7 +201,27 @@ def main(argv: list[str] | None = None) -> int:
         qall = " ".join(g.get("quotes", [])).lower() + " " + str(g.get("reason", "")).lower()
         return any(sig in qall for sig in _REJECT)
 
-    # 期望 TopN (与 run 同刀法, 独立重算): must_take verified 按 (-count, name) 排, 去拒绝, 最大断层切分
+    # 期望升级 TopN (#50: 与 run 同刀法, 独立重算): S/A 按 (-count, term_en) 排, 最大断层切分, 不断层多收, 保底 Top1
+    _sa_exp = sorted([r for r in ratings if r.get("rating") in ("S", "A")],
+                     key=lambda x: (-int(x.get("count", 0)), str(x.get("term_en", ""))))
+    _ucounts_exp = [int(r.get("count", 0)) for r in _sa_exp]
+    if len(_sa_exp) <= 1:
+        _expect_up = [r.get("term_en") for r in _sa_exp]
+    elif not _sa_exp:
+        _expect_up = []
+    else:
+        _ugaps = [_ucounts_exp[i] - _ucounts_exp[i + 1] for i in range(len(_ucounts_exp) - 1)]
+        _umx = max(_ugaps)
+        if _umx == 0:
+            _expect_up = [r.get("term_en") for r in _sa_exp]
+        else:
+            _ucut = next(i for i, gp in enumerate(_ugaps) if gp == _umx)
+            _expect_up = [r.get("term_en") for r in _sa_exp[:_ucut + 1]]
+    if isinstance(ups, list) and ups and _expect_up:
+        _got_up = [u.get("name") for u in ups if isinstance(u, dict)]
+        if _got_up != _expect_up:
+            fail(f"priorities upgrades 须为断层 TopN (期望 {_expect_up}, 实得 {_got_up})", errors)
+    # 期望商店 TopN (与 run 同刀法, 独立重算): must_take verified 按 (-count, name) 排, 去拒绝, 最大断层切分
     _cands_exp = sorted(list(mt_verified.values()), key=lambda x: (-int(x.get("count", 0)), str(x.get("name_en", ""))))
     _filt_exp = [g for g in _cands_exp if not _has_refusal(g)]
     _counts_exp = [int(g.get("count", 0)) for g in _filt_exp]
@@ -301,10 +321,7 @@ def main(argv: list[str] | None = None) -> int:
                 fail(f"pitfalls quote须等于quotes成员: {p.get('title')}", errors)
             if want_kind == "anchor" and (p.get("quotes", []) or [None])[0] not in seeds:
                 fail(f"pitfalls 锚定条quotes[0]须是种子直引: {p.get('title')}", errors)
-            for q in (p.get("quotes", []) if isinstance(p.get("quotes"), list) else []):
-                if "glass cannon" in str(q).lower():
-                    fail(f"pitfalls glass cannon系take排除: {p.get('title')}", errors)
-                    break
+            # (#50: take 系出局走 prompt 锚规则 + 召回约束, 代码侧不点名; merge 只校验种子链, 不做按名过滤)
             if want_kind == "anchor" and not seeds:
                 fail(f"pitfalls 锚定条至少一句链回seed: {p.get('title')}", errors)
             for q in seeds:
@@ -339,9 +356,7 @@ def main(argv: list[str] | None = None) -> int:
             if not isinstance(c.get("signals"), list) or not c["signals"]:
                 fail("candidates entry must have non-empty signals", errors)
                 break
-            if "glass cannon" in c["quote"].lower():
-                fail("candidates glass cannon系take排除", errors)
-                break
+            # (#50: 召回纯标记 + 情态约束, 不点名; take 系出局走 prompt, candidates 允许警告标记句含 taken 件名, 由 agent 提名时剔除)
 
     # --- 09-assemble ---
     if guide != guide_out:

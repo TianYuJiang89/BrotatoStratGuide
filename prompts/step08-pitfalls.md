@@ -21,7 +21,8 @@
   - `how_to_avoid`：人话一句：动作＋条件（何波/何时/拿什么），只认视频口径，未提空出不脑补。
   - `reason`：一句话人话：为什么这几句合成一条、扩展句凭什么跟走（锚定条也要写；trap 在此论证“看着赚”）。
   - `inferred`：bool；锚定条填 false（警告锚定非推断，走绿），裁量条填 true（标黄待人点，永不进绿）。
-  - glass cannon 系 take（一律不收，拿不是坑）；ban 组不重复进（拒绝清单是 03 的事）。
+  - take 系出局（通用，不点名）：有 take 系 verified 拿取（精确名 + 闭集拿取动词 take/buy/pick up/lock/get/roll for 原形/变形肯定式，无 n't/not/never/can't 等否定）一律不收为种子/extra，拿不是坑；ban 组不重复进（拒绝清单是 03 的事）。
+    （#50：召回 seedpool 已按纯警告标记 + 情态约束过滤，take 出局由你提名时执行；extra 允许含 take 作解法证据，如 horde 波前合核弹，但不得以 take 本身为坑。）
 
 ## 好/坏例
 

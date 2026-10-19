@@ -288,6 +288,7 @@ def step02(workdir: Path, sentences: list[dict]) -> dict:
         key = r.get("object_norm") or r.get("normalized_to")
         by_item[key].append(r)
     # 截断 candidates 超长 (verified 全留, candidates 按件 cap 10)
+    # #50 退役: pilot 旧链已冻结, B 链走 run_segment1.step02 (无 cap, #46 去截断); 本 trim 仅留作 pilot 历史口径, 无 B 链调用.
     cand_by_item: dict[str, list] = defaultdict(list)
     for c in candidates:
         cand_by_item[c["normalized_to"]].append(c)

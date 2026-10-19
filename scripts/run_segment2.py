@@ -56,8 +56,8 @@ def _collect(sentences: list[dict], keywords: list[str],
               id_min: int | None = None, id_max: int | None = None) -> tuple[list[str], list[dict]]:
     """现场扫: 任一关键词 substring (case-insensitive) 命中即收, 保序去重, 全量 (去cap #42跟进).
 
-    id 窗 (可选): 视频按波次顺序讲解, W1-5 偏前段 / W6-12 偏中段 / W13-20 偏后段.
-    窗只做去重前的预筛, 不改关键词口径, 不编数字.
+    id 窗 (可选): 去重前预筛, 不改关键词口径, 不编数字 (#50 删 W1-5 旧口径, 窗口按调用方传参, 08 不传窗全量扫).
+    纯采集无过滤 (#50: glass cannon 按名过滤已删, take 系出局走 08 锚规则 prompt + 召回 seedpool 约束, 不点名).
     """
     seen: list[str] = []
     for s in sentences:
@@ -66,8 +66,6 @@ def _collect(sentences: list[dict], keywords: list[str],
         if id_max is not None and s["id"] > id_max:
             continue
         low = s["text"].lower()
-        if "glass cannon" in low:
-            continue
         if any(k.lower() in low for k in keywords):
             if s["text"] not in seen:
                 seen.append(s["text"])
@@ -244,12 +242,24 @@ def step07(workdir: Path, sentences: list[dict], ratings: list[dict],
     live_phases = [p for p in phases if isinstance(p, dict) and p.get("quotes")]
     # live_phases 仅用于节奏引用 (空段跳过); 升级沿用 S/A 排名 + 商店读新分组, 不自创不重评
     _ = live_phases
-    # 升级 Top3 沿用: 只认 04 输出 S/A + count 降序 (不自创, 不重评; 04 新评级自动跟)
+    # 升级 TopN 断层动态 (#50: 与商店侧同一刀法, 去 sa[:3] 写死; 只认 04 输出 S/A + count 降序, 不自创不重评; 04 新评级自动跟)
     sa = [r for r in ratings if r.get("rating") in ("S", "A")]
-    sa = sorted(sa, key=lambda x: -int(x.get("count", 0)))
-    if len(sa) < 3:
-        raise SystemExit(f"step07 升级候选不足 S/A={len(sa)}: 段1 ratings 疑异常")
-    top_up = sa[:3]
+    sa = sorted(sa, key=lambda x: (-int(x.get("count", 0)), str(x.get("term_en", ""))))
+    if not sa:
+        raise SystemExit("step07 升级候选不足 S/A=0: 段1 ratings 疑异常")
+    if len(sa) == 1:
+        top_up = sa
+    else:
+        _ucounts = [int(r.get("count", 0)) for r in sa]
+        _ugaps = [_ucounts[i] - _ucounts[i + 1] for i in range(len(_ucounts) - 1)]
+        _umx = max(_ugaps)
+        if _umx == 0:
+            top_up = sa
+        else:
+            _ucut = next(i for i, gp in enumerate(_ugaps) if gp == _umx)
+            top_up = sa[:_ucut + 1]
+    if not top_up:
+        raise SystemExit(f"step07 升级断层切分空 (S/A={len(sa)}): 保底 Top1 失败")
     # 商店 TopN 断层动态 (#49: 去 Top3 写死 + Peacock 按名顺延; 只认新分组 must_take + verified + count 降序)
     # 通用顺延 (不点名): 任一候选 quotes+reason 含拒绝动词原话即顺延 (拿取否定/跳过系逐字, 不含泛 don't want)
     _REJECT = ("not taking", "not take", "don't take", "do not take",
@@ -338,6 +348,7 @@ def step07(workdir: Path, sentences: list[dict], ratings: list[dict],
 # 08两跳召回((a)方案): 第一跳纯警告标记产种子池(零游戏名词) + agent提名主题扩展 + merge种子链约束.
 # 标记只认警告言语行为(禁止/义务/翻车/风险/后悔), materials/swap/peacock等地名式名词一律不进;
 # 主题由agent从seed出发提名, 每条锚定坑至少一句种子直引(链回seed), 扩展须出自sentences逐字.
+# (#50 收敛: 删纯语法粘连 "'d "; 情态须同句另含非情态锚才收, 去注水; take 系出局走 prompt 锚规则 + 召回约束, 代码侧不点名)
 MARKER_SIGNALS = [
     "mistake", "wrong", "fail", "failed", "fault",
     "dying", "die", "died", "death", "hurt", "hurts", "painful",
@@ -349,18 +360,31 @@ MARKER_SIGNALS = [
     "dangerous", "risky", "risk", "trap", "careful", "worry", "worried", "warn", "warning",
     "watch out", "beware", "awkward", "problem", "struggle", "survive", "barely", "hard",
     "wish", "should have", "could have", "would have", "if only", "supposed to",
-    "avoid", "'d ",
+    "avoid",
 ]
+# 情态单独不成种子 (#50): 须同句另含一个非情态锚才收. 非情态 = 警告实词/禁止/翻车/风险 (don't/can't/never/dangerous/mistake 等).
+# "'d " 已删 (纯语法粘连, 去注水); make sure/make certain/be sure/remember 视为非情态 (建议动作, 单独可收).
+_MODAL_SIGNALS = {
+    "must", "should", "must not", "shouldn't", "should not",
+    "need to", "needs to", "have to", "has to", "got to", "gotta", "had to",
+    "wish", "should have", "could have", "would have", "if only", "supposed to",
+}
 
 
 def _recall_08(workdir: Path, sentences: list[dict]) -> list[dict]:
-    """第一跳(代码, 无判断): 任一警告标记逐字命中即收为种子, 保序去重全量, 落candidates.json(种子池)."""
+    """第一跳(代码, 无判断): 任一警告标记逐字命中即收为种子, 保序去重全量, 落candidates.json(种子池).
+
+    #50 收敛: 情态单独不成种子 (sigs 全落 _MODAL 即跳过, 须同句另含非情态锚); "'d " 已删.
+    take 系出局走 prompt 锚规则 (agent 提名时不收 take 系 verified 拿取, 不点名), 召回侧纯标记 + 情态约束, 不读 verbs/grouping (DAG 08 与段1并行).
+    """
     qs, qd = _collect(sentences, MARKER_SIGNALS)
     by_q = {d["quote"]: d for d in qd if isinstance(d, dict)}
     cands: list[dict] = []
     for q in qs:
         low = q.lower()
         sigs = sorted({s for s in MARKER_SIGNALS if s.lower() in low})
+        if sigs and all(s in _MODAL_SIGNALS for s in sigs):
+            continue  # 情态单独不成种子, 去注水
         d = by_q.get(q, {})
         cands.append({"quote": q, "signals": sigs, "start": d.get("start"),
                       "end": d.get("end"), "t": d.get("t"),
@@ -378,7 +402,7 @@ def _load_wordings_08(workdir: Path) -> list[dict]:
         raise SystemExit(
             "step08 缺 wordings.json (agent判断未写): 按 prompts/step08-pitfalls.md "
             "读 steps/08-pitfalls/candidates.json (种子池) + sentences.json (扩展备查) 写 wordings.json "
-            "(seeds提名+extra扩展+anchor/why/how_to_avoid/reason只写判断, glass cannon禁入)")
+            "(seeds提名+extra扩展+anchor/why/how_to_avoid/reason只写判断, take系verified拿取出局不点名)")
     try:
         w = json.loads(p.read_text(encoding="utf-8"))
     except Exception as err:
@@ -428,13 +452,11 @@ def step08(workdir: Path, sentences: list[dict]) -> list[dict]:
         for q in seeds:
             if q not in seedpool:
                 raise SystemExit(f"step08 seed须出自种子池逐字: {e.get('title')} :: {q[:40]}")
-            if "glass cannon" in q.lower():
-                raise SystemExit(f"step08 glass cannon系take排除: {e.get('title')}")
+            # (#50: take 系出局走 prompt 锚规则 + 召回 seedpool 约束, 代码侧不点名; merge 只校验种子链, 不做按名过滤)
         for q in extra:
             if q not in senttexts:
                 raise SystemExit(f"step08 extra须出自sentences逐字: {e.get('title')} :: {q[:40]}")
-            if "glass cannon" in q.lower():
-                raise SystemExit(f"step08 glass cannon系take排除: {e.get('title')}")
+            # (#50: extra 允许 take 作为解法证据 (如 horde 波前合核弹), take 出局仅约束召回 seeds 提名, 不点名)
         akeys = list(e["anchors"])
         for a in akeys:
             low_a = a.lower()

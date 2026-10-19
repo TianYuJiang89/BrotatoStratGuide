@@ -295,17 +295,20 @@ def main(argv: list[str] | None = None) -> int:
         fail(f"weapons t1+t2 must equal registry-slice weapons {sorted(wset)}, got {sorted(got_w)}", errors)
     if len(t1) < 1:
         fail("weapons T1>=1 (验收线)", errors)
-    # #47 排名制: registry 子集内按 score=count+动词信号 (verified+5) 排, 不卡绝对数; T1 须为 top 断层 (最小 T1 score >= 最大 T2 score)
+    # #47 排名制 #50 归一: registry 子集内按 count 降序 + verified 同分置顶 (不做 verified+5 加分), 不卡绝对数;
+    # T1 须为 top 断层 (最小 T1 count > 最大 T2 count, 或同分时 T1 全 verified 置顶; 简单断言 count 不倒挂, tie 由实现 tie-break 保证)
     try:
-        _score = {}
+        _count = {}
+        _ver = {}
         for w in (t1 + t2):
             if isinstance(w, dict) and isinstance(w.get("name_en"), str):
-                _score[w["name_en"]] = int(w.get("count", 0) or 0) + (5 if w.get("confidence") == "verified" else 0)
+                _count[w["name_en"]] = int(w.get("count", 0) or 0)
+                _ver[w["name_en"]] = (w.get("confidence") == "verified")
         if t1 and t2:
-            _min_t1 = min(_score.get(w.get("name_en"), 0) for w in t1 if isinstance(w, dict))
-            _max_t2 = max(_score.get(w.get("name_en"), 0) for w in t2 if isinstance(w, dict))
+            _min_t1 = min(_count.get(w.get("name_en"), 0) for w in t1 if isinstance(w, dict))
+            _max_t2 = max(_count.get(w.get("name_en"), 0) for w in t2 if isinstance(w, dict))
             if _min_t1 < _max_t2:
-                fail(f"weapons T1须为排名制top (最小T1 score {_min_t1} < 最大T2 score {_max_t2}, 不卡绝对数)", errors)
+                fail(f"weapons T1须为排名制top (最小T1 count {_min_t1} < 最大T2 count {_max_t2}, 不卡绝对数)", errors)
     except Exception:
         pass
     for w in (t1 + t2):

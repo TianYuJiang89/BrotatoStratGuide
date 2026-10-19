@@ -952,7 +952,7 @@ function render() {
           <span class="badge" style="margin-left:4px;">DAG L1并行层</span>
         </div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step08-pitfalls.md + <code>steps/08-pitfalls/pitfalls.json</code>；可与段1并行先跑，验收按段1→段2两闸算。</p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>→ <code>steps/08-pitfalls/candidates.json</code>（第一跳：纯警告标记产种子池，零游戏名词） → wordings.json（agent提名主题扩展＋分组分级＋种子链） → <code>steps/08-pitfalls/pitfalls.json</code>（merge：锚定条至少一句种子直引，扩展须出自sentences逐字；glass cannon系take排除；禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>→ <code>steps/08-pitfalls/candidates.json</code>（第一跳：纯警告标记产种子池，零游戏名词；#50 收敛：删纯语法粘连 "'d "，情态须同句另含非情态锚才收） → wordings.json（agent提名主题扩展＋分组分级＋种子链） → <code>steps/08-pitfalls/pitfalls.json</code>（merge：锚定条至少一句种子直引，扩展须出自sentences逐字；take 系 verified 拿取出局通用规则不点名，拿不是坑；308–310 去向：308/309 无警告标记不进池（309 另为 take 系 verified 拿取），310 含 hurt/lose 进池但 agent 未提名，属正常召回未选中；禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
         ${pitfallsSectionHtml()}
       </div>
     </div>
@@ -964,12 +964,12 @@ function render() {
       <div class="card">
         <div class="card-header">
           <div class="card-title">
-            <span>🛒 steps/07-priorities/ · 升级 Top3 沿用 + 商店 TopN 动态 + 怎么拿</span>
+            <span>🛒 steps/07-priorities/ · 升级 TopN 断层动态 + 商店 TopN 动态 + 怎么拿</span>
           </div>
           <span class="badge badge-verified">check_07 对应节</span>
         </div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step07-priorities.md + <code>steps/07-priorities/priorities.json</code>；07 须段1绿后才开。</p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/04-attributes/ratings.json</code> + <code>steps/05-weapons/weapons.json</code> + <code>steps/06-phases/phases.json</code> + <code>steps/03-grouping/grouping.json</code>（读新分组：锚+裁量动态 cutoff，68 全收录） + 商店 quotes → <code>steps/07-priorities/priorities.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>；升级 Top3 沿用 S/A 排名，商店 TopN 断层动态：count 不断层多收、断层即止、保底 Top1，任一候选有拒绝动词原话即顺延不点名）</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/04-attributes/ratings.json</code> + <code>steps/05-weapons/weapons.json</code> + <code>steps/06-phases/phases.json</code> + <code>steps/03-grouping/grouping.json</code>（读新分组：锚+裁量动态 cutoff，68 全收录） + 商店 quotes → <code>steps/07-priorities/priorities.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>；升级 TopN 断层动态 S/A 排名（#50 与商店侧同一刀法：count 降序 + 最大断层即止，不断层多收，保底 Top1），商店 TopN 断层动态：count 不断层多收、断层即止、保底 Top1，任一候选有拒绝动词原话即顺延不点名）</p>
         ${prioritiesSectionHtml()}
       </div>
     </div>
@@ -1204,7 +1204,7 @@ function prioritiesSectionHtml() {
         ${(u.quotes && u.quotes.length) ? `<div class="item-card-quote">“${u.quotes[0]}”</div>` : ''}
       </div>`;
   return `
-    <div style="font-size:12px;font-weight:700;margin:6px 0 4px;">⬆️ 升级 Top3 沿用（依赖 04 S/A 排名 + 05/06）</div>
+    <div style="font-size:12px;font-weight:700;margin:6px 0 4px;">⬆️ 升级 TopN 断层动态（依赖 04 S/A 排名 + 05/06，#50 与商店侧同一刀法）</div>
     <div style="display:flex;flex-direction:column;gap:8px;">${ups.map((u, i) => card(u, i, 'upgrades')).join('')}</div>
     <div style="font-size:12px;font-weight:700;margin:8px 0 4px;">🛒 商店 TopN 断层动态（依赖新 03 must_take verified + 通用顺延 + 断层切分）</div>
     <div style="display:flex;flex-direction:column;gap:8px;">${shs.map((u, i) => card(u, i, 'shop')).join('')}</div>`;
@@ -1245,7 +1245,7 @@ function assembleSectionHtml() {
     </div>`;
 }
 
-// 07继承自上游结果 (非自创, #49): 升级←04 S/A 沿用, 商店←新03 must_take+verified 断层TopN+通用顺延 (与 run_segment2 口径一致, 不点名)
+// 07继承自上游结果 (非自创, #49/#50): 升级←04 S/A 断层TopN (与商店侧同一刀法), 商店←新03 must_take+verified 断层TopN+通用顺延 (与 run_segment2 口径一致, 不点名)
 function inheritLineHtml(kind, name) {
   const key = (name || '').toLowerCase();
   if (kind === 'shop') {

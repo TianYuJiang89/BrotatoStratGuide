@@ -385,13 +385,15 @@ def step03(workdir: Path, verbs: dict, sentences: list[dict]) -> list[dict]:
     锚 (机检只认逐字):
     - ban 系原话 (ban/recycle/sell 闭集原话, 或 candidates mapped_to==ban 含 agent 补) -> ban, 无按名例外.
     - 拿取系原话 (take/buy/pick up/lock/get/roll for 闭集原话, 或 mapped_to 落拿取系含 agent 补) + 高频 -> must_take.
-      高频无固定数: 68 件 count 的 mean+stdev 动态 cutoff (count>=cutoff 即高频, 无 >=8/>=4 写死).
+      高频无固定数: 68 件 count 的 mean+stdev 动态 cutoff #50 口径 (count>=cutoff 即高频, 无 >=8/>=4 写死;
+      换视频 count 分布变 cutoff 跟着动, 口径不动, 值不动).
     - skip 系原话 (skip 闭集原话, 或 mapped_to==skip 如 ignoring->skip 含 agent 补) + 高频 -> mentioned_not_taken;
       skip 系低频 -> casual (低频路过照旧).
     裁量 (只查格式, 审计标黄): 无动词或信号冲突无法定级 -> candidate + inferred true, reason 写清拿不准.
     """
     import statistics as _stats
-    # #48 动词信号集 (闭集 10 下限内划分, 无按名, 无阈值)
+    # #48 动词信号集 (闭集 10 下限内划分, 无按名, 无阈值) #50 口径: _BAN/_TAKE/_SKIP 构成为本视频动词分布口径,
+    # 换视频新增转述 (如 snatch→take 新变体) 走 agent 补 candidates, 不改集合, 值不动.
     _BAN = {"ban", "recycle", "sell"}  # ban 系原话
     _TAKE = {"take", "buy", "pick up", "lock", "get", "roll for"}  # 拿取系原话
     _SKIP = {"skip"}  # 跳过系原话 (mapped skip 含 ignoring->skip 等种子 + agent 补)
@@ -527,11 +529,12 @@ def step04(workdir: Path, sentences: list[dict]) -> list[dict]:
     - 拿取动词闭集 (作者亲口买/升级含拿取): buy/bought/buying,
       upgrade/upgraded/upgrading, take/took/taken/taking, pick up/picked up (get/lock/roll excluded:
       get 太泛 got lucky/got cursed/get tree 误报, roll 系重随非拿取). 机检只认这些逐字.
-    - 同句 term+动词共现 (窗 30 字, 动词否定跳过 n't/never/without/hard/unfortunately,
+    - 同句 term+动词共现 (窗 30 字 #50 口径: 同句内 term span 与动词距离≤30 字, 换视频句长分布变须重估, 值不动;
+      动词否定跳过 n't/never/without/hard/unfortunately #50 口径: 动词前 20 字窗, 换视频否定前置距离变须重估, 值不动;
       term/动词同 span 重叠跳过如 pickup==pick up 自匹配). 每条 quote+reason, 审计标黄外 S/A 走绿.
     - 升级二选一赢过谁: 含 over + 拿取动词句, over 前 winner/后 loser, 最长匹配定 term
       (range damage 2 词优先于 range/damage 单字, attack speed 排除 Speed 系 pattern 已有 lookbehind).
-      S=赢家 (cyborg 单例: Ranged Damage), A=其余有锚.
+      S=赢家 (cyborg 单例: Ranged Damage), A=其余有锚. over 窗 #50 口径: over 前 60 字窗取 winner, 换视频从句长度变须重估, 值不动.
     裁量 (只查格式, 审计标黄): 无锚 + 有负面 (can't/don't/never/without/hard/unfortunately/
     negative/given up/gave up/reduced/lost/lose/dangerous/avoid/-100%) -> D; 无锚无负面按 count
     排名上半 B(顺手)/下半 C(妥协/路过), 无绝对数; count==0 -> - (作者未提及) 保留; reason 禁计数泄漏沿旧契约.
@@ -738,7 +741,7 @@ def step05(workdir: Path, sentences: list[dict]) -> dict:
 
     T1 锚 (闭集强约束, 机检只认逐字): verified 拿取动词 (02-verbs 精确名+闭集动词+整句 quote)
     + 把数/波次原话不丢 (note 须含 quotes 内数字词逐字: one/two/three/four/five/second/2/3/4/1/5/level/wave).
-    T1 判定改排名制: registry 子集内按 score=count+动词信号 (verified+5) 排, 最大断层切分, 不卡绝对数; T1>=1 验收线保留.
+    T1 判定改排名制 (#50 归一): registry 子集内按 count 降序 + verified 同分置顶 (不做 verified+5 加分), 最大断层切分, 不卡绝对数; T1>=1 验收线保留.
     裁量 (只查格式, 审计标黄): T2 过渡/备选位, kind discretion/inferred true, 每条 note+quotes.
     """
     import re as _re
@@ -759,6 +762,7 @@ def step05(workdir: Path, sentences: list[dict]) -> dict:
         ver_by_name = {}
     _NUM_TOKENS = ["one", "two", "three", "four", "five", "second", "level", "wave",
                    " 1 ", " 2 ", " 3 ", " 4 ", " 5 ", "1", "2", "3", "4", "5"]
+    # #50 口径: 数字词表为本视频口径 (英文数词 + level/wave + 1-5; 单字数字靠空格词界, 换视频出现 six/ten/20波等须增补, 值不动).
     def _best_number_quote(name: str, seen_q: list[str]) -> tuple[str, str]:
         """把数/波次原话: 武器名附近数字词最近句 (通用, 不按名, 未提空出不脑补). 返回 (nq_short, num_token)."""
         lname = name.lower()
@@ -809,7 +813,8 @@ def step05(workdir: Path, sentences: list[dict]) -> dict:
             h = hits[0] if hits else {"start": None, "end": None, "t": None, "context": q[:300]}
             details.append({"quote": q, "start": h["start"], "end": h["end"], "t": h["t"], "context": h["context"]})
         verified = name in ver_names
-        score = count + (5 if verified else 0)
+        # #50 归一: 排名内 verified 同分置顶, 不做 +5 加分 (换视频 count 分布变须重看断层, 口径不动).
+        score = count  # 归一分 = count 本身 (verified 仅同分置顶, 见 ws_sorted tie-break, 不加分)
         nq, num_tok = _best_number_quote(name, seen_q)
         nq_short = (nq[:60] if nq else (seen_q[0][:60] if seen_q else name))
         return {"name_en": name, "count": count, "score": score, "verified": verified,
@@ -817,11 +822,11 @@ def step05(workdir: Path, sentences: list[dict]) -> dict:
                 "_nq": nq, "_num_tok": num_tok, "_nq_short": nq_short,
                 "quotes": seen_q, "quote_details": details}
     ws = [one(n) for n in wnames]
-    # 排名制: score 降序, 最大断层切分 (不卡绝对数); 保底 T1>=1
-    ws_sorted = sorted(ws, key=lambda x: (-x["score"], -x["count"], x["name_en"]))
+    # 排名制 (#50 归一: count 降序, verified 同分置顶, 不加分; 最大断层切分不卡绝对数; 保底 T1>=1)
+    ws_sorted = sorted(ws, key=lambda x: (-x["count"], 0 if x["verified"] else 1, x["name_en"]))
     cut = 0
     if len(ws_sorted) >= 2:
-        gaps = [ws_sorted[i]["score"] - ws_sorted[i + 1]["score"] for i in range(len(ws_sorted) - 1)]
+        gaps = [ws_sorted[i]["count"] - ws_sorted[i + 1]["count"] for i in range(len(ws_sorted) - 1)]
         cut = int(max(range(len(gaps)), key=lambda i: (gaps[i], -i)))
     elif ws_sorted:
         cut = 0
@@ -879,8 +884,10 @@ def step05(workdir: Path, sentences: list[dict]) -> dict:
         w["tier"] = "T2"
     if not t1 and out_ws:
         # 保底 Top1 (排名制不断层也保 1, cyborg 不触发)
-        score_of = {s["name_en"]: s["score"] for s in ws_sorted}
-        cand = sorted(out_ws, key=lambda x: (-score_of.get(x["name_en"], x["count"]), -x["count"]))[0]
+        count_of = {s["name_en"]: s["count"] for s in ws_sorted}
+        ver_of = {s["name_en"]: s["verified"] for s in ws_sorted}
+        cand = sorted(out_ws, key=lambda x: (-count_of.get(x["name_en"], x["count"]),
+                                             0 if ver_of.get(x["name_en"]) else 1))[0]
         cand["tier"] = "T1"
         # 保底转 T1 须补锚 (通用, 同上兜底)
         if not cand.get("anchors"):

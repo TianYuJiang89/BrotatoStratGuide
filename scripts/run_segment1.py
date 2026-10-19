@@ -337,15 +337,8 @@ def step02(workdir: Path, sentences: list[dict]) -> dict:
                                    "reason": f"无动词意图推断：提及 {n} 虽无闭集动词，结合语境算关注意图（inferred:true），待人点",
                                    **base_extra})
 
-    from collections import defaultdict as _dd
-    cand_by: dict[str, list] = _dd(list)
-    for c in candidates:
-        cand_by[c["normalized_to"]].append(c)
-    trimmed: list[dict] = []
-    for k, lst in cand_by.items():
-        trimmed.extend(lst[:10])
-
-    verbs = {"verified": verified, "candidates": trimmed}
+    # 去 cap (#46): candidates 全量保留，不按件截断（cyborg 下 trim 为空转，去前后 71 一致）
+    verbs = {"verified": verified, "candidates": candidates}
     outdir = workdir / "steps" / "02-verbs"
     outdir.mkdir(parents=True, exist_ok=True)
     (outdir / "verbs.json").write_text(

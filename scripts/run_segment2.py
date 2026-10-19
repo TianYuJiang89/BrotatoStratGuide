@@ -66,6 +66,8 @@ def _collect(sentences: list[dict], keywords: list[str],
         if id_max is not None and s["id"] > id_max:
             continue
         low = s["text"].lower()
+        if "glass cannon" in low:
+            continue
         if any(k.lower() in low for k in keywords):
             if s["text"] not in seen:
                 seen.append(s["text"])
@@ -313,35 +315,131 @@ def step07(workdir: Path, sentences: list[dict], ratings: list[dict],
     return priorities
 
 
+# #46: 08换筐(事件锚定N不定, 沿grilling Q1=A): 筐由作者亲口警告定, 有锚才有条.
+# 闭集9锚逐字原话, 机检只认这个; cyborg现货5组全留; glass cannon系take排除.
+CLOSED_PIT_ANCHORS = [
+    "mistake",
+    "dying",
+    "do not want",
+    "avoid",
+    "too dangerous",
+    "knock back",
+    "materials",
+    "transition-swap",
+    "peacock-spawn",
+]
+
+# 复合锚展开为逐字短语(机检验逐字包含, 大小写不敏感;
+# transition-swap = transition OR swap, peacock-spawn = peacock OR spawn)
+PIT_ANCHOR_PHRASES: dict[str, list[str]] = {
+    "mistake": ["mistake"],
+    "dying": ["dying"],
+    "do not want": ["do not want"],
+    "avoid": ["avoid"],
+    "too dangerous": ["too dangerous"],
+    "knock back": ["knock back"],
+    "materials": ["materials"],
+    "transition-swap": ["transition", "swap"],
+    "peacock-spawn": ["peacock", "spawn"],
+}
+
+
+def _anchor_phrases(keys: list[str]) -> list[str]:
+    out: list[str] = []
+    for k in keys:
+        out.extend(PIT_ANCHOR_PHRASES.get(k, [k]))
+    return out
+
+
+def _has_closed_anchor(text: str) -> bool:
+    low = text.lower()
+    for plist in PIT_ANCHOR_PHRASES.values():
+        if any(p.lower() in low for p in plist):
+            return True
+    return False
+
+
+def _collect_anchors(sentences: list[dict], anchor_keys: list[str]) -> tuple[list[str], list[dict]]:
+    """闭集锚收集: 任一锚短语逐字命中即收(glass cannon已在_collect内排除)."""
+    return _collect(sentences, _anchor_phrases(anchor_keys))
+
+
+def _collect_discretion(sentences: list[dict], keywords: list[str]) -> tuple[list[str], list[dict]]:
+    """裁量收集: 关键词命中 + 排除闭集锚(保证黄vs绿可分) + 排除glass cannon, 全量去重."""
+    seen: list[str] = []
+    for s in sentences:
+        low = s["text"].lower()
+        if "glass cannon" in low:
+            continue
+        if _has_closed_anchor(s["text"]):
+            continue
+        if any(k.lower() in low for k in keywords):
+            if s["text"] not in seen:
+                seen.append(s["text"])
+    qlookup = _quote_lookup(sentences)
+    details = []
+    for q in seen:
+        hits = qlookup.get(q, [])
+        h = hits[0] if hits else {"start": None, "end": None, "t": None, "context": q[:300]}
+        details.append({"quote": q, "start": h["start"], "end": h["end"], "t": h["t"], "context": h["context"]})
+    return seen, details
+
+
 def step08(workdir: Path, sentences: list[dict]) -> list[dict]:
-    specs = [
-        ("半波转换踩空", "fatal",
-         ["swap", "transition", "halfway", "kill elites", "before", "convert"],
-         "前半波没打完 elite/boss，转换后变近战刮痧",
-         "看顶栏 halfway，前半波集火 elite， engineering half 靠螺丝刀+结构补"),
-        ("材料落地不捡", "risky",
-         ["materials on the ground", "picking them up", "mid game", "worry"],
-         "中期材料落地不捡，经济崩盘",
-         "材料顺路捡，不跨波囤，中期必清地"),
-        ("站位撞出生点", "risky",
-         ["mistake", "awkward", "spawning", "knock back", "stargazers"],
-         "站位撞投射物出生点 + 击退丢失后难处理",
-         "开局记出生点，不贴左墙；丢击退后靠走位拉扯"),
-        ("Peacock刷怪失控", "trap",
-         ["peacock", "flies", "wave 16", "mini boss", "spawn", "do not want", "dangerous"],
-         "Peacock 波 +30% 伤 + 刷怪失控（小怪/放出器）",
-         "horde 波提前合核弹清场，peacock 波控刷怪数，enhanced flies 用前半远程点掉"),
+    # 5锚定组(覆盖全部9闭集锚, cyborg现货全留) + 2裁量(不限条, 黄永不进绿)
+    anchored_specs = [
+        ("半波转换踩空", "fatal", ["transition-swap"],
+         "前半波没打完elite/boss, 转换后变近战刮痧",
+         "看顶栏halfway, 前半波集火elite, engineering half靠螺丝刀+结构补"),
+        ("材料落地不捡", "risky", ["materials"],
+         "中期材料落地不捡, 经济崩盘",
+         "材料顺路捡, 不跨波囤, 中期必清地"),
+        ("失误丢击退", "risky", ["mistake", "knock back"],
+         "走位撞投射物出生点失误 + 击退丢了难处理",
+         "开局记出生点, 不贴左墙; 丢击退后靠走位拉扯"),
+        ("刷怪站位失控", "trap", ["peacock-spawn", "do not want"],
+         "Peacock波+30%伤 + 刷怪失控 + 站位撞刷怪点",
+         "horde波提前合核弹清场, peacock波控刷怪数, 开局远离刷怪点"),
+        ("高难警告别硬顶", "risky", ["dying", "avoid", "too dangerous"],
+         "经济没成型硬顶会死 + 非武器伤别碰 + 危险波次别硬拿",
+         "经济先保命再贪收入; 非武器伤直接避开; horde波不拿scarf锁企鹅过波"),
     ]
-    pitfalls = []
-    for title, sev, keys, why_tail, avoid in specs:
-        qs, qd = _collect(sentences, keys)
+    discretion_specs = [
+        ("尸潮核弹清场", "risky", ["horde", "nuke"],
+         "horde波没核弹清不动, 拖到尸潮堆起来会崩",
+         "horde波前合核弹(nuke launcher), 留咖啡/穿透打清场",
+         "裁量: horde波靠核弹清场是判断(无闭集锚, 标黄待人点)"),
+        ("精英集火补伤", "risky", ["elite", "boss"],
+         "精英/boss不集火压不住, 后半变刮痧",
+         "前半远程补第二把枪, 精英优先点掉, 留伤进boss波",
+         "裁量: 精英/boss集火是判断(无闭集锚, 标黄待人点)"),
+    ]
+    pitfalls: list[dict] = []
+    for title, sev, akeys, why_tail, avoid in anchored_specs:
+        for k in akeys:
+            if k not in CLOSED_PIT_ANCHORS:
+                raise SystemExit(f"step08 anchor非闭集: {k}")
+        qs, qd = _collect_anchors(sentences, akeys)
         if not qs:
-            raise SystemExit(f"step08 现场扫不足 {title}: keywords={keys}")
+            raise SystemExit(f"step08现场扫不足 {title}: anchors={akeys}")
         pitfalls.append({
-            "title": title, "severity": sev,
+            "title": title, "severity": sev, "kind": "anchor",
+            "anchor": akeys[0], "anchors": akeys,
             "why": f"{why_tail}；原话“{_short(qs[0])}…”",
             "how_to_avoid": f"{avoid}；原话“{_short(qs[1] if len(qs) > 1 else qs[0])}…”",
             "quotes": qs, "quote_details": qd,
+        })
+    for title, sev, keys, why_tail, avoid, reason in discretion_specs:
+        qs, qd = _collect_discretion(sentences, keys)
+        if not qs:
+            raise SystemExit(f"step08裁量扫不足 {title}: keywords={keys}")
+        pitfalls.append({
+            "title": title, "severity": sev, "kind": "discretion",
+            "anchor": None, "anchors": [],
+            "why": f"{why_tail}；原话“{_short(qs[0])}…”",
+            "how_to_avoid": f"{avoid}；原话“{_short(qs[1] if len(qs) > 1 else qs[0])}…”",
+            "quotes": qs, "quote_details": qd,
+            "quote": qs[0], "reason": reason, "inferred": True,
         })
     outdir = workdir / "steps" / "08-pitfalls"
     outdir.mkdir(parents=True, exist_ok=True)

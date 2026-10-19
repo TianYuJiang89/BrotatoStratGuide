@@ -31,7 +31,7 @@
 ## 誠实评价
 
 - 给观点时必须凭 `verified/candidates` 信号：verified 高置信直推，candidates 标黄待人点，不混排。
-- `quote` cap 沿目录契约（单句 500 字，单件 quotes cap 10）。
+- `quote` cap 沿目录契约（单句 500 字）。
 
 ## 验收行（机检）
 

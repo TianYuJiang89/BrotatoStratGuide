@@ -931,7 +931,7 @@ function render() {
           <span class="badge" style="margin-left:4px;">DAG L1并行层</span>
         </div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 作者章节分段（#45）落地 prompts/step06-phases.md + <code>steps/06-phases/phases.json</code>（N=8 一章一段，phase 名=章标题原文）；审计与实现同 PR 进，不接受功能先上审计后补。</p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（<code>start_s</code> 落窗分桶，保序去重 cap10） + <code>meta.json chapters timed [{title,start,end}]</code> → <code>steps/06-phases/phases.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>，没读 02/03）</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（<code>start_s</code> 落窗分桶，窗口左闭右开 [start, end) 末章含 end, 保序去重全量不cap） + <code>meta.json chapters timed [{title,start,end}]</code> → <code>steps/06-phases/phases.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>，没读 02/03）</p>
         ${phasesSectionHtml()}
       </div>
     </div>
@@ -947,7 +947,7 @@ function render() {
           <span class="badge" style="margin-left:4px;">DAG L1并行层</span>
         </div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step08-pitfalls.md + <code>steps/08-pitfalls/pitfalls.json</code>；可与段1并行先跑，验收按段1→段2两闸算。</p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（死亡/失误 quotes 现场扫） → <code>steps/08-pitfalls/pitfalls.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（事件锚定现场扫, 闭集9锚 mistake/dying/do not want/avoid/too dangerous/knock back/materials/transition-swap/peacock-spawn逐字原话, 有锚才有条 + 裁量不限条, glass cannon系take排除） → <code>steps/08-pitfalls/pitfalls.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
         ${pitfallsSectionHtml()}
       </div>
     </div>
@@ -1129,10 +1129,10 @@ function pitfallsSectionHtml() {
   return `
     <div style="display:flex;flex-direction:column;gap:8px;">
     ${ps.map((x, idx) => `
-      <div class="item-card" data-pitfall="${idx}" style="cursor:pointer;">
+      <div class="item-card ${x.kind === 'discretion' ? 'is-candidate' : ''}" data-pitfall="${idx}" style="cursor:pointer;${x.kind === 'discretion' ? 'border-color:#f59e0b;background:#fffbeb;' : ''}">
         <div class="item-card-top">
           <div class="item-card-name"><span>⚠️ ${x.title}</span></div>
-          <div><span class="badge" style="${sevStyle(x.severity)}">${x.severity}</span><span class="badge-count-pill">${(x.quotes||[]).length} 引用</span></div>
+          <div><span class="badge" style="${sevStyle(x.severity)}">${x.severity}</span>${x.kind === 'discretion' ? '<span class="badge badge-candidate">裁量黄</span>' : '<span class="badge badge-verified">锚定绿</span>'}<span class="badge-count-pill">${(x.quotes||[]).length} 引用</span></div>
         </div>
         <div class="item-card-reason"><strong>成因:</strong> ${x.why || ''}</div>
         ${(x.quotes && x.quotes.length) ? `<div class="item-card-quote">“${x.quotes[0]}”</div>` : ''}
@@ -1528,6 +1528,7 @@ function openPitfallDrawer(idx) {
       <h3>1. 定级</h3>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;">
         ${sevBadge}
+        ${(x.kind === 'discretion') ? '<span class="badge badge-candidate">裁量黄永不进绿</span>' : '<span class="badge badge-verified">锚定绿</span>'}
         <span class="badge-count-pill">${(x.quotes || []).length} 引用</span>
       </div>
     </div>
@@ -1535,6 +1536,7 @@ function openPitfallDrawer(idx) {
     <div class="drawer-section">
       <h3>2. 成因与躲法</h3>
       <div style="font-size:12px;line-height:1.8;">
+        <div><strong>类型:</strong> ${(x.kind || '')}${(x.anchors && x.anchors.length) ? ' · 锚 ' + x.anchors.join('/') : ''}${(x.reason) ? ' · <span style="background:#fffbeb;border:1px solid #f59e0b;border-radius:4px;padding:0 4px;">' + x.reason + '</span>' : ''}${(x.inferred === true) ? ' · inferred:true' : ''}</div>
         <div><strong>为什么翻车:</strong> ${x.why || ''}</div>
         <div><strong>怎么躲:</strong> ${x.how_to_avoid || ''}</div>
       </div>

@@ -206,19 +206,78 @@ def main(argv: list[str] | None = None) -> int:
     if priorities != priorities_out:
         fail("outputs/priorities.json must equal steps/07-priorities/priorities.json", errors)
 
-    # --- 08-pitfalls ---
+    # --- 08-pitfalls (#46: 事件锚定N不定 + 裁量不限条) ---
+    # 闭集9锚沿 run_segment2.CLOSED_PIT_ANCHORS, 机检只认这个(逐字原话); 裁量只查格式.
+    _CLOSED = ["mistake", "dying", "do not want", "avoid", "too dangerous",
+               "knock back", "materials", "transition-swap", "peacock-spawn"]
+    _PHRASES: dict[str, list[str]] = {
+        "mistake": ["mistake"], "dying": ["dying"], "do not want": ["do not want"],
+        "avoid": ["avoid"], "too dangerous": ["too dangerous"], "knock back": ["knock back"],
+        "materials": ["materials"], "transition-swap": ["transition", "swap"],
+        "peacock-spawn": ["peacock", "spawn"],
+    }
+    def _pit_has_anchor(q: str, keys: list[str]) -> bool:
+        low = q.lower()
+        for k in keys:
+            for ph in _PHRASES.get(k, [k]):
+                if ph.lower() in low:
+                    return True
+        return False
     if not isinstance(pitfalls, list) or len(pitfalls) < 3:
         fail(f"pitfalls must be >=3, got {len(pitfalls) if isinstance(pitfalls, list) else type(pitfalls)}", errors)
     else:
+        _n_anchor = sum(1 for p in pitfalls if isinstance(p, dict) and p.get("kind") == "anchor")
+        _n_disc = sum(1 for p in pitfalls if isinstance(p, dict) and p.get("kind") == "discretion")
+        if _n_anchor < 1:
+            fail("pitfalls must have >=1 anchor kind (闭集锚保底)", errors)
+        if _n_disc < 1:
+            fail("pitfalls must have >=1 discretion kind (裁量不限条)", errors)
         for p in pitfalls:
-            for k in ("title", "severity", "why", "how_to_avoid", "quotes"):
+            for k in ("title", "severity", "why", "how_to_avoid", "quotes", "kind"):
                 if k not in p or (isinstance(p[k], str) and not p[k].strip()):
-                    fail(f"pitfalls missing {k}: {p.get('title')}", errors)
+                    if k == "kind" and "kind" not in p:
+                        fail(f"pitfalls missing kind (anchor/discretion): {p.get('title')}", errors)
+                        continue
+                    if k not in p or (isinstance(p[k], str) and not p[k].strip()):
+                        fail(f"pitfalls missing {k}: {p.get('title')}", errors)
             if p.get("severity") not in ("fatal", "risky", "trap"):
                 fail(f"pitfalls severity must be fatal/risky/trap: {p.get('title')}", errors)
+            if p.get("kind") not in ("anchor", "discretion"):
+                fail(f"pitfalls kind must be anchor/discretion: {p.get('title')}", errors)
+                continue
             if len(str(p.get("why", ""))) < 8 or len(str(p.get("how_to_avoid", ""))) < 8:
                 fail(f"pitfalls why/how_to_avoid too short: {p.get('title')}", errors)
             _check_quotes(f"pitfalls {p.get('title')}", p.get("quotes", []), p.get("quote_details", []))
+            for q in (p.get("quotes", []) if isinstance(p.get("quotes"), list) else []):
+                if "glass cannon" in str(q).lower():
+                    fail(f"pitfalls glass cannon系take排除: {p.get('title')}", errors)
+                    break
+            if p.get("kind") == "anchor":
+                akeys = p.get("anchors", [])
+                if not isinstance(akeys, list) or not akeys:
+                    fail(f"pitfalls anchor must have non-empty anchors list: {p.get('title')}", errors)
+                    continue
+                for k in akeys:
+                    if k not in _CLOSED:
+                        fail(f"pitfalls anchor非闭集 (机检只认9锚): {p.get('title')}={k}", errors)
+                        break
+                if p.get("anchor") not in _CLOSED:
+                    fail(f"pitfalls anchor主锚须在闭集内: {p.get('title')}", errors)
+                # 闭集格式强约束: 每条quote须含至少一锚短语逐字原话
+                for q in (p.get("quotes", []) if isinstance(p.get("quotes"), list) else []):
+                    if not _pit_has_anchor(str(q), akeys if isinstance(akeys, list) else []):
+                        fail(f"pitfalls anchor quote须含锚逐字原话: {p.get('title')} :: {str(q)[:40]}", errors)
+                        break
+            else:
+                # 裁量只查格式: 必带quote+reason+inferred, 审计标黄永不进绿(机检永不标绿)
+                if not isinstance(p.get("quote"), str) or not p["quote"].strip():
+                    fail(f"pitfalls discretion missing quote: {p.get('title')}", errors)
+                elif p.get("quote") not in (p.get("quotes", []) if isinstance(p.get("quotes"), list) else []):
+                    fail(f"pitfalls discretion quote须等于quotes[0]: {p.get('title')}", errors)
+                if not isinstance(p.get("reason"), str) or len(p["reason"].strip()) < 4:
+                    fail(f"pitfalls discretion missing reason: {p.get('title')}", errors)
+                if not isinstance(p.get("inferred"), bool):
+                    fail(f"pitfalls discretion inferred must be bool: {p.get('title')}", errors)
     if pitfalls != pitfalls_out:
         fail("outputs/pitfalls.json must equal steps/08-pitfalls/pitfalls.json", errors)
 

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Machine check for B-段2 (#45): 06-phases + 07-priorities + 08-pitfalls + 09-assemble.
+"""Machine check for B-段2 (#45 + #49): 06-phases + 07-priorities + 08-pitfalls + 09-assemble.
 
 沿 check_segment1.py (schema + 去重 + quote 对句 + sha + audit 一一对应), 加:
 - 06: N=8 作者 chapters 一章一段 (phase 名=章标题原文), 非空段 goal/focus/pivot + quotes 去重 + 对句,
   空段 quotes==[] + quote_details==[] + goal 写明非打法章 (类比 ratings `-`)
-- 07: upgrades 3 (全在 ratings S/A 内) + shop 3 (全在 grouping must_take 内), 每项 why/how_to_get/quotes[0]
+- 07 (#49 去 Top3 写死 + Peacock 按名顺延): upgrades 3 沿用 (全在 ratings S/A 内) + shop N 动态 (全在新 grouping must_take verified 内,
+  无拒绝动词 + 最大断层 TopN + 保底 Top1), 每项 why/how_to_get/quotes[0]
+- 08: >=3 条, severity 全在 fatal/risky/trap 内, 每条 why/how_to_avoid/quotes[0]
 - 08: >=3 条, severity 全在 fatal/risky/trap 内, 每条 why/how_to_avoid/quotes[0]
 - 09: 双写一致 + 六节聚合一致 + sha 对上 manifest + source.vtt
 - audit 常设对应节 (check 与审计节一一对应, 缺节即 fail; 06-09 须为实节非空占位)
@@ -171,18 +173,54 @@ def main(argv: list[str] | None = None) -> int:
     if phases != phases_out:
         fail("outputs/phases.json must equal steps/06-phases/phases.json", errors)
 
-    # --- 07-priorities ---
+    # --- 07-priorities (#49: upgrades 3 沿用 + shop N 动态断层 + 通用顺延, 去 Top3 写死 + 按名特判) ---
     if not isinstance(priorities, dict) or "upgrades" not in priorities or "shop" not in priorities:
-        fail("priorities must be {upgrades[3], shop[3]}", errors)
+        fail("priorities must be {upgrades[3], shop[N]} (升级沿用3 + 商店断层动态N>=1)", errors)
         ups, shs = [], []
     else:
         ups, shs = priorities["upgrades"], priorities["shop"]
     if not (isinstance(ups, list) and len(ups) == 3):
-        fail(f"priorities upgrades must be 3, got {len(ups) if isinstance(ups, list) else type(ups)}", errors)
-    if not (isinstance(shs, list) and len(shs) == 3):
-        fail(f"priorities shop must be 3, got {len(shs) if isinstance(shs, list) else type(shs)}", errors)
+        fail(f"priorities upgrades must be 3 沿用, got {len(ups) if isinstance(ups, list) else type(ups)}", errors)
+    if not (isinstance(shs, list) and len(shs) >= 1):
+        fail(f"priorities shop must be N>=1 动态 (保底 Top1), got {len(shs) if isinstance(shs, list) else type(shs)}", errors)
     sa_names = {r.get("term_en") for r in ratings if r.get("rating") in ("S", "A")}
     mt_names = {g.get("name_en") for g in grouping if g.get("group") == "must_take"}
+    mt_verified = {g.get("name_en"): g for g in grouping
+                   if g.get("group") == "must_take" and g.get("confidence") == "verified"}
+    # 通用顺延信号 (与 run_segment2.step07 同口径, 不点名, 不含泛 don't want)
+    _REJECT = ("not taking", "not take", "don't take", "do not take",
+               "don't buy", "do not buy", "not buying",
+               "don't pick", "do not pick", "not picking",
+               "don't lock", "do not lock",
+               "skip", "avoid", "ban", "recycle", "sell",
+               "passed on", "ignoring", "ignored", "not interested",
+               "don't want to take", "do not want to take",
+               "don't want to buy", "do not want to buy")
+
+    def _has_refusal(g):
+        qall = " ".join(g.get("quotes", [])).lower() + " " + str(g.get("reason", "")).lower()
+        return any(sig in qall for sig in _REJECT)
+
+    # 期望 TopN (与 run 同刀法, 独立重算): must_take verified 按 (-count, name) 排, 去拒绝, 最大断层切分
+    _cands_exp = sorted(list(mt_verified.values()), key=lambda x: (-int(x.get("count", 0)), str(x.get("name_en", ""))))
+    _filt_exp = [g for g in _cands_exp if not _has_refusal(g)]
+    _counts_exp = [int(g.get("count", 0)) for g in _filt_exp]
+    if len(_filt_exp) == 1:
+        _expect_names = [_filt_exp[0].get("name_en")]
+    elif not _filt_exp:
+        _expect_names = []
+    else:
+        _gaps = [_counts_exp[i] - _counts_exp[i + 1] for i in range(len(_counts_exp) - 1)]
+        _mx = max(_gaps)
+        if _mx == 0:
+            _expect_names = [g.get("name_en") for g in _filt_exp]
+        else:
+            _cut = next(i for i, gp in enumerate(_gaps) if gp == _mx)
+            _expect_names = [g.get("name_en") for g in _filt_exp[:_cut + 1]]
+    if isinstance(shs, list) and shs and _expect_names:
+        _got_names = [s.get("name") for s in shs if isinstance(s, dict)]
+        if _got_names != _expect_names:
+            fail(f"priorities shop 须为断层 TopN (期望 {_expect_names}, 实得 {_got_names})", errors)
     for u in (ups if isinstance(ups, list) else []):
         for k in ("name", "kind", "why", "how_to_get", "quotes"):
             if k not in u or (isinstance(u[k], str) and not u[k].strip()):
@@ -202,6 +240,12 @@ def main(argv: list[str] | None = None) -> int:
             fail(f"priorities shop kind must be shop: {s.get('name')}", errors)
         if s.get("name") not in mt_names:
             fail(f"priorities shop must be in grouping must_take: {s.get('name')}", errors)
+        if s.get("name") not in mt_verified:
+            fail(f"priorities shop must be verified (拿取锚绿): {s.get('name')}", errors)
+        else:
+            _ge = mt_verified.get(s.get("name"))
+            if _ge is not None and _has_refusal(_ge):
+                fail(f"priorities shop 有拒绝动词应顺延 (通用顺延未执行): {s.get('name')}", errors)
         if len(str(s.get("why", ""))) < 8 or len(str(s.get("how_to_get", ""))) < 8:
             fail(f"priorities shop why/how_to_get too short: {s.get('name')}", errors)
         _check_quotes(f"priorities shop {s.get('name')}", s.get("quotes", []), s.get("quote_details", []))

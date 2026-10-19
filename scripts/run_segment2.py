@@ -242,28 +242,48 @@ def step07(workdir: Path, sentences: list[dict], ratings: list[dict],
     if not isinstance(phases, list) or not phases:
         raise SystemExit("step07 缺 phases (06 未跑): 先跑 step06 作者章节分桶")
     live_phases = [p for p in phases if isinstance(p, dict) and p.get("quotes")]
-    # live_phases 仅用于节奏引用 (空段跳过); Top3 口径仍只认 04/03, 不自创不重评
+    # live_phases 仅用于节奏引用 (空段跳过); 升级沿用 S/A 排名 + 商店读新分组, 不自创不重评
     _ = live_phases
-    # 升级 Top3: 只认 04 输出 S/A + count 降序 (不自创, 不重评)
+    # 升级 Top3 沿用: 只认 04 输出 S/A + count 降序 (不自创, 不重评; 04 新评级自动跟)
     sa = [r for r in ratings if r.get("rating") in ("S", "A")]
     sa = sorted(sa, key=lambda x: -int(x.get("count", 0)))
     if len(sa) < 3:
         raise SystemExit(f"step07 升级候选不足 S/A={len(sa)}: 段1 ratings 疑异常")
     top_up = sa[:3]
-    # 商店 Top3: 只认 03 输出 must_take + verified + count 降序; Peacock 有拒绝原话诚实顺延
-    cands = [g for g in grouping if g.get("group") == "must_take" and g.get("confidence") == "verified"]
-    cands = sorted(cands, key=lambda x: -int(x.get("count", 0)))
-    shop: list[dict] = []
-    for g in cands:
+    # 商店 TopN 断层动态 (#49: 去 Top3 写死 + Peacock 按名顺延; 只认新分组 must_take + verified + count 降序)
+    # 通用顺延 (不点名): 任一候选 quotes+reason 含拒绝动词原话即顺延 (拿取否定/跳过系逐字, 不含泛 don't want)
+    _REJECT = ("not taking", "not take", "don't take", "do not take",
+               "don't buy", "do not buy", "not buying",
+               "don't pick", "do not pick", "not picking",
+               "don't lock", "do not lock",
+               "skip", "avoid", "ban", "recycle", "sell",
+               "passed on", "ignoring", "ignored", "not interested",
+               "don't want to take", "do not want to take",
+               "don't want to buy", "do not want to buy")
+
+    def _has_refusal(g: dict) -> bool:
         qall = " ".join(g.get("quotes", [])).lower() + " " + str(g.get("reason", "")).lower()
-        # 诚实跳过: 本波明确不拿 (not taking) 属波次 modifier, 非商店优先级
-        if g.get("name_en") == "Peacock" and ("not taking" in qall or "not take" in qall):
-            continue
-        shop.append(g)
-        if len(shop) >= 3:
-            break
-    if len(shop) < 3:
-        raise SystemExit(f"step07 商店候选不足 must_take verified={len(shop)}: 段1 grouping 疑异常")
+        return any(sig in qall for sig in _REJECT)
+
+    cands = [g for g in grouping if g.get("group") == "must_take" and g.get("confidence") == "verified"]
+    cands = sorted(cands, key=lambda x: (-int(x.get("count", 0)), str(x.get("name_en", ""))))
+    filtered: list[dict] = [g for g in cands if not _has_refusal(g)]
+    if not filtered:
+        raise SystemExit(f"step07 商店候选不足 must_take verified 去拒绝后=0 (cands={len(cands)}): 段1 grouping 疑异常")
+    # 断层切分 (与 05 排名制同一刀法): gaps=count[i]-count[i+1], 最大断层即止, 不断层(max==0)多收, 保底 Top1
+    counts = [int(g.get("count", 0)) for g in filtered]
+    if len(filtered) == 1:
+        shop = filtered
+    else:
+        gaps = [counts[i] - counts[i + 1] for i in range(len(counts) - 1)]
+        mx = max(gaps)
+        if mx == 0:
+            shop = filtered
+        else:
+            cut = next(i for i, gp in enumerate(gaps) if gp == mx)
+            shop = filtered[:cut + 1]
+    if not shop:
+        raise SystemExit(f"step07 商店断层切分空 (filtered={len(filtered)}): 保底 Top1 失败")
     qlookup = _quote_lookup(sentences)
 
     def _how(name: str, fallback_q: str) -> tuple[str, list[str], list[dict]]:

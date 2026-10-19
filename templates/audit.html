@@ -957,19 +957,19 @@ function render() {
       </div>
     </div>
 
-    <!-- DAG-L2：07-priorities（依赖 04/05/06，段1绿后才开） -->
-    <div class="dag-layer" data-dag-layer="L2">DAG L2 · 07-priorities <small>（依赖 04/05/06 输出 + 商店 quotes；段1绿后才开）</small></div>
+    <!-- DAG-L2：07-priorities（依赖 03/04/05/06，段1绿后才开） -->
+    <div class="dag-layer" data-dag-layer="L2">DAG L2 · 07-priorities <small>（依赖 03/04/05/06 输出 + 商店 quotes；段1绿后才开）</small></div>
     <!-- Pipeline Step 7: 07-priorities 空节占位 -->
     <div class="pipeline-step completed" id="audit-07-priorities" data-dag-layer="L2">
       <div class="card">
         <div class="card-header">
           <div class="card-title">
-            <span>🛒 steps/07-priorities/ · 升级/商店 Top3 + 怎么拿</span>
+            <span>🛒 steps/07-priorities/ · 升级 Top3 沿用 + 商店 TopN 动态 + 怎么拿</span>
           </div>
           <span class="badge badge-verified">check_07 对应节</span>
         </div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step07-priorities.md + <code>steps/07-priorities/priorities.json</code>；07 须段1绿后才开。</p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/04-attributes/ratings.json</code> + <code>steps/05-weapons/weapons.json</code> + <code>steps/06-phases/phases.json</code> + <code>steps/03-grouping/grouping.json</code> + 商店 quotes → <code>steps/07-priorities/priorities.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/04-attributes/ratings.json</code> + <code>steps/05-weapons/weapons.json</code> + <code>steps/06-phases/phases.json</code> + <code>steps/03-grouping/grouping.json</code>（读新分组：锚+裁量动态 cutoff，68 全收录） + 商店 quotes → <code>steps/07-priorities/priorities.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>；升级 Top3 沿用 S/A 排名，商店 TopN 断层动态：count 不断层多收、断层即止、保底 Top1，任一候选有拒绝动词原话即顺延不点名）</p>
         ${prioritiesSectionHtml()}
       </div>
     </div>
@@ -1204,9 +1204,9 @@ function prioritiesSectionHtml() {
         ${(u.quotes && u.quotes.length) ? `<div class="item-card-quote">“${u.quotes[0]}”</div>` : ''}
       </div>`;
   return `
-    <div style="font-size:12px;font-weight:700;margin:6px 0 4px;">⬆️ 升级 Top3（依赖 04/05/06）</div>
+    <div style="font-size:12px;font-weight:700;margin:6px 0 4px;">⬆️ 升级 Top3 沿用（依赖 04 S/A 排名 + 05/06）</div>
     <div style="display:flex;flex-direction:column;gap:8px;">${ups.map((u, i) => card(u, i, 'upgrades')).join('')}</div>
-    <div style="font-size:12px;font-weight:700;margin:8px 0 4px;">🛒 商店 Top3（依赖 03 must_take + 04/05）</div>
+    <div style="font-size:12px;font-weight:700;margin:8px 0 4px;">🛒 商店 TopN 断层动态（依赖新 03 must_take verified + 通用顺延 + 断层切分）</div>
     <div style="display:flex;flex-direction:column;gap:8px;">${shs.map((u, i) => card(u, i, 'shop')).join('')}</div>`;
 }
 
@@ -1245,7 +1245,7 @@ function assembleSectionHtml() {
     </div>`;
 }
 
-// 07继承自上游结果 (非自创): 升级←04 S/A, 商店←03 must_take+verified (与 run_segment2 口径一致)
+// 07继承自上游结果 (非自创, #49): 升级←04 S/A 沿用, 商店←新03 must_take+verified 断层TopN+通用顺延 (与 run_segment2 口径一致, 不点名)
 function inheritLineHtml(kind, name) {
   const key = (name || '').toLowerCase();
   if (kind === 'shop') {

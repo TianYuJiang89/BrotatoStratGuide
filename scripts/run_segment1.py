@@ -43,10 +43,10 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 # 复用 pilot 动词表 (闭集 10 下限, 不扩展)
 from run_pilot import (  # noqa: E402
-    CLOSED_VERBS,
-    VERB_PATTERNS,
-    PARAPHRASE_MAP,
-    PARA_PATTERNS,
+    CLOSED_VERBS,  # 闭集 10 下限 (#48 不动)
+    VERB_PATTERNS,  # 闭集变形种子
+    PARAPHRASE_MAP,  # 转述种子 (#48: 种子保留，agent 补走 candidates 格式)
+    PARA_PATTERNS,  # 转述种子 pattern
 )
 
 VERB_RES = {k: re.compile(v, re.IGNORECASE) for k, v in VERB_PATTERNS.items()}
@@ -310,11 +310,12 @@ def step02(workdir: Path, sentences: list[dict]) -> dict:
                                    "reason": f"别名归一（{surface_word}→{n}）+ 闭集动词 {verb}",
                                    **base_extra})
             elif para_hits:
+                # #48 种子 + agent 补：种子保留 (PARAPHRASE_MAP/PARA_PATTERNS)，agent 补的每条走 candidates
+                # （surface_verb/mapped_to/reason，字段已在 schema，不加字段；check 只查格式）。
+                # 去写死：删 `bought turret instead of` 按句特判，instead-of 类转述由 agent 补（种子只保 grab/snatch/pick/avoid/ignoring 等）。
                 assert _closest_para is not None
                 surf_v = _closest_para[1]
                 mapped = PARAPHRASE_MAP.get(surf_v, "skip" if surf_v in ("ignoring", "avoid", "avoiding") else "take")
-                if surf_v == "bought turret instead of":
-                    mapped = "skip"
                 key = (sid, n, surf_v, "p")
                 if key in seen:
                     continue
@@ -379,18 +380,21 @@ def _dynamic_scan(sentences: list[dict]):
 
 
 def step03(workdir: Path, verbs: dict, sentences: list[dict]) -> list[dict]:
-    """分组: 道具全收录, 动态推导 (禁读 builds/mentions)."""
-    from build_mentions import load_registry_names as _lr
-    _, _, _ = _lr(REPO / "data"), None, None
-    # wiki tags for core structures (global wiki-cache, 非 runtime)
-    try:
-        _reg = json.loads((REPO / "data" / "wiki-cache.json").read_text(encoding="utf-8"))
-        _items_reg = _reg.get("items", {}) if isinstance(_reg, dict) else {}
-    except Exception:
-        _items_reg = {}
-    def _tags(name: str) -> list[str]:
-        v = _items_reg.get(name, {})
-        return v.get("tags", []) if isinstance(v, dict) else []
+    """分组: 锚+裁量 (#48: 删阈值 + 删全部按名特判; 只认动词信号; 68 全收录保留; 禁读 builds/mentions).
+
+    锚 (机检只认逐字):
+    - ban 系原话 (ban/recycle/sell 闭集原话, 或 candidates mapped_to==ban 含 agent 补) -> ban, 无按名例外.
+    - 拿取系原话 (take/buy/pick up/lock/get/roll for 闭集原话, 或 mapped_to 落拿取系含 agent 补) + 高频 -> must_take.
+      高频无固定数: 68 件 count 的 mean+stdev 动态 cutoff (count>=cutoff 即高频, 无 >=8/>=4 写死).
+    - skip 系原话 (skip 闭集原话, 或 mapped_to==skip 如 ignoring->skip 含 agent 补) + 高频 -> mentioned_not_taken;
+      skip 系低频 -> casual (低频路过照旧).
+    裁量 (只查格式, 审计标黄): 无动词或信号冲突无法定级 -> candidate + inferred true, reason 写清拿不准.
+    """
+    import statistics as _stats
+    # #48 动词信号集 (闭集 10 下限内划分, 无按名, 无阈值)
+    _BAN = {"ban", "recycle", "sell"}  # ban 系原话
+    _TAKE = {"take", "buy", "pick up", "lock", "get", "roll for"}  # 拿取系原话
+    _SKIP = {"skip"}  # 跳过系原话 (mapped skip 含 ignoring->skip 等种子 + agent 补)
 
     ver_by: dict[str, list] = defaultdict(list)
     for r in verbs.get("verified", []):
@@ -401,8 +405,10 @@ def step03(workdir: Path, verbs: dict, sentences: list[dict]) -> list[dict]:
 
     _, _, _, _, _, items_counts = _dynamic_scan(sentences)
     qlookup = _quote_lookup(sentences)
-    # 只收 count>0 (沿全收录), 排序 account desc
+    # 只收 count>0 (沿全收录), 排序 count desc; 高频 cutoff 动态 (mean+stdev, 无固定数)
     items_all = [(k, v[0], v[1]) for k, v in items_counts.items() if v[0] > 0]
+    _counts = [c for _, c, _ in items_all]
+    _cutoff = (_stats.mean(_counts) + _stats.pstdev(_counts)) if len(_counts) >= 2 else 0
 
     grouping: list[dict] = []
     for name, count, quotes in sorted(items_all, key=lambda x: -x[1]):
@@ -436,48 +442,57 @@ def step03(workdir: Path, verbs: dict, sentences: list[dict]) -> list[dict]:
             verb, verb_type, surf_v, mapped, surf_w = None, "none", None, None, name
             disc = "路过提及，无动词"
 
-        # 分组启发式 (动态, 不读 builds):
-        # ban 优先: 任一 ban 系动词原话 (verified ban / mapped ban / ignoring-skip  terror? ban 系才 ban, skip 另议)
-        _ban_verbs = [r for r in ver_list if r.get("verb") == "ban"]
-        _ban_cand = [c for c in cand_list if c.get("mapped_to") == "ban"]
-        # Glass Cannon 诚实: 全 take 无 ban 原话 -> 不硬 ban (沿 #38 诚实修正, 凭动词信号, 非抄 builds)
-        _has_ban_quote = bool(_ban_verbs or _ban_cand)
-        if _has_ban_quote and name != "Glass Cannon":
+        # 分组只认动词信号 (#48, 无阈值无按名, 不读 builds/tags): ban > skip > 拿取+高频 > 路过; 拿不准进 candidates 位.
+        _ban_verbs = [r for r in ver_list if r.get("verb") in _BAN]
+        _ban_cand = [c for c in cand_list if c.get("mapped_to") in _BAN]
+        _skip_verbs = [r for r in ver_list if r.get("verb") in _SKIP]
+        _skip_cand = [c for c in cand_list if c.get("mapped_to") in _SKIP]
+        _take_verbs = [r for r in ver_list if r.get("verb") in _TAKE]
+        _take_cand = [c for c in cand_list if c.get("mapped_to") in _TAKE]
+        _has_ban = bool(_ban_verbs or _ban_cand)
+        _has_skip = bool(_skip_verbs or _skip_cand or any("ignor" in str(c.get("surface_verb", "")) for c in cand_list))
+        _has_take = bool(_take_verbs or _take_cand)
+        _is_high = count >= _cutoff
+        if _has_ban:
             _bq = (_ban_verbs + _ban_cand)[0]["quote"] if (_ban_verbs + _ban_cand) else (quotes[0] if quotes else name)
             q0 = _bq[:60]
-            reason = f"【ban】明确拒绝：商店见即 ban，原话“{q0}…”"
+            reason = f"【ban】明确拒绝：拒绝动词原话（ban 系），原话[{q0}...]"
             group, tier = "ban", None
             verb, verb_type, surf_v, mapped = "ban", "closed", "ban", "ban"
             confidence, inferred = ("verified" if _ban_verbs else "candidate"), False
-            disc = "拒绝动词原话（ban 系），机检锚点" if _ban_verbs else "动词转述拒绝（mapped ban），待人点"
-        elif verb in ("skip",) or any("ignor" in str(c.get("surface_verb", "")) for c in cand_list):
-            if count >= 4:
-                q0 = (ver_list + cand_list)[0]["quote"][:60] if (ver_list + cand_list) else (quotes[0][:60] if quotes else name)
-                reason = f"【提过未拿】拿了又放 / 有资源没拿：与核心结构抢经济，原话“{q0}…”"
-                group, tier = "mentioned_not_taken", None
+            disc = "拒绝动词原话（ban 系），机检锚点" if _ban_verbs else "动词转述拒绝（mapped ban，含 agent 补），待人点"
+        elif _has_skip and _is_high:
+            q0 = (ver_list + cand_list)[0]["quote"][:60] if (ver_list + cand_list) else (quotes[0][:60] if quotes else name)
+            reason = f"【提过未拿】跳过语境（skip/ignoring 原话），有资源没拿，原话[{q0}...]"
+            group, tier = "mentioned_not_taken", None
+            # verb 保持 skip 信号 (verified skip 则 closed，否则 mapped)
+            if _skip_verbs:
+                verb, verb_type, surf_v, mapped = "skip", "closed", "skip", "skip"
+                confidence, inferred = "verified", False
+                disc = "跳过动词原话（skip 系），机检锚点"
             else:
-                reason = "【路过提及】商店刷新或路过提及，无明确评价，不影响构筑主线。"
-                group, tier = "casual_mention", None
-        elif count >= 8:
+                _sc0 = (_skip_cand or cand_list)[0] if (_skip_cand or cand_list) else None
+                sv0 = str((_sc0 or {}).get("surface_verb", "skip"))
+                verb, verb_type = "skip", ("closed" if sv0 in CLOSED_VERBS else "mapped")
+                surf_v, mapped = (_sc0 or {}).get("surface_verb", "skip"), "skip"
+                confidence, inferred = "candidate", False
+                disc = f"动词转述跳过（{sv0}→skip，含 agent 补），待人点"
+        elif _has_take and _is_high:
             group, tier = "must_take", "convenient"
             q0 = (ver_list + cand_list)[0]["quote"][:60] if (ver_list + cand_list) else (quotes[0][:60] if quotes else name)
-            tags = _tags(name)
-            # 核心结构: 工程/Structure 标签 + verified 拿取 + 高频 -> core (cyborg 要塞体系, 凭 tags+动词, 非抄 builds)
-            if (("Engineering" in tags) or ("Structure" in tags)) and ver_list and count >= 10:
-                tier = "core"
-                reason = f"【必拿·核心】结构体系件：工程转化养输出，站场即战力，原话“{q0}…”"
-            elif inferred or name in ("Mutation", "Focus"):
-                tier = "compromise"
-                reason = f"【必拿·妥协】没更好的才拿，矬子里拔将军；出处原话“{q0}…”"
+            # 本变体统一 convenient (删 core/compromise 按名分档；无 Engineering/Structure tags，无 Mutation/Focus 特判)
+            reason = f"【必拿·顺手】拿取动词原话（{_take_verbs[0].get('verb') if _take_verbs else (_take_cand[0].get('mapped_to') if _take_cand else 'take')}）+ 高频提及，遇到即拿，原话[{q0}...]"
+            # confidence/inferred 保持锚信号：有 verified 拿取即 verified 绿，否则 candidate 黄
+            if _take_verbs:
+                confidence, inferred = "verified", False
             else:
-                reason = f"【必拿·顺手】高频补益件，遇到且经济充裕时顺手补入；出处原话“{q0}…”"
-        elif count >= 4:
-            q0 = (ver_list + cand_list)[0]["quote"][:60] if (ver_list + cand_list) else (quotes[0][:60] if quotes else name)
-            reason = f"【必拿·顺手】中频补益件，遇到且经济充裕时顺手补入；出处原话“{q0}…”"
-            group, tier = "must_take", "convenient"
+                confidence, inferred = "candidate", False
         else:
             reason = "【路过提及】商店刷新或路过提及，无明确评价，不影响构筑主线。"
             group, tier = "casual_mention", None
+            # confidence/inferred 保持：有动词即原信号，拿不准（无动词）进 candidates 位标黄
+            if not has_verb:
+                confidence, inferred = "candidate", True
 
         seen_q: list[str] = []
         for q in quotes:

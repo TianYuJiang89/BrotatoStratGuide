@@ -810,7 +810,7 @@ function render() {
             <span class="badge badge-candidate" style="margin-left:4px;">${v.candidates.length} candidates 自由裁量</span>
           </div>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code> + <code>inputs/registry-slice.json</code></p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code> + <code>inputs/registry-slice.json</code>（闭集10下限不动 + 转述种子保留 + agent 补进 candidates，check 只查格式 surface+quote+reason/inferred bool）</p>
         <div class="step2-dual">
           <div class="verb-panel verified">
             <h4 style="font-size:12px;font-weight:700;color:#047857;margin-bottom:8px;">✅ Verified（精确名 + 闭集10动词 + 原文整句）</h4>
@@ -854,7 +854,7 @@ function render() {
           </div>
           <span class="badge badge-count-pill">当前展示 ${filtered.length} 项</span>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/02-verbs/verbs.json</code> + <code>steps/01-sentences/sentences.json</code>（现场扫 count/quotes + quote_details 回查，禁读旧链 <code>data/mentions</code>/<code>data/builds</code>）</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/02-verbs/verbs.json</code> + <code>steps/01-sentences/sentences.json</code>（现场扫 count/quotes + quote_details 回查，禁读旧链 <code>data/mentions</code>/<code>data/builds</code>；锚+裁量：ban 系原话→ban、拿取+高频动态→must_take、低频路过照旧、拿不准 candidates 位标黄；无阈值无按名；68 全收录）</p>
 
         ${renderGroupAccordion("【必拿·核心 (Must Take - Core)】", filtered.filter(x => x.group === 'must_take' && x.tier === 'core'))}
         ${renderGroupAccordion("【必拿·顺手 (Must Take - Convenient)】", filtered.filter(x => x.group === 'must_take' && x.tier === 'convenient'))}

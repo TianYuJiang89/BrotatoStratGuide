@@ -110,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
 
     sent_by_id = {s["id"]: s["text"] for s in sentences if isinstance(s, dict)}
 
-    # --- 02-verbs (+start/end/context 只读) ---
+    # --- 02-verbs (#48 种子 + agent 补, 只查格式) ---
     if not isinstance(verbs, dict) or "verified" not in verbs or "candidates" not in verbs:
         fail("verbs must be {verified[], candidates[]}", errors)
         verified, candidates = [], []
@@ -137,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
             if k not in c:
                 fail(f"candidates missing read-only {k}: {c.get('normalized_to')}@{c.get('sentence_id')}", errors)
 
-    # --- 03-grouping (沿 pilot + quote_details + 去重) ---
+    # --- 03-grouping (#48 锚+裁量: 68 全收录 + ban 必有拒绝动词 + must_take 必有拿取系动词; 无阈值无按名) ---
     if isinstance(grouping, list):
         grouped_names = {g.get("name_en") for g in grouping if isinstance(g, dict)}
         try:
@@ -169,6 +169,12 @@ def main(argv: list[str] | None = None) -> int:
                 if not any(w in qall for w in ("ban", "avoid", "recycl", "sell", "skip", "ignor")):
                     if "ban" not in rs.lower() and "避开" not in rs:
                         fail(f"ban must have rejection verb quote: {g.get('name_en')}", errors)
+            if g.get("group") == "must_take":
+                # #48 锚: 拿取系动词信号 (verb/mapped_to 落拿取系, 含 agent 补; 无按名无阈值)
+                _vv = str(g.get("verb", "") or "")
+                _mm = str(g.get("mapped_to", "") or "")
+                if _vv not in ("take", "buy", "pick up", "lock", "get", "roll for") and _mm not in ("take", "buy", "pick up", "lock", "get", "roll for"):
+                    fail(f"must_take must have take-verb signal: {g.get('name_en')}={_vv}/{_mm}", errors)
             # quotes 去重
             qs = g.get("quotes", [])
             if isinstance(qs, list) and len(qs) != len(set(qs)):

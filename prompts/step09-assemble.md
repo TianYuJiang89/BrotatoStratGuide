@@ -7,7 +7,7 @@
 - `steps/03-grouping/grouping.json`（= `outputs/groups.json`，68 全收录）。
 - `steps/04-attributes/ratings.json`（= `outputs/ratings.json`，39 全量）。
 - `steps/05-weapons/weapons.json`（= `outputs/weapons.json`，T1/T2）。
-- `steps/06-phases/phases.json`（3 段）。
+- `steps/06-phases/phases.json`（8 段作者章节）。
 - `steps/07-priorities/priorities.json`（升级 3 + 商店 3）。
 - `steps/08-pitfalls/pitfalls.json`（≥3 条）。
 - `inputs/manifest.json`（sha + URL，组装一致性锚点）+ `inputs/meta.json`（标题/chapters 备查）。
@@ -21,7 +21,7 @@
   - `url/title`：拷 manifest/meta（取材登记，不编数字）。
   - `groups/ratings/weapons/phases/priorities/pitfalls`：逐字聚合各步 JSON（深拷贝，不改写、不重排、不截断）。
 
-## 组装契约（沿 #39 Q6/Q8）
+## 组装契约（沿 #39 Q6/Q8 + #45）
 
 - 聚合即复制：guide 内各节必须与对应 steps 文件逐字相等（`guide.groups == grouping.json` 等，`sha` 对上 manifest）；任何改写、重排、截断即 fail。
 - 主脚本同时写 `steps/09-assemble/guide.json` + `outputs/guide.json`（内容一致，双写）。

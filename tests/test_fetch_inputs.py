@@ -73,7 +73,8 @@ def test_build_meta_and_manifest_shape(tmp_path: Path) -> None:
         "duration_string": "33:23",
         "upload_date": "20260708",
         "description": "Trying out the new, brutal stuff!",
-        "chapters": [{"title": "Character overview"}, {"title": "Strategy and early game"}],
+        "chapters": [{"title": "Character overview", "start_time": 0, "end_time": 105},
+                       {"title": "Strategy and early game", "start_time": 105, "end_time": 322}],
         "webpage_url": "https://www.youtube.com/watch?v=yEY-RoLWjfM",
     }
     meta = m.build_meta(dump, difficulty="Ultimate", subs_source="auto")
@@ -81,7 +82,8 @@ def test_build_meta_and_manifest_shape(tmp_path: Path) -> None:
     assert meta["video_id"] == "yEY-RoLWjfM"
     assert meta["published"] == "2026-07-08"
     assert meta["duration"] == "33:23"
-    assert meta["chapters"] == ["Character overview", "Strategy and early game"]
+    assert meta["chapters"] == [{"title": "Character overview", "start": 0, "end": 105},
+                                   {"title": "Strategy and early game", "start": 105, "end": 322}]
     assert meta["subs_source"] == "auto"
     assert "youtube.com/watch?v=yEY-RoLWjfM" in meta["url"]
     mf = m.build_manifest("cyborg", "ultimate", ["Ultimate"], meta,
@@ -121,7 +123,7 @@ def test_end_to_end_with_mocked_ytdlp(tmp_path: Path, monkeypatch) -> None:
         "duration_string": "33:23",
         "upload_date": "20260708",
         "description": "Trying out the new, brutal stuff!",
-        "chapters": [{"title": "Character overview"}],
+        "chapters": [{"title": "Character overview", "start_time": 0, "end_time": 105}],
         "webpage_url": "https://www.youtube.com/watch?v=yEY-RoLWjfM",
         "subtitles": {},
         "automatic_captions": {"en": [{"ext": "json3"}]},
@@ -170,7 +172,8 @@ def test_end_to_end_missing_subs_fails_loud(tmp_path: Path, monkeypatch) -> None
     m = _load_fetch()
     dump = {"id": "xxx", "title": "T", "duration_string": "1:00",
             "upload_date": "20260708", "description": "d",
-            "chapters": [], "webpage_url": "https://www.youtube.com/watch?v=xxx",
+            "chapters": [{"title": "C", "start_time": 0, "end_time": 60}],
+            "webpage_url": "https://www.youtube.com/watch?v=xxx",
             "subtitles": {}, "automatic_captions": {}}
     import subprocess as sp
     monkeypatch.setattr("subprocess.run",

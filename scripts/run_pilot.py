@@ -90,6 +90,24 @@ def ensure_inputs(slug: str, vid: str, workdir: Path) -> dict:
                 f"先跑 scripts/fetch_inputs.py --url <youtube-url> "
                 f"--slug {slug} --variant {vid} 取证")
     manifest = json.loads((inputs / "manifest.json").read_text(encoding="utf-8"))
+    # #45: chapters timed 校验 (老格式纯字符串数组视为缺取证, 指引重跑 Step00)
+    try:
+        _meta = json.loads((inputs / "meta.json").read_text(encoding="utf-8"))
+    except Exception:
+        raise SystemExit(
+            f"meta.json 读失败 for {slug}/{vid}: 先跑 scripts/fetch_inputs.py --url <youtube-url> "
+            f"--slug {slug} --variant {vid} 取证")
+    _chs = _meta.get("chapters")
+    if (not isinstance(_chs, list) or not _chs
+            or any(not isinstance(c, dict) for c in _chs)
+            or any(not isinstance((c or {}).get("title"), str)
+                    or not isinstance((c or {}).get("start"), (int, float))
+                    or not isinstance((c or {}).get("end"), (int, float))
+                    for c in _chs)):
+        raise SystemExit(
+            f"meta.json chapters 非 timed 格式 ([{{title,start,end}}]) for {slug}/{vid}: "
+            f"老格式纯字符串数组视为缺取证, 先跑 scripts/fetch_inputs.py --url <youtube-url> "
+            f"--slug {slug} --variant {vid} 回填 (source.vtt 不动, sha 不变)")
     actual_sha = sha1_of(inputs / "source.vtt")
     expect_sha = (manifest.get("sources") or [{}])[0].get("sha1", "")
     if actual_sha != expect_sha:

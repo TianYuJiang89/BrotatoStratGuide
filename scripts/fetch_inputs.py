@@ -112,11 +112,20 @@ def build_meta(dump: dict, difficulty: str, subs_source: str) -> dict:
     published = normalize_published(str(dump.get("upload_date") or ""))
     description = str(dump.get("description") or "")
     chapters_raw = dump.get("chapters") or []
-    chapters: list[str] = []
-    if isinstance(chapters_raw, list):
-        for c in chapters_raw:
-            if isinstance(c, dict) and str(c.get("title") or "").strip():
-                chapters.append(str(c["title"]).strip())
+    if not isinstance(chapters_raw, list) or not chapters_raw:
+        _fail("meta 抓不到 chapters (作者章节缺失, 不猜测不脑补)")
+    chapters: list[dict] = []
+    for c in chapters_raw:
+        if not isinstance(c, dict):
+            _fail(f"meta chapters 非对象 (yt-dlp 原值异常): {c!r}"[:200])
+        ctitle = str(c.get("title") or "").strip()
+        start = c.get("start_time")
+        end = c.get("end_time")
+        if not ctitle:
+            _fail("meta chapters 缺 title (yt-dlp 原值异常)")
+        if not isinstance(start, (int, float)) or not isinstance(end, (int, float)):
+            _fail(f"meta chapters 缺 start_time/end_time (秒, yt-dlp 原值): {ctitle[:60]}")
+        chapters.append({"title": ctitle, "start": start, "end": end})
     url = str(dump.get("webpage_url") or f"https://www.youtube.com/watch?v={video_id}")
     return {
         "title": title,

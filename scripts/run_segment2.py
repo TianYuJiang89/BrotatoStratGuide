@@ -82,36 +82,105 @@ def _short(q: str, n: int = 60) -> str:
     return q[:n]
 
 
+def _load_chapters(workdir: Path) -> list[dict]:
+    """#45: 作者 8 chapters timed ([{title,start,end}], 秒, yt-dlp 原值).
+
+    老格式纯字符串数组视为缺取证 fail loud, 指引重跑 Step00 回填."""
+    meta = _load(workdir, "inputs/meta.json")
+    chs = meta.get("chapters")
+    if (not isinstance(chs, list) or not chs
+            or any(not isinstance(c, dict) for c in chs)
+            or any(not isinstance((c or {}).get("title"), str)
+                    or not isinstance((c or {}).get("start"), (int, float))
+                    or not isinstance((c or {}).get("end"), (int, float))
+                    for c in chs)):
+        raise SystemExit(
+            "step06 chapters 非 timed 格式 ([{title,start,end}]): 老格式纯字符串数组视为缺取证, "
+            "先跑 scripts/fetch_inputs.py --url <youtube-url> --slug <slug> --variant <variant> 回填 "
+            "(source.vtt 不动, sha 不变)")
+    return chs
+
+
+def _bucket_by_chapter(sentences: list[dict], chapters: list[dict],
+                       cap: int = 10) -> list[tuple[list[str], list[dict]]]:
+    """#45: 按 chapter 时间窗确定性分桶 (sentence.start_s 落窗即收, 保序去重 cap10).
+
+    窗口左闭右开 [start, end), 末章含 end (ss>=start). 空窗诚实空出 (quotes==[])."""
+    for s in sentences:
+        if s.get("start_s") is None:
+            raise SystemExit("step06 sentences 缺 start_s (需重跑 01 取整句时间戳): 现场时间窗分桶无依据")
+    qlookup = _quote_lookup(sentences)
+    out: list[tuple[list[str], list[dict]]] = []
+    for i, ch in enumerate(chapters):
+        s = float(ch["start"])
+        e = float(ch["end"])
+        is_last = (i == len(chapters) - 1)
+        seen: list[str] = []
+        for sent in sentences:
+            ss = float(sent["start_s"])
+            hit = (ss >= s and ss <= e) if is_last else (ss >= s and ss < e)
+            if hit and sent["text"] not in seen:
+                seen.append(sent["text"])
+                if len(seen) >= cap:
+                    break
+        details = []
+        for q in seen:
+            hits = qlookup.get(q, [])
+            h = hits[0] if hits else {"start": None, "end": None, "t": None, "context": q[:300]}
+            details.append({"quote": q, "start": h["start"], "end": h["end"],
+                            "t": h["t"], "context": h["context"]})
+        out.append((seen, details))
+    return out
+
+
 def step06(workdir: Path, sentences: list[dict]) -> list[dict]:
-    # 三段关键词 (现场扫, 不照抄 chapters; chapters 仅备查)
-    k_early = ["early", "start", "first", "lock", "ranged", "minigun", "screwdriver",
-               "elite", "quickly", "first half", "beginning"]
-    k_mid = ["engineering", "horde", "nuke", "nuclear", "mid", "swap", "second half",
-             "materials", "convert", "transition to the engineering"]
-    k_late = ["late", "boss", "heal", "life steal", "peacock", "wave 16", "wave 17",
-              "wave 18", "wave 20", "final", "knock back", "flies", "elite"]
-    q1, d1 = _collect(sentences, k_early, id_max=150)
-    q2, d2 = _collect(sentences, k_mid, id_min=80, id_max=300)
-    q3, d3 = _collect(sentences, k_late, id_min=200)
-    if not q1 or not q2 or not q3:
-        raise SystemExit(f"step06 现场扫 Quotes 不足 (early={len(q1)} mid={len(q2)} late={len(q3)}): sentences 疑异常")
-    phases = [
-        {"phase": "W1-5", "waves": "W1-5",
-         "goal": f"开局前半波远程清场立住，锁枪补第二把远程保证 elite 击杀；原话“{_short(q1[0])}…”",
-         "focus": f"配装重心：加特林开局锁1把 + 螺丝刀中期补，商店直购不拖；原话“{_short(q1[1] if len(q1) > 1 else q1[0])}…”",
-         "pivot": f"转向点 W5→W6：前半远程压制结束，中期转工程养结构，horde/elite 提前准备；原话“{_short(q2[0])}…”",
-         "quotes": q1, "quote_details": d1},
-        {"phase": "W6-12", "waves": "W6-12",
-         "goal": f"中期工程转换后靠螺丝刀+结构站场，horde 波用核弹过渡；原话“{_short(q2[0])}…”",
-         "focus": f"配装重心：螺丝刀成型 + 口袋工厂/炮塔养后半波，材料顺路捡不落地；原话“{_short(q2[1] if len(q2) > 1 else q2[0])}…”",
-         "pivot": f"转向点 W12→W13：后期 boss/elite 血量上涨，需高基础伤害抢转换前击杀；原话“{_short(q3[0])}…”",
-         "quotes": q2, "quote_details": d2},
-        {"phase": "W13-20", "waves": "W13-20",
-         "goal": f"后期高工程+高吸血站桩，boss 先杀 whale，怪多即回血；原话“{_short(q3[0])}…”",
-         "focus": f"配装重心：生命窃取+消耗品续航顶残血站桩，peacock 波控刷怪；原话“{_short(q3[1] if len(q3) > 1 else q3[0])}…”",
-         "pivot": f"终局 W20：range half 结束即收，engineering half 靠炮塔/口袋工厂保险；原话“{_short(q3[2] if len(q3) > 2 else q3[0])}…”",
-         "quotes": q3, "quote_details": d3},
-    ]
+    # #45: 作者 8 chapters 一章一段 (N=8, phase 名=章标题原文), 时间窗确定性分桶
+    chapters = _load_chapters(workdir)
+    buckets = _bucket_by_chapter(sentences, chapters, cap=10)
+    phases: list[dict] = []
+    for i, ch in enumerate(chapters):
+        title = str(ch["title"])
+        waves = f"{ch['start']}-{ch['end']}s"
+        qs, qd = buckets[i]
+        nxt = str(chapters[i + 1]["title"]) if i + 1 < len(chapters) else ""
+        if not qs:
+            # 诚实空出 (类比 ratings `-`): 非打法章不硬凑, quotes==[]
+            phases.append({
+                "phase": title, "waves": waves,
+                "goal": f"本章（{title}）为非打法章，作者未给可执行打法，仅作背景/回顾，不硬凑（类比 ratings `-`）。",
+                "focus": "本章无配装/走位要点，不脑补。",
+                "pivot": "无转向点，不编数字。",
+                "quotes": [], "quote_details": [],
+            })
+            continue
+        # goal/focus 引实质句 (跳过过短 filler, 仍为本窗原句, 保诚实人话)
+        def _substantive(pool: list[str], skip: set[int] | None = None) -> int:
+            skip = skip or set()
+            for idx, q in enumerate(pool):
+                if idx in skip:
+                    continue
+                if len(q.strip()) >= 20:
+                    return idx
+            for idx in range(len(pool)):
+                if idx not in skip:
+                    return idx
+            return 0
+        i0 = _substantive(qs)
+        i1 = _substantive(qs, {i0})
+        q0 = _short(qs[i0])
+        q1 = _short(qs[i1])
+        qlast = _short(qs[-1])
+        if nxt:
+            pivot = f"转向下一章（{nxt}）衔接点；原话“{qlast}…”"
+        else:
+            pivot = f"终章收束复盘，不编数字；原话“{qlast}…”"
+        phases.append({
+            "phase": title, "waves": waves,
+            "goal": f"本章（{title}）作者打法：{q0}…原话“{q0}…”",
+            "focus": f"配装/走位重心按本章节奏来，原话数字不丢；原话“{q1}…”",
+            "pivot": pivot,
+            "quotes": qs, "quote_details": qd,
+        })
     outdir = workdir / "steps" / "06-phases"
     outdir.mkdir(parents=True, exist_ok=True)
     (outdir / "phases.json").write_text(json.dumps(phases, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -122,6 +191,12 @@ def step06(workdir: Path, sentences: list[dict]) -> list[dict]:
 
 def step07(workdir: Path, sentences: list[dict], ratings: list[dict],
            grouping: list[dict], phases: list[dict]) -> dict:
+    # #45: 跳过空段 (overview/review 诚实空出不进节奏引用, how_to_get 可引章节奏)
+    if not isinstance(phases, list) or not phases:
+        raise SystemExit("step07 缺 phases (06 未跑): 先跑 step06 作者章节分桶")
+    live_phases = [p for p in phases if isinstance(p, dict) and p.get("quotes")]
+    # live_phases 仅用于节奏引用 (空段跳过); Top3 口径仍只认 04/03, 不自创不重评
+    _ = live_phases
     # 升级 Top3: 只认 04 输出 S/A + count 降序 (不自创, 不重评)
     sa = [r for r in ratings if r.get("rating") in ("S", "A")]
     sa = sorted(sa, key=lambda x: -int(x.get("count", 0)))
@@ -285,7 +360,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[segment2] 段1输入就绪 (sentences={len(sentences)} grouping={len(grouping)} "
           f"ratings={len(ratings)} weapons=T1:{len(weapons.get('t1', []))} T2:{len(weapons.get('t2', []))})")
     phases = step06(workdir, sentences)
-    print(f"[segment2] 06-phases: {len(phases)} 段 (W1-5/6-12/13-20) -> steps/06-phases/phases.json")
+    print(f"[segment2] 06-phases: {len(phases)} 段 (作者 chapters 一章一段) -> steps/06-phases/phases.json")
     pitfalls = step08(workdir, sentences)
     print(f"[segment2] 08-pitfalls: {len(pitfalls)} 条 -> steps/08-pitfalls/pitfalls.json")
     priorities = step07(workdir, sentences, ratings, grouping, phases)

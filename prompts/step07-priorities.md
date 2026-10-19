@@ -6,7 +6,7 @@
 
 - `steps/04-attributes/ratings.json`：39 全量（升级 Top3 只从 S/A 里按 count 降序取 3，不自创）。
 - `steps/05-weapons/weapons.json`：`{t1[], t2[]}`（备查：T1 武器不重复进商店 Top3，避雷不单列进 08）。
-- `steps/06-phases/phases.json`：3 段（备查：怎么拿须合阶段节奏，前半波直购/后半波养结构）。
+- `steps/06-phases/phases.json`：8 段作者章节（备查：怎么拿须合章节奏，可引章节奏；空段跳过，不引用空段）。
 - `steps/01-sentences/sentences.json`：现场扫商店 quotes（buy/lock/roll/shop/upgrade 语境，原话数字不丢）。
 - 中间产物（G work 动态产生，禁读旧链）：`steps/03-grouping/grouping.json`（商店 Top3 只从 `must_take + verified` 按 count 降序取 3；Peacock 有明确拒绝原话时诚实跳过，顺延下一位；禁抄 `data/mentions` + `data/builds`）。
 
@@ -25,7 +25,7 @@
 - 升级 Top3：只认 04 输出 S/A + count 降序（cyborg/ultimate：Damage / Ranged Damage / Engineering），有几个收几个，不设上限外推；`why` 沿 ratings reason 口径，不重评。
 - 商店 Top3：只认 03 输出 `must_take + verified` + count 降序；有拒绝动词原话（ban/skip/not taking）的不硬塞（Peacock 本波明确不拿即顺延，凭动词信号，非抄 builds）；`how_to_get` 凭 verbs 动词（buy/lock/pick up）+ 原话，不编数字。
 - 给观点时必须凭 `verified/candidates` 信号：verified 直推，candidates 标黄待人点，不混排。
-- DAG：07 依赖 04/05/06，段1绿后才开；09 依赖 07。
+- DAG：07 依赖 04/05/06，段1绿后才开（跳过空段）；09 依赖 07。
 
 ## 验收行（机检 + 人看一单）
 

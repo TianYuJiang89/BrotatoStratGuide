@@ -925,13 +925,13 @@ function render() {
       <div class="card">
         <div class="card-header">
           <div class="card-title">
-            <span>🗺️ steps/06-phases/ · 阶段划分（W1-5/6-12/13-20 + 转向点）</span>
+            <span>🗺️ steps/06-phases/ · 作者章节分段（8 章一章一段 + 转向点）</span>
           </div>
           <span class="badge badge-verified">check_06 对应节</span>
           <span class="badge" style="margin-left:4px;">DAG L1并行层</span>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step06-phases.md + <code>steps/06-phases/phases.json</code>；审计与实现同 PR 进，不接受功能先上审计后补。</p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（现场扫阶段 quotes） + 全局 <code>meta.json chapters</code> → <code>steps/06-phases/phases.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>，没读 02/03）</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 作者章节分段（#45）落地 prompts/step06-phases.md + <code>steps/06-phases/phases.json</code>（N=8 一章一段，phase 名=章标题原文）；审计与实现同 PR 进，不接受功能先上审计后补。</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（<code>start_s</code> 落窗分桶，保序去重 cap10） + <code>meta.json chapters timed [{title,start,end}]</code> → <code>steps/06-phases/phases.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>，没读 02/03）</p>
         ${phasesSectionHtml()}
       </div>
     </div>

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Machine check for B-段2 (#41): 06-phases + 07-priorities + 08-pitfalls + 09-assemble.
+"""Machine check for B-段2 (#45): 06-phases + 07-priorities + 08-pitfalls + 09-assemble.
 
 沿 check_segment1.py (schema + 去重 + quote 对句 + sha + audit 一一对应), 加:
-- 06: 3 段 W1-5/6-12/13-20, 每段 goal/focus/pivot + quotes[0], 去重, quote_details 平行, quotes 对句
+- 06: N=8 作者 chapters 一章一段 (phase 名=章标题原文), 非空段 goal/focus/pivot + quotes 去重 + 对句,
+  空段 quotes==[] + quote_details==[] + goal 写明非打法章 (类比 ratings `-`)
 - 07: upgrades 3 (全在 ratings S/A 内) + shop 3 (全在 grouping must_take 内), 每项 why/how_to_get/quotes[0]
 - 08: >=3 条, severity 全在 fatal/risky/trap 内, 每条 why/how_to_avoid/quotes[0]
 - 09: 双写一致 + 六节聚合一致 + sha 对上 manifest + source.vtt
@@ -94,13 +95,24 @@ def main(argv: list[str] | None = None) -> int:
                 fail(f"{tag} quote_details missing quote/context", errors)
                 break
 
-    # --- 06-phases ---
-    if not isinstance(phases, list) or len(phases) != 3:
-        fail(f"phases must be 3 (W1-5/6-12/13-20), got {len(phases) if isinstance(phases, list) else type(phases)}", errors)
-    else:
+    # --- 06-phases (#45: 作者 chapters 一章一段, N=8, phase 名=章标题原文) ---
+    try:
+        _meta = json.loads((work / "inputs" / "meta.json").read_text(encoding="utf-8"))
+    except Exception:
+        fail("missing inputs/meta.json for chapters timed 校验", errors)
+        _meta = {}
+    _chs = (_meta or {}).get("chapters") if isinstance(_meta, dict) else None
+    if (not isinstance(_chs, list) or not _chs
+            or any(not isinstance(c, dict) for c in _chs)):
+        fail("meta.json chapters 非 timed 格式 ([{title,start,end}]): 先回填 Step00", errors)
+        _chs = []
+    expect_titles = [str(c.get("title")) for c in _chs] if _chs else []
+    if not isinstance(phases, list) or (expect_titles and len(phases) != len(expect_titles)):
+        fail(f"phases must be N={len(expect_titles)} (作者 chapters 一章一段), got {len(phases) if isinstance(phases, list) else type(phases)}", errors)
+    elif expect_titles:
         got_ph = [p.get("phase") for p in phases]
-        if got_ph != ["W1-5", "W6-12", "W13-20"]:
-            fail(f"phases must be [W1-5, W6-12, W13-20], got {got_ph}", errors)
+        if got_ph != expect_titles:
+            fail(f"phases phase 名须=章标题原文, got {got_ph}", errors)
         for p in phases:
             for k in ("phase", "waves", "goal", "focus", "pivot", "quotes"):
                 if k not in p or (isinstance(p[k], str) and not p[k].strip()):
@@ -110,7 +122,18 @@ def main(argv: list[str] | None = None) -> int:
             rs = str(p.get("goal", "")) + str(p.get("focus", ""))
             if "字幕" in rs and "次" in rs and "原话" not in rs:
                 warns.append(f"WARN: phases 疑计数泄漏: {p.get('phase')}")
-            _check_quotes(f"phases {p.get('phase')}", p.get("quotes", []), p.get("quote_details", []))
+            qs = p.get("quotes", [])
+            qd = p.get("quote_details", [])
+            if not qs:
+                # 空段诚实空出: quotes==[] + details==[] + goal 写明非打法章
+                if qs != [] or qd != []:
+                    fail(f"phases 空段须 quotes==[] + quote_details==[]: {p.get('phase')}", errors)
+                if "非打法章" not in str(p.get("goal", "")):
+                    fail(f"phases 空段 goal 须写明非打法章: {p.get('phase')}", errors)
+            else:
+                if len(qs) > 10:
+                    fail(f"phases 非空段 quotes cap10, got {len(qs)}: {p.get('phase')}", errors)
+                _check_quotes(f"phases {p.get('phase')}", qs, qd)
     if phases != phases_out:
         fail("outputs/phases.json must equal steps/06-phases/phases.json", errors)
 

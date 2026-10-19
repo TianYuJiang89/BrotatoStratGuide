@@ -134,7 +134,7 @@ def _bucket_by_chapter(sentences: list[dict], chapters: list[dict],
 
 
 def step06_buckets(workdir: Path, sentences: list[dict]) -> tuple[list[dict], list[tuple[list[str], list[dict]]]]:
-    """#45跟进: 确定性分桶 (代码, 无 judgment). 写 buckets.json 供 agent 输入."""
+    """#45跟进: 确定性分桶 (代码, 无 judgment). 写 buckets.json 供 agent 输入. N=章节数 (cyborg=8, 他例按实际)."""
     chapters = _load_chapters(workdir)
     buckets = _bucket_by_chapter(sentences, chapters, cap=10)
     outdir = workdir / "steps" / "06-phases"
@@ -166,13 +166,18 @@ def _load_wordings(workdir: Path, chapters: list[dict]) -> list[dict]:
             v = entry.get(k)
             if not isinstance(v, str) or len(v.strip()) < 8:
                 raise SystemExit(f"step06 wordings {entry.get('phase')} 缺 {k} (人话一句≥8字)")
+        ex = entry.get("extra_quotes", [])
+        if ex is None:
+            ex = []
+        if not isinstance(ex, list) or len(ex) > 2 or any(not isinstance(q, str) for q in ex):
+            raise SystemExit(f"step06 wordings {entry.get('phase')} extra_quotes 须≤2条字符串 (窗外补引用, 无则[])")
     return w
 
 
 def step06_merge(workdir: Path, chapters: list[dict],
                  buckets: list[tuple[list[str], list[dict]]],
-                 wordings: list[dict]) -> list[dict]:
-    """#45跟进: 确定性合并 (代码, 无 judgment). buckets(quotes) + wordings(三问) → phases.json."""
+                 wordings: list[dict], sentences: list[dict]) -> list[dict]:
+    """#45跟进+C: 确定性合并 (代码, 无 judgment). buckets(窗内) + wordings(三问+extra≤2) → phases.json. N=章节数."""
     phases: list[dict] = []
     for i, ch in enumerate(chapters):
         title = str(ch["title"])
@@ -188,12 +193,33 @@ def step06_merge(workdir: Path, chapters: list[dict],
             })
             continue
         entry = wordings[i]
+        extra: list[str] = list(entry.get("extra_quotes") or [])
+        if len(extra) > 2:
+            raise SystemExit(f"step06 {title} extra_quotes 超2条")
+        by_text = {s["text"]: s for s in sentences if isinstance(s, dict)}
+        qlookup = _quote_lookup(sentences)
+        ex_details: list[dict] = []
+        for q in extra:
+            if q in qs:
+                raise SystemExit(f"step06 {title} extra_quotes 与窗内重复: {q[:40]}")
+            hit = by_text.get(q)
+            if hit is None:
+                raise SystemExit(f"step06 {title} extra_quotes 须逐字等于 sentences: {q[:40]}")
+            ss = float(hit.get("start_s", -1))
+            s0, e0 = float(ch["start"]), float(ch["end"])
+            is_last = (i == len(chapters) - 1)
+            inside = (ss >= s0 and ss <= e0) if is_last else (ss >= s0 and ss < e0)
+            if inside:
+                raise SystemExit(f"step06 {title} extra_quotes 须在窗外 (窗内已收): {q[:40]}")
+            h = (qlookup.get(q) or [None])[0] or {"start": None, "end": None, "t": None, "context": q[:300]}
+            ex_details.append({"quote": q, "start": h["start"], "end": h["end"],
+                               "t": h["t"], "context": h["context"], "out_of_window": True})
         phases.append({
             "phase": title, "waves": waves,
             "goal": str(entry["goal"]).strip(),
             "focus": str(entry["focus"]).strip(),
             "pivot": str(entry["pivot"]).strip(),
-            "quotes": qs, "quote_details": qd,
+            "quotes": list(qs) + list(extra), "quote_details": list(qd) + ex_details,
         })
     outdir = workdir / "steps" / "06-phases"
     outdir.mkdir(parents=True, exist_ok=True)
@@ -204,16 +230,10 @@ def step06_merge(workdir: Path, chapters: list[dict],
 
 
 def step06(workdir: Path, sentences: list[dict]) -> list[dict]:
-    # #45跟进: 分桶(代码) + 三问(agent) + 合并(代码). quotes 不可由 agent 改写.
+    # #45跟进+C: 分桶(代码) + 三问+extra≤2(agent) + 合并(代码). 窗内quotes不可改, N=章节数.
     chapters, buckets = step06_buckets(workdir, sentences)
     wordings = _load_wordings(workdir, chapters)
-    return step06_merge(workdir, chapters, buckets, wordings)
-    outdir = workdir / "steps" / "06-phases"
-    outdir.mkdir(parents=True, exist_ok=True)
-    (outdir / "phases.json").write_text(json.dumps(phases, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (workdir / "outputs").mkdir(parents=True, exist_ok=True)
-    (workdir / "outputs" / "phases.json").write_text(json.dumps(phases, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return phases
+    return step06_merge(workdir, chapters, buckets, wordings, sentences)
 
 
 def step07(workdir: Path, sentences: list[dict], ratings: list[dict],

@@ -1088,10 +1088,11 @@ function manifestUrl() {
 function quoteRowHtml(q, d) {
   const mu = manifestUrl();
   const tlink = (d && d.t != null) ? `<a href="${mu}${mu.includes('?') ? '&' : '?'}t=${d.t}s" target="_blank">⏱${d.start || ('t='+d.t)}</a>` : '<span style="color:#aaa;">无时间戳</span>';
+  const oow = (d && d.out_of_window) ? '<span class="badge" style="background:#faf5ff;color:#7c3aed;border:1px solid #ddd6fe;margin-left:4px;">窗外补</span>' : '';
   const sid = sentenceIdForQuote(q);
   return `
     <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;margin-bottom:6px;">
-      <div style="font-weight:700;color:var(--accent);margin-bottom:2px;">${tlink}${sentJumpLink(sid, q)}</div>
+      <div style="font-weight:700;color:var(--accent);margin-bottom:2px;">${tlink}${sentJumpLink(sid, q)}${oow}</div>
       <div style="font-style:italic;">“${q}”</div>
       ${fullContextHtml(sid, d && d.context)}
     </div>`;

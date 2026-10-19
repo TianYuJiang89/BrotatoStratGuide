@@ -95,7 +95,7 @@ def main(argv: list[str] | None = None) -> int:
                 fail(f"{tag} quote_details missing quote/context", errors)
                 break
 
-    # --- 06-phases (#45: 作者 chapters 一章一段, N=8, phase 名=章标题原文) ---
+    # --- 06-phases (#45+C: 作者 chapters 一章一段, N=章节数(cyborg=8), phase 名=章标题原文) ---
     try:
         _meta = json.loads((work / "inputs" / "meta.json").read_text(encoding="utf-8"))
     except Exception:
@@ -131,9 +131,29 @@ def main(argv: list[str] | None = None) -> int:
                 if "非打法章" not in str(p.get("goal", "")):
                     fail(f"phases 空段 goal 须写明非打法章: {p.get('phase')}", errors)
             else:
-                if len(qs) > 10:
-                    fail(f"phases 非空段 quotes cap10, got {len(qs)}: {p.get('phase')}", errors)
+                # C: 窗内cap10前缀须等于buckets, 窗外补≤2须标out_of_window
+                try:
+                    _bk = json.loads((work / "steps" / "06-phases" / "buckets.json").read_text(encoding="utf-8"))
+                except Exception:
+                    _bk = []
+                _bq = []
+                for b in (_bk if isinstance(_bk, list) else []):
+                    if isinstance(b, dict) and b.get("phase") == p.get("phase"):
+                        _bq = b.get("quotes", []) if isinstance(b.get("quotes", []), list) else []
+                        break
+                if _bq and list(qs[:len(_bq)]) != list(_bq):
+                    fail(f"phases 窗内前缀须等于buckets (不可改写): {p.get('phase')}", errors)
+                _in_n = len(_bq) if _bq else min(len(qs), 10)
+                if _bq and len(qs) > len(_bq) + 2:
+                    fail(f"phases 窗外补引用超2条: {p.get('phase')}", errors)
+                if not _bq and len(qs) > 12:
+                    fail(f"phases 非空段 quotes 上限12 (窗内10+窗外2), got {len(qs)}: {p.get('phase')}", errors)
                 _check_quotes(f"phases {p.get('phase')}", qs, qd)
+                # 窗外补须标out_of_window:true
+                for d in (qd[_in_n:] if isinstance(qd, list) else []):
+                    if not isinstance(d, dict) or d.get("out_of_window") is not True:
+                        fail(f"phases 窗外补须标 out_of_window:true: {p.get('phase')}", errors)
+                        break
                 # #45跟进: 三问人话质检 (FAIL=整句复制; WARN=模板黑话/无实体)
                 for k in ("goal", "focus", "pivot"):
                     v = str(p.get(k, "")).strip()

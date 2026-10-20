@@ -1,3 +1,5 @@
+# DEPRECATED — DO NOT USE（2026-10-20）：本文件被证明有害（拿取逻辑借尸还魂 + Engineering 转/捡不分），已废，待五角色隔离重看后重写。以下全文冻结为反面教材，不作 few-shot，不进 prompt。
+
 # Step04 评级基准（FROZEN，永远不变）
 
 > 本文件是 [04-attributes 属性评级体系重构](https://github.com/TianYuJiang89/BrotatoStratGuide/issues/58) 的 resolution 资产。

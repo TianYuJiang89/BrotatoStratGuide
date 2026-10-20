@@ -240,7 +240,7 @@ def _safe_term(term_en: str) -> str:
 
 
 def _spawn_agent_once(workdir: Path, prompt_text: str, output_rel: str,
-                      log_path: Path, timeout: float = 1800.0) -> Path:
+                      log_path: Path, timeout: float = 1800.0, model=None, thinking="xhigh") -> Path:
     """单次 RPC spawn (复用 run_chain 口径: transient/缺件/格式由调用方重试).
 
     本函数只做单次, 不重试. transient 抛 RuntimeError("transient: ..."),
@@ -256,7 +256,9 @@ def _spawn_agent_once(workdir: Path, prompt_text: str, output_rel: str,
         base = ["--mode", "rpc", "--no-session",
                 "--no-skills", "--no-extensions", "--no-prompt-templates",
                 "--no-context-files", "--tools", "read,write,bash",
-                "--thinking", "xhigh"]
+                "--thinking", thinking]
+        if model:
+            base += ["--model", model]
         found = _sh.which("pi")
         if found:
             return [found, *base]
@@ -360,7 +362,7 @@ def _spawn_agent_once(workdir: Path, prompt_text: str, output_rel: str,
     return out_path
 
 
-def _do_one_term(workdir, sentences, fewshot, per_dir, t, agent_fn=None, timeout=1800.0, force=False):
+def _do_one_term(workdir, sentences, fewshot, per_dir, t, agent_fn=None, timeout=1800.0, force=False, model=None, thinking="xhigh"):
     import json
     import time
     en = t["en"].strip()
@@ -401,7 +403,7 @@ def _do_one_term(workdir, sentences, fewshot, per_dir, t, agent_fn=None, timeout
             bi = 0
             while True:
                 try:
-                    _spawn_agent_once(workdir, full_prompt, out_rel, log_path, timeout=timeout)
+                    _spawn_agent_once(workdir, full_prompt, out_rel, log_path, timeout=timeout, model=model, thinking=thinking)
                 except RuntimeError as e:
                     msg = str(e)
                     if msg.startswith("transient:"):
@@ -441,7 +443,7 @@ def _do_one_term(workdir, sentences, fewshot, per_dir, t, agent_fn=None, timeout
     return build_final_entry(en, zh, typ, agent_data, sentences)
 
 
-def run_step04_loop(workdir, sentences, agent_fn=None, timeout=1800.0, force=False, max_workers=2, stagger=5.0):
+def run_step04_loop(workdir, sentences, agent_fn=None, timeout=1800.0, force=False, max_workers=2, stagger=5.0, model=None, thinking="xhigh"):
     import concurrent.futures
     import json
     terms = load_terms()
@@ -452,7 +454,7 @@ def run_step04_loop(workdir, sentences, agent_fn=None, timeout=1800.0, force=Fal
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
         futs = {}
         for t in terms:
-            futs[ex.submit(_do_one_term, workdir, sentences, fewshot, per_dir, t, agent_fn, timeout, force)] = t["en"].strip()
+            futs[ex.submit(_do_one_term, workdir, sentences, fewshot, per_dir, t, agent_fn, timeout, force, model, thinking)] = t["en"].strip()
             _tm.sleep(stagger)
         by_en = {}
         for fut in concurrent.futures.as_completed(futs):

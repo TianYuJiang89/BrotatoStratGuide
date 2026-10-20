@@ -282,29 +282,21 @@ def _spawn_agent_once(workdir: Path, prompt_text: str, output_rel: str,
     import queue
     import threading
 
-    sys.path.insert(0, str(REPO / "scripts"))
-    try:
-        from run_chain import build_agent_cmd
-    except Exception:
-        # 回退: 直接拼 pi 命令 (run_chain 未就绪时)
-        import shutil as _sh
-
-        def build_agent_cmd() -> list[str]:  # type: ignore[no-redef]
-            found = _sh.which("pi")
-            if found:
-                return [found, "--mode", "rpc", "--no-session",
-                        "--no-skills", "--no-extensions", "--no-prompt-templates",
-                        "--no-context-files", "--tools", "read,write,bash",
-                        "--thinking", "off"]
-            for cand in ("F:/Pi/CLI/pi.cmd", "F:/Pi/CLI/pi", "pi.cmd"):
-                if Path(cand).exists():
-                    return [cand, "--mode", "rpc", "--no-session",
-                            "--no-skills", "--no-extensions", "--no-prompt-templates",
-                            "--no-context-files", "--tools", "read,write,bash",
-                            "--thinking", "off"]
-            return ["pi", "--mode", "rpc", "--no-session",
-                    "--no-skills", "--no-extensions", "--no-context-files",
-                    "--tools", "read,write,bash", "--thinking", "off"]
+    import shutil as _sh
+    def build_agent_cmd() -> list[str]:
+        # #60 04-loop 纯 judgment, thinking 必须开 (xhigh 对齐主 session).
+        # 不复用 run_chain.build_agent_cmd (off, 确定性步用;改它会碰 06/08).
+        base = ["--mode", "rpc", "--no-session",
+                "--no-skills", "--no-extensions", "--no-prompt-templates",
+                "--no-context-files", "--tools", "read,write,bash",
+                "--thinking", "xhigh"]
+        found = _sh.which("pi")
+        if found:
+            return [found, *base]
+        for cand in ("F:/Pi/CLI/pi.cmd", "F:/Pi/CLI/pi", "pi.cmd"):
+            if Path(cand).exists():
+                return [cand, *base]
+        return ["pi", *base]
 
     def _sha1(s: str) -> str:
         return hashlib.sha1(s.encode("utf-8")).hexdigest()

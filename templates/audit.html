@@ -591,7 +591,7 @@ html { scroll-behavior: smooth; }
       📂 备用上传
       <input type="file" id="fallbackDirInput" webkitdirectory directory multiple style="display:none;">
     </label>
-    <button class="btn-sm" id="btnResetMock" title="清空为无数据占位，须经 picker/?base= 载入真实 steps">
+    <button class="btn-sm" id="btnClearData" title="清空为无数据占位，须经 picker/?base= 载入真实 steps">
       🧹 清空数据
     </button>
   </div>
@@ -1880,8 +1880,8 @@ document.getElementById('fallbackDirInput').addEventListener('change', async (e)
 });
 
 // Reset to empty (无mock)
-document.getElementById('btnResetMock').addEventListener('click', () => {
-  loadMockData();
+document.getElementById('btnClearData').addEventListener('click', () => {
+  loadEmptyData();
   state.dataSource = 'empty';
   document.getElementById('sourceDot').className = 'source-dot';
   document.getElementById('sourceText').textContent = '数据源：无（须经 picker/?base= 载入真实 steps）';
@@ -1975,7 +1975,7 @@ function setupFilterListeners() {
   });
 }
 
-function loadMockData() {
+function loadEmptyData() {
   // 无mock：清空为真实数据占位，须经 picker/?base= 载入 steps/*/*.json
   appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, phases:[], priorities:{}, pitfalls:[], candidates08:[], wordings08:[], assemble:{}};
 }

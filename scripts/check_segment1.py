@@ -238,15 +238,13 @@ def main(argv: list[str] | None = None) -> int:
             _ana = str(r.get("analysis", ""))
             if len(_ana.strip()) < 4:
                 fail("ratings analysis must be nonempty", errors)
-            if "字幕" in _ana and "次" in _ana and "原话" not in _ana:
-                fail("ratings analysis no count leak", errors)
+            pass  # 漏数不卡 (#60删禁数字，agent全权)
             _sum = str(r.get("summary", ""))
             if not _sum.strip():
                 fail("ratings summary missing", errors)
             if len(_sum) > 120:
                 fail("ratings summary must be le 120", errors)
-            if "字幕" in _sum and "次" in _sum and "原话" not in _sum:
-                fail("ratings summary no count leak", errors)
+            pass  # 漏数不卡 (#60删禁数字，agent全权)
             qd = r.get("quote_details", [])
             if not isinstance(qd, list) or len(qd) != len(qs):
                 fail("ratings quote_details must parallel quotes", errors)

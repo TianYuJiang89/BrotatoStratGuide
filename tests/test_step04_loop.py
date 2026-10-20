@@ -104,7 +104,7 @@ def test_validate_shape_ok_and_fail_loud():
         m.validate_attribute_output(bad4, "Ranged Damage", sents)
 
 
-def test_validate_rejects_old_anchor_fields_and_count_leak():
+def test_validate_rejects_old_anchor_fields():
     m = _load("step04_loop", "scripts/step04_loop.py")
     import pytest
     sents = _sentences()
@@ -131,12 +131,7 @@ def test_validate_rejects_old_anchor_fields_and_count_leak():
     bad["summary"] = "x" * 121
     with pytest.raises(SystemExit):
         m.validate_attribute_output(bad, "Ranged Damage", sents)
-    # 计数泄漏即fail
-    bad = dict(base)
-    bad["summary"] = "字幕出现5次所以强"
-    with pytest.raises(SystemExit):
-        m.validate_attribute_output(bad, "Ranged Damage", sents)
-    # 不查动词/over/S数量帽：11个S也不fail（形状只卡存在性）
+    # 不查动词/over/S数量帽/计数泄漏：11个S也不fail，数字也不卡（形状只卡存在性）
     # （本测试只验validate不查S数量：多S由人看抽检，不由代码卡）
 
 

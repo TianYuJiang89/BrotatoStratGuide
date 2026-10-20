@@ -41,8 +41,6 @@ FEWSHOT_REL = "prompts/step04-ratings-fewshot.md"
 VALID_RATINGS = {"S", "A", "B", "C", "D", "-"}
 RETIRED_FIELDS = ("anchors", "confidence", "kind", "inferred", "reason")
 SUMMARY_MAX_LEN = 120
-# 计数泄漏: 字幕出现N次类表述 (无原话豁免沿旧契约: 含"原话"则视为引用不判 leak)
-_COUNT_LEAK_RE = re.compile(r"字幕.*次|出现\s*\d+\s*次|提及\s*\d+\s*次|count\s*[=:]\s*\d+", re.IGNORECASE)
 _TS_RE = re.compile(r"^\d{2}:\d{2}:\d{2}[.,]\d{3}$")
 
 
@@ -124,8 +122,8 @@ def build_attribute_prompt(term_en: str, sentences: list[dict], fewshot_text: st
         + "## 输出契约（只输出一件 JSON 对象，不输出其它文字）\n\n"
         + '{"term_en": "<与 TASK_ATTR 一字不差>", "rating": "S/A/B/C/D/-", '
         + '"quotes": ["逐字出自上表 text，去重"], '
-        + '"analysis": "来源（捡/转/自带/挂钩/缺席）→机制效果→评级，不许数字", '
-        + '"summary": "≤120字中文人话，禁计数泄漏"}\n\n'
+        + '"analysis": "来源（捡/转/自带/挂钩/缺席）→机制效果→评级", '
+        + '"summary": "≤120字中文人话"}\n\n'
         + "- term_en 须与 TASK_ATTR 一字不差；你不输出 count。\n"
         + "- quotes 须逐字等于上表某条 text，去重；编 quote 即 fail。\n"
         + "- 若你判定作者未提及，rating 必 `-`，quotes 必 []，summary 写作者未提及。\n"
@@ -135,13 +133,6 @@ def build_attribute_prompt(term_en: str, sentences: list[dict], fewshot_text: st
     return prompt
 
 
-def _has_count_leak(text: str) -> bool:
-    if not isinstance(text, str) or not text:
-        return False
-    # 含"原话"视为引用豁免 (沿旧契约: 原话"…")
-    if "原话" in text:
-        return False
-    return bool(_COUNT_LEAK_RE.search(text))
 
 
 def validate_attribute_output(data: dict, term_en: str, sentences: list[dict]) -> None:
@@ -183,15 +174,11 @@ def validate_attribute_output(data: dict, term_en: str, sentences: list[dict]) -
     analysis = data.get("analysis")
     if not isinstance(analysis, str) or len(analysis.strip()) < 4:
         _fail(f"{term_en} analysis 须为非空人话 (审计全过程, 缺件即 fail)")
-    if _has_count_leak(analysis):
-        _fail(f"{term_en} analysis 禁计数泄漏 (字幕N次不进文案)")
     summary = data.get("summary")
     if not isinstance(summary, str) or not summary.strip():
         _fail(f"{term_en} summary 缺件即 fail")
     if len(summary) > SUMMARY_MAX_LEN:
         _fail(f"{term_en} summary 须≤{SUMMARY_MAX_LEN}字, got {len(summary)}")
-    if _has_count_leak(summary):
-        _fail(f"{term_en} summary 禁计数泄漏 (字幕N次不进文案)")
     # 短引若含 “...” 则须出自 quotes (含短引约束: 有引号即验, 无引号不强制)
     for m in re.finditer(r"[“\"'](.{4,}?)[”\"']", summary):
         inner = m.group(1).strip()

@@ -195,89 +195,96 @@ def main(argv: list[str] | None = None) -> int:
         # 兼容: 若 outputs 缺 quote_details, 视为未刷新, fail 提示重跑
         fail("outputs/groups.json must equal steps/03-grouping/grouping.json (重跑 01-03 新 schema 后须一致)", errors)
 
-    # --- 04-attributes ---
+    # --- 04-attributes (#60: frozen fewshot + for-loop x39, shape only) ---
     if not isinstance(ratings, list) or len(ratings) != 39:
-        fail(f"ratings must be 39 (主17+次级22全量), got {len(ratings) if isinstance(ratings, list) else type(ratings)}", errors)
+        fail("ratings must be 39", errors)
     else:
         import csv as _csv
         terms = list(_csv.DictReader((REPO / "data" / "terms.csv").open(encoding="utf-8")))
         expect = [(t["en"].strip(), t.get("type", "")) for t in terms]
         got = [(r.get("term_en"), r.get("type")) for r in ratings]
         if set(x[0] for x in got) != set(x[0] for x in expect):
-            fail("ratings must cover all 39 terms (主17+次级22)", errors)
+            fail("ratings must cover all 39 terms", errors)
+        _meta_by = {t["en"].strip(): t for t in terms}
+        sent_texts = {s.get("text") for s in sentences if isinstance(s, dict)}
         for r in ratings:
-            for k in ("term_en", "type", "count", "rating", "reason", "quotes", "kind", "inferred", "anchors"):
+            for k in ("term_en", "term_zh", "type", "count", "rating", "quotes", "analysis", "summary", "quote_details"):
                 if k not in r:
-                    fail(f"ratings missing {k}: {r.get('term_en')}", errors)
+                    fail("ratings missing", errors)
+            for _old in ("anchors", "confidence", "kind", "inferred", "reason"):
+                if _old in r:
+                    fail("ratings retired field must be absent", errors)
             cnt = r.get("count")
             rt = r.get("rating")
-            kind = r.get("kind")
-            inferred = r.get("inferred")
-            anchors = r.get("anchors")
-            if not isinstance(anchors, list) or any(not isinstance(a, str) for a in anchors):
-                fail(f"ratings anchors must be string array: {r.get('term_en')}", errors)
-                anchors = []
-            if not isinstance(inferred, bool):
-                fail(f"ratings inferred must be bool: {r.get('term_en')}", errors)
-            if kind not in ("anchor", "discretion", "none"):
-                fail(f"ratings kind must be anchor/discretion/none: {r.get('term_en')}", errors)
-            if isinstance(cnt, int) and cnt > 0:
-                if rt not in ("S", "A", "B", "C", "D"):
-                    fail(f"count>0 must have S-D rating: {r.get('term_en')}={rt}", errors)
-                if not r.get("quotes"):
-                    fail(f"count>0 must have quotes: {r.get('term_en')}", errors)
-                if len(str(r.get("reason", "")).strip()) < 8:
-                    fail(f"ratings reason too short: {r.get('term_en')}", errors)
-                # #47 闭集强约束: S/A 须锚 (anchors 非空逐字出自 quotes + inferred false + verified + kind anchor)
-                if rt in ("S", "A"):
-                    if kind != "anchor":
-                        fail(f"ratings S/A kind须anchor: {r.get('term_en')}", errors)
-                    if inferred is not False:
-                        fail(f"ratings S/A inferred须false: {r.get('term_en')}", errors)
-                    if r.get("confidence") != "verified":
-                        fail(f"ratings S/A confidence须verified: {r.get('term_en')}", errors)
-                    if not anchors:
-                        fail(f"ratings S/A anchors须非空 (作者亲口买/锁/升级+赢过谁逐字): {r.get('term_en')}", errors)
-                    else:
-                        qall = " ".join(r.get("quotes", []) if isinstance(r.get("quotes"), list) else []).lower()
-                        for a in anchors:
-                            if not a or a.lower() not in qall:
-                                fail(f"ratings anchor须出自本条quotes逐字: {r.get('term_en')}={a}", errors)
-                                break
-                else:
-                    # 裁量只查格式: B/C/D 须 discretion + inferred true + anchors 空, 内容不硬查 (顺手/妥协位)
-                    if kind != "discretion":
-                        fail(f"ratings B/C/D kind须discretion: {r.get('term_en')}", errors)
-                    if inferred is not True:
-                        fail(f"ratings B/C/D inferred须true (审计标黄): {r.get('term_en')}", errors)
-                    if anchors:
-                        fail(f"ratings B/C/D anchors须空 (裁量无锚): {r.get('term_en')}", errors)
-                    if r.get("confidence") != "candidate":
-                        fail(f"ratings B/C/D confidence须candidate (审计标黄): {r.get('term_en')}", errors)
-            elif cnt == 0:
-                if rt != "-":
-                    fail(f"count==0 must be '-': {r.get('term_en')}={rt}", errors)
-                if r.get("quotes"):
-                    fail(f"count==0 must have empty quotes: {r.get('term_en')}", errors)
-                if kind != "none":
-                    fail(f"count==0 kind须none: {r.get('term_en')}", errors)
-                if inferred is not False:
-                    fail(f"count==0 inferred须false: {r.get('term_en')}", errors)
-                if anchors:
-                    fail(f"count==0 anchors须空: {r.get('term_en')}", errors)
-                if r.get("confidence") != "none":
-                    fail(f"count==0 confidence须none: {r.get('term_en')}", errors)
-            rs = str(r.get("reason", ""))
-            if "字幕" in rs and "次" in rs and "原话" not in rs:
-                warns.append(f"WARN: ratings 疑计数泄漏: {r.get('term_en')}")
+            if not isinstance(cnt, int) or cnt < 0:
+                fail("ratings count must be nonneg int", errors)
+            if rt not in ("S", "A", "B", "C", "D", "-"):
+                fail("ratings rating must be valid", errors)
+            _exp = _meta_by.get(r.get("term_en"), {})
+            if _exp and r.get("term_zh") != _exp.get("zh"):
+                fail("ratings term_zh must match terms.csv", errors)
+            if _exp and r.get("type") != _exp.get("type"):
+                fail("ratings type must match terms.csv", errors)
             qs = r.get("quotes", [])
-            if isinstance(qs, list) and len(qs) != len(set(qs)):
-                fail(f"ratings quotes must be deduped: {r.get('term_en')}", errors)
+            if not isinstance(qs, list):
+                fail("ratings quotes must be array", errors)
+                qs = []
+            if len(qs) != len(set(qs)):
+                fail("ratings quotes must be deduped", errors)
+            for q in qs:
+                if q not in sent_texts:
+                    fail("ratings quotes must be verbatim from sentences", errors)
+                    break
+            _ana = str(r.get("analysis", ""))
+            if len(_ana.strip()) < 4:
+                fail("ratings analysis must be nonempty", errors)
+            if "字幕" in _ana and "次" in _ana and "原话" not in _ana:
+                fail("ratings analysis no count leak", errors)
+            _sum = str(r.get("summary", ""))
+            if not _sum.strip():
+                fail("ratings summary missing", errors)
+            if len(_sum) > 120:
+                fail("ratings summary must be le 120", errors)
+            if "字幕" in _sum and "次" in _sum and "原话" not in _sum:
+                fail("ratings summary no count leak", errors)
             qd = r.get("quote_details", [])
             if not isinstance(qd, list) or len(qd) != len(qs):
-                fail(f"ratings quote_details must parallel quotes: {r.get('term_en')}", errors)
+                fail("ratings quote_details must parallel quotes", errors)
+            else:
+                for d in qd:
+                    if not isinstance(d, dict) or "quote" not in d or "t" not in d:
+                        fail("ratings quote_details must have quote and t", errors)
+                        break
+                    if d.get("quote") not in qs:
+                        fail("ratings quote_details quote must be in quotes", errors)
+                        break
+                    if not _valid_ts(d.get("start")) or not _valid_ts(d.get("end")):
+                        fail("ratings quote_details start end bad", errors)
+                        break
+                    if d.get("start") is not None and not isinstance(d.get("t"), int):
+                        fail("ratings quote_details start must have int t", errors)
+                        break
+                for d in qd[:2]:
+                    if "context" not in d:
+                        fail("ratings quote_details missing context", errors)
+                        break
+            if isinstance(cnt, int):
+                if cnt == 0:
+                    if rt != "-":
+                        fail("count0 must be dash", errors)
+                    if qs:
+                        fail("count0 must have empty quotes", errors)
+                    if qd:
+                        fail("count0 must have empty quote_details", errors)
+                    if "作者未提及" not in _sum:
+                        fail("count0 summary must say not mentioned", errors)
+                else:
+                    if rt == "-":
+                        fail("count positive must not be dash", errors)
+                    if not qs:
+                        fail("count positive must have quotes", errors)
     if ratings != ratings_out:
-        fail("outputs/ratings.json must equal steps/04-attributes/ratings.json", errors)
+        fail("outputs ratings must equal steps ratings", errors)
 
     # --- 05-weapons ---
     if not isinstance(weapons, dict) or "t1" not in weapons or "t2" not in weapons:

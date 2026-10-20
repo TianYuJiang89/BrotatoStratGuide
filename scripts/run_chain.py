@@ -144,8 +144,23 @@ def _reuse_ok_grouping(path: Path) -> bool:
 
 
 def _reuse_ok_ratings(path: Path) -> bool:
+    # #60: 新 schema {term_en,term_zh,type,count,rating,quotes,analysis,summary,quote_details}, 旧四件退役
     d = _load_json(path)
-    return isinstance(d, list) and len(d) == 39
+    if not (isinstance(d, list) and len(d) == 39):
+        return False
+    try:
+        for r in d:
+            if not isinstance(r, dict):
+                return False
+            for k in ("term_en", "count", "rating", "quotes", "analysis", "summary", "quote_details"):
+                if k not in r:
+                    return False
+            for _old in ("anchors", "confidence", "kind", "inferred", "reason"):
+                if _old in r:
+                    return False
+        return True
+    except Exception:
+        return False
 
 
 def _reuse_ok_weapons(path: Path) -> bool:

@@ -322,7 +322,7 @@ def step07(workdir: Path, sentences: list[dict], ratings: list[dict],
         q, qs, qd = _how(r["term_en"], base_q)
         upgrades.append({
             "name": r["term_en"], "kind": "upgrade",
-            "why": f"{r.get('reason', '')}",
+            "why": f"{r.get('summary', '') or r.get('reason', '')}",  # #60: 新 ratings 只读 rating+summary, 回落旧 reason 保兼容
             "how_to_get": f"拿法看商店/升级节奏;原话[{_short(q)}]",
             "quotes": qs, "quote_details": qd,
         })

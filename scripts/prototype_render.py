@@ -935,7 +935,7 @@ table.guide-table th {{
         zh = r.get("term_zh", "")
         rating = r.get("rating", "-")
         count = r.get("count", 0)
-        reason = r.get("reason", "")
+        reason = r.get("summary", "") or r.get("reason", "") or r.get("analysis", "")  # #60 compat
         qds = r.get("quote_details", [])
         qd_first = qds[0] if qds else None
         
@@ -982,7 +982,7 @@ table.guide-table th {{
         zh = r.get("term_zh", "")
         rating = r.get("rating", "-")
         count = r.get("count", 0)
-        reason = r.get("reason", "")
+        reason = r.get("summary", "") or r.get("reason", "") or r.get("analysis", "")  # #60 compat
         qds = r.get("quote_details", [])
         qd_first = qds[0] if qds else None
         stat_wiki = wiki.get("stats", {}).get(en, {})

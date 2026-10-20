@@ -126,9 +126,9 @@ def build_attribute_prompt(term_en: str, sentences: list[dict], fewshot_text: st
         + '"quotes": ["逐字出自上表 text，去重"], '
         + '"analysis": "来源（捡/转/自带/挂钩/缺席）→机制效果→评级，不许数字", '
         + '"summary": "≤120字中文人话，禁计数泄漏"}\n\n'
-        + "- term_en 须与 TASK_ATTR 一字不差；count 由代码回填，你不填 count。\n"
+        + "- term_en 须与 TASK_ATTR 一字不差；你不输出 count。\n"
         + "- quotes 须逐字等于上表某条 text，去重；编 quote 即 fail。\n"
-        + "- count==0（整局零命中）时 rating 必 `-`，quotes 必 []，summary 写作者未提及。\n"
+        + "- 若你判定作者未提及，rating 必 `-`，quotes 必 []，summary 写作者未提及。\n"
         + "- analysis 写全过程（来源→机制→评级），犹豫/tradeoff/未知一律写进 analysis。\n"
         + "- 缺句/编 quote 即 fail，不回落不补空。\n"
     )
@@ -144,7 +144,7 @@ def _has_count_leak(text: str) -> bool:
     return bool(_COUNT_LEAK_RE.search(text))
 
 
-def validate_attribute_output(data: dict, term_en: str, sentences: list[dict], count: int) -> None:
+def validate_attribute_output(data: dict, term_en: str, sentences: list[dict]) -> None:
     """形状校验 (只卡形状, 不查动词/over/S数量帽).
 
     - term_en 一字不差; rating 合法; count 由调用方传入 (agent 不填 count, 含 count 即 fail).
@@ -155,9 +155,9 @@ def validate_attribute_output(data: dict, term_en: str, sentences: list[dict], c
     """
     if not isinstance(data, dict):
         _fail(f"{term_en} agent 输出须为 JSON 对象, got {type(data)}")
-    # count 只活代码: agent 不许填
+    # count 只活代码 (code = len(quotes), 无扫描): agent 不许填
     if "count" in data:
-        _fail(f"{term_en} count 由代码回填，agent 不许填 (含 count 即 fail)")
+        _fail(f"{term_en} agent 不许填 count")
     # 退役字段: 出现即 fail
     for f in RETIRED_FIELDS:
         if f in data:
@@ -201,22 +201,18 @@ def validate_attribute_output(data: dict, term_en: str, sentences: list[dict], c
                 # 放宽: 短引允许截断/改写标点？不，须逐字。短引不在 quotes 内即 fail。
                 # 但 frozen 例 summary 无短引，故无引号时不判；有引号才判。
                 _fail(f"{term_en} summary 短引须出自本条 quotes 逐字: {inner[:30]!r}")
-    # count==0 ⇔ - 且 quotes==[]
-    if int(count) == 0:
-        if rating != "-":
-            _fail(f"{term_en} count==0 必 `-` (作者未提及), got {rating!r}")
+    # agent 自洽 (无扫描, 全权 agent): '-' ⇔ quotes==[]
+    if rating == "-":
         if quotes:
-            _fail(f"{term_en} count==0 必 quotes==[]")
+            _fail(f"{term_en} '-' 必 quotes==[] (自洽)")
         if "作者未提及" not in str(summary):
-            _fail(f"{term_en} count==0 summary 须写作者未提及")
+            _fail(f"{term_en} '-' summary 须写作者未提及")
     else:
-        if rating == "-":
-            _fail(f"{term_en} count>0 不许 `-` (提过即评 S-D)")
         if not quotes:
-            _fail(f"{term_en} count>0 必有 quotes (缺件即 fail)")
+            _fail(f"{term_en} S-D 必有 quotes (缺件即 fail)")
 
 
-def build_final_entry(term_en: str, term_zh: str, typ: str, count: int,
+def build_final_entry(term_en: str, term_zh: str, typ: str,
                       agent_data: dict, sentences: list[dict]) -> dict:
     """合并最终条目: 代码回填 term_zh/type/count + 重建 quote_details.
 
@@ -243,29 +239,13 @@ def build_final_entry(term_en: str, term_zh: str, typ: str, count: int,
         "term_en": term_en,
         "term_zh": term_zh,
         "type": typ,
-        "count": int(count),
+        "count": len(seen),
         "rating": agent_data.get("rating"),
         "quotes": seen,
         "analysis": str(agent_data.get("analysis", "")).strip(),
         "summary": str(agent_data.get("summary", "")).strip(),
         "quote_details": details,
     }
-
-
-def _dynamic_counts(sentences: list[dict]) -> dict[str, tuple[int, list[str]]]:
-    """现场扫 count/quotes (与 run_segment1._dynamic_scan 同口径, 禁读 mentions/builds)."""
-    sys.path.insert(0, str(REPO / "scripts"))
-    try:
-        from build_mentions import load_registry_names as _lr, load_terms as _lt, build_pattern_map as _bp, scan_cues as _sc
-    except Exception as e:
-        _fail(f"load build_mentions 失败: {e}")
-        raise  # pragma: no cover
-    terms = _lt(REPO / "data")
-    wall, iall = _lr(REPO / "data")
-    pmap = _bp(terms, wall, iall)
-    cues = [s["text"] for s in sentences]
-    sc = _sc(cues, pmap)
-    return {en: sc.get(en, (0, [])) for en in terms}
 
 
 def _safe_term(term_en: str) -> str:
@@ -393,20 +373,18 @@ def _spawn_agent_once(workdir: Path, prompt_text: str, output_rel: str,
     return out_path
 
 
-def _do_one_term(workdir, sentences, fewshot, counts, meta_by, per_dir, t, agent_fn=None, timeout=1800.0, force=False):
+def _do_one_term(workdir, sentences, fewshot, per_dir, t, agent_fn=None, timeout=1800.0, force=False):
     import json
     import time
     en = t["en"].strip()
     zh = t.get("zh", "")
     typ = t.get("type", "")
-    cnt, _ = counts.get(en, (0, []))
-    cnt = int(cnt)
     per_path = per_dir / f"{_safe_term(en)}.json"
     agent_data = None
     if per_path.exists() and not force:
         try:
             cand = json.loads(per_path.read_text(encoding="utf-8"))
-            validate_attribute_output(cand, en, sentences, cnt)
+            validate_attribute_output(cand, en, sentences)
             agent_data = cand
         except SystemExit:
             raise
@@ -455,7 +433,7 @@ def _do_one_term(workdir, sentences, fewshot, counts, meta_by, per_dir, t, agent
                 try:
                     txt = per_path.read_text(encoding="utf-8")
                     cand = _extract_json(txt, en)
-                    validate_attribute_output(cand, en, sentences, cnt)
+                    validate_attribute_output(cand, en, sentences)
                     agent_data = cand
                     per_path.write_text(json.dumps(agent_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
                     break
@@ -470,10 +448,10 @@ def _do_one_term(workdir, sentences, fewshot, counts, meta_by, per_dir, t, agent
                         pass
                     continue
         if agent_fn is not None and agent_data is not None:
-            validate_attribute_output(agent_data, en, sentences, cnt)
+            validate_attribute_output(agent_data, en, sentences)
             per_path.write_text(json.dumps(agent_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     assert agent_data is not None
-    return build_final_entry(en, zh, typ, cnt, agent_data, sentences)
+    return build_final_entry(en, zh, typ, agent_data, sentences)
 
 
 def run_step04_loop(workdir, sentences, agent_fn=None, timeout=1800.0, force=False, max_workers=8):
@@ -481,12 +459,10 @@ def run_step04_loop(workdir, sentences, agent_fn=None, timeout=1800.0, force=Fal
     import json
     terms = load_terms()
     fewshot = load_fewshot()
-    counts = _dynamic_counts(sentences)
-    meta_by = {t["en"].strip(): t for t in terms}
     per_dir = workdir / "steps" / "04-attributes" / "per_attr"
     per_dir.mkdir(parents=True, exist_ok=True)
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
-        futs = {ex.submit(_do_one_term, workdir, sentences, fewshot, counts, meta_by, per_dir, t, agent_fn, timeout, force): t["en"].strip() for t in terms}
+        futs = {ex.submit(_do_one_term, workdir, sentences, fewshot, per_dir, t, agent_fn, timeout, force): t["en"].strip() for t in terms}
         by_en = {}
         for fut in concurrent.futures.as_completed(futs):
             en = futs[fut]

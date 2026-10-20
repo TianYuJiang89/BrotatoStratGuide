@@ -70,21 +70,21 @@ def test_validate_shape_ok_and_fail_loud():
         "analysis": "来源=捡（三倍率）→前半波爆发机制→整局入口故S。不计次数。",
         "summary": "无脑堆，前半波秒怪全靠它。",
     }
-    # count由代码回填，agent不填：validate不应要求count
+    # count=len(quotes)无扫描，agent不填：validate不应要求count
     assert "count" not in good
-    m.validate_attribute_output(good, "Ranged Damage", sents, count=5)
+    m.validate_attribute_output(good, "Ranged Damage", sents)
     # 编quote即fail loud
     import pytest
     bad = dict(good)
     bad["quotes"] = ["我编的一句根本不在字幕里"]
     with pytest.raises(SystemExit):
-        m.validate_attribute_output(bad, "Ranged Damage", sents, count=5)
+        m.validate_attribute_output(bad, "Ranged Damage", sents)
     # 缺件即fail loud（缺summary）
     bad2 = dict(good)
     del bad2["summary"]
     with pytest.raises(SystemExit):
-        m.validate_attribute_output(bad2, "Ranged Damage", sents, count=5)
-    # count==0必须-且空quotes：正例
+        m.validate_attribute_output(bad2, "Ranged Damage", sents)
+    # 自洽：-必须空quotes（正例）
     zero = {
         "term_en": "Bounces",
         "rating": "-",
@@ -92,12 +92,16 @@ def test_validate_shape_ok_and_fail_loud():
         "analysis": "作者未提及。",
         "summary": "作者未提及",
     }
-    m.validate_attribute_output(zero, "Bounces", sents, count=0)
-    # count==0却给S即fail
-    bad3 = dict(good)
-    bad3["term_en"] = "Bounces"
+    m.validate_attribute_output(zero, "Bounces", sents)
+    # 自洽：-却给quotes即fail；S-D却空quotes即fail
+    bad3 = dict(zero)
+    bad3["quotes"] = ["You buy ranged damage at triple the normal rate, uh, which is of course incredibly strong."]
     with pytest.raises(SystemExit):
-        m.validate_attribute_output(bad3, "Bounces", sents, count=0)
+        m.validate_attribute_output(bad3, "Bounces", sents)
+    bad4 = dict(good)
+    bad4["quotes"] = []
+    with pytest.raises(SystemExit):
+        m.validate_attribute_output(bad4, "Ranged Damage", sents)
 
 
 def test_validate_rejects_old_anchor_fields_and_count_leak():
@@ -116,22 +120,22 @@ def test_validate_rejects_old_anchor_fields_and_count_leak():
         bad = dict(base)
         bad[old] = [] if old == "anchors" else "x"
         with pytest.raises(SystemExit):
-            m.validate_attribute_output(bad, "Ranged Damage", sents, count=5)
+            m.validate_attribute_output(bad, "Ranged Damage", sents)
     # agent填count即fail（count只活代码）
     bad = dict(base)
     bad["count"] = 5
     with pytest.raises(SystemExit):
-        m.validate_attribute_output(bad, "Ranged Damage", sents, count=5)
+        m.validate_attribute_output(bad, "Ranged Damage", sents)
     # summary超120即fail
     bad = dict(base)
     bad["summary"] = "x" * 121
     with pytest.raises(SystemExit):
-        m.validate_attribute_output(bad, "Ranged Damage", sents, count=5)
+        m.validate_attribute_output(bad, "Ranged Damage", sents)
     # 计数泄漏即fail
     bad = dict(base)
     bad["summary"] = "字幕出现5次所以强"
     with pytest.raises(SystemExit):
-        m.validate_attribute_output(bad, "Ranged Damage", sents, count=5)
+        m.validate_attribute_output(bad, "Ranged Damage", sents)
     # 不查动词/over/S数量帽：11个S也不fail（形状只卡存在性）
     # （本测试只验validate不查S数量：多S由人看抽检，不由代码卡）
 
@@ -147,9 +151,9 @@ def test_backfill_builds_final_entry_with_quote_details():
         "analysis": "来源=捡→机制→S。",
         "summary": "无脑堆。",
     }
-    entry = m.build_final_entry("Ranged Damage", "远程伤害", "primary", 5, agent, sents)
+    entry = m.build_final_entry("Ranged Damage", "远程伤害", "primary", agent, sents)
     assert entry["term_en"] == "Ranged Damage"
-    assert entry["count"] == 5
+    assert entry["count"] == 1
     assert entry["rating"] == "S"
     assert entry["quotes"] == agent["quotes"]
     assert len(entry["quote_details"]) == 1

@@ -441,15 +441,19 @@ def _do_one_term(workdir, sentences, fewshot, per_dir, t, agent_fn=None, timeout
     return build_final_entry(en, zh, typ, agent_data, sentences)
 
 
-def run_step04_loop(workdir, sentences, agent_fn=None, timeout=1800.0, force=False, max_workers=8):
+def run_step04_loop(workdir, sentences, agent_fn=None, timeout=1800.0, force=False, max_workers=2, stagger=5.0):
     import concurrent.futures
     import json
     terms = load_terms()
     fewshot = load_fewshot()
     per_dir = workdir / "steps" / "04-attributes" / "per_attr"
     per_dir.mkdir(parents=True, exist_ok=True)
+    import time as _tm
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
-        futs = {ex.submit(_do_one_term, workdir, sentences, fewshot, per_dir, t, agent_fn, timeout, force): t["en"].strip() for t in terms}
+        futs = {}
+        for t in terms:
+            futs[ex.submit(_do_one_term, workdir, sentences, fewshot, per_dir, t, agent_fn, timeout, force)] = t["en"].strip()
+            _tm.sleep(stagger)
         by_en = {}
         for fut in concurrent.futures.as_completed(futs):
             en = futs[fut]

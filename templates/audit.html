@@ -591,8 +591,8 @@ html { scroll-behavior: smooth; }
       📂 备用上传
       <input type="file" id="fallbackDirInput" webkitdirectory directory multiple style="display:none;">
     </label>
-    <button class="btn-sm" id="btnResetMock" title="重置为默认 68 件全集测试数据">
-      🔄 恢复 Mock 数据
+    <button class="btn-sm" id="btnResetMock" title="清空为无数据占位，须经 picker/?base= 载入真实 steps">
+      🧹 清空数据
     </button>
   </div>
 </header>
@@ -684,7 +684,7 @@ html { scroll-behavior: smooth; }
 let appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, phases:[], priorities:[]};
 
 const state = {
-  dataSource: 'mock',
+  dataSource: 'empty',
   filters: {
     count: 'all',
     confidence: 'all',
@@ -1881,12 +1881,12 @@ document.getElementById('fallbackDirInput').addEventListener('change', async (e)
   render();
 });
 
-// Reset to Mock
+// Reset to empty (无mock)
 document.getElementById('btnResetMock').addEventListener('click', () => {
   loadMockData();
-  state.dataSource = 'mock';
+  state.dataSource = 'empty';
   document.getElementById('sourceDot').className = 'source-dot';
-  document.getElementById('sourceText').textContent = '数据源：MOCK 样例（离线占位，不可作为验收依据）';
+  document.getElementById('sourceText').textContent = '数据源：无（须经 picker/?base= 载入真实 steps）';
   render();
 });
 

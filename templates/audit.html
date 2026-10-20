@@ -730,9 +730,8 @@ function getFilteredItems() {
 function render() {
   const container = document.getElementById('mainContainer');
   if (!appData.manifest) {
-    const isMock = state.dataSource === 'mock';
-    container.innerHTML = `<div class="card"><div class="card-header"><div class="card-title"><span>${isMock ? '⚠️ 当前为 MOCK 样例，不可作为验收依据' : '⏳ 待加载 live 数据'}</span></div></div>`
-      + `<p style="font-size:13px;color:var(--muted);">${isMock ? '你点的是“恢复 Mock 数据”（离线样例）。验收必须切 live：点顶部“选择工作区目录”选 G:/brotato-work/&lt;slug&gt;/&lt;variant&gt;/，顶栏变蓝点“本地工作区”才算数。' : '未读到 live：请点顶部“选择工作区目录”选 G:/brotato-work/&lt;slug&gt;/&lt;variant&gt;/；失败不回落 mock。 formal 发布形态才用 ?base=（audit 随 outputs/ 同级发布）。'}</p></div>`;
+    container.innerHTML = `<div class="card"><div class="card-header"><div class="card-title"><span>⏳ 待加载 live 数据</span></div></div>`
+      + `<p style="font-size:13px;color:var(--muted);">未读到 live：请点顶部“选择工作区目录”选 G:/brotato-work/&lt;slug&gt;/&lt;variant&gt;/。 formal 发布形态才用 ?base=（audit 随 outputs/ 同级发布）。</p></div>`;
     updateSideNav();
     return;
   }

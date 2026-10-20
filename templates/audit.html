@@ -679,8 +679,7 @@ html { scroll-behavior: smooth; }
 </aside>
 
 <script>
-// Mock data and app state
-// 无mock：只读真实数据 (?base= 或 picker 载入 steps/*/*.json)
+// App state (无mock，只读真实数据 ?base=/picker)
 let appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, phases:[], priorities:[]};
 
 const state = {
@@ -881,7 +880,7 @@ function render() {
             <div class="item-card-reason">${_ana} ${tlink}</div><div style="font-size:12px;margin-top:4px;">summary：${_sum}</div>
             ${q0?`<div class="item-card-quote">"${q0}"</div>`:'<div class="item-card-quote">作者未提及</div>'}
             ${(d0&&d0.context)?`<div style="font-size:11px;color:#999;">上下文: ${d0.context}</div>`:''}
-          </div>`; }).join('')+`</div></div>`; }; return sec('S（核心）',grp('S'))+sec('A（主力）',grp('A'))+sec('B（可用）',grp('B'))+sec('C（一般）',grp('C'))+sec('D（不用）',grp('D'))+sec('-（未提及）',grp('-')); })() : '<div style="color:#999;">待加载：请用“选择工作区目录”或 ?base= 载入 steps/04-attributes/ratings.json（mock 仅含 6 条样例）。</div>'}
+          </div>`; }).join('')+`</div></div>`; }; return sec('S（核心）',grp('S'))+sec('A（主力）',grp('A'))+sec('B（可用）',grp('B'))+sec('C（一般）',grp('C'))+sec('D（不用）',grp('D'))+sec('-（未提及）',grp('-')); })() : '<div style="color:#999;">待加载：请用“选择工作区目录”或 ?base= 载入 steps/04-attributes/ratings.json（须载入真实 ratings.json）。</div>'}
       </div>
     </div>
 

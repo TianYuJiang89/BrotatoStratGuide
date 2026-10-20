@@ -117,10 +117,10 @@ def build_attribute_prompt(term_en: str, sentences: list[dict], fewshot_text: st
     blob = "\n".join(lines)
     prompt = (
         fewshot_text
-        + "\n\n---\n\n# TASK_ATTR（本轮只评这一个属性，其它属性一律不评）\n\n"
-        + f"TASK_ATTR: {term_en}\n\n"
         + "## 该角色全量整句（含 start/end/t/context，原样全量，不截断）\n\n"
         + "```json\n" + blob + "\n```\n\n"
+        + "\n\n---\n\n# TASK_ATTR（本轮只评这一个属性，其它属性一律不评）\n\n"
+        + f"TASK_ATTR: {term_en}\n\n"
         + "## 输出契约（只输出一件 JSON 对象，不输出其它文字）\n\n"
         + '{"term_en": "<与 TASK_ATTR 一字不差>", "rating": "S/A/B/C/D/-", '
         + '"quotes": ["逐字出自上表 text，去重"], '
@@ -393,138 +393,113 @@ def _spawn_agent_once(workdir: Path, prompt_text: str, output_rel: str,
     return out_path
 
 
-def run_step04_loop(workdir: Path, sentences: list[dict],
-                    agent_fn=None, timeout: float = 1800.0,
-                    force: bool = False) -> list[dict]:
-    """for-loop 调度: 39 属性各独立起一个 LLM agent.
+def _do_one_term(workdir, sentences, fewshot, counts, meta_by, per_dir, t, agent_fn=None, timeout=1800.0, force=False):
+    import json
+    import time
+    en = t["en"].strip()
+    zh = t.get("zh", "")
+    typ = t.get("type", "")
+    cnt, _ = counts.get(en, (0, []))
+    cnt = int(cnt)
+    per_path = per_dir / f"{_safe_term(en)}.json"
+    agent_data = None
+    if per_path.exists() and not force:
+        try:
+            cand = json.loads(per_path.read_text(encoding="utf-8"))
+            validate_attribute_output(cand, en, sentences, cnt)
+            agent_data = cand
+        except SystemExit:
+            raise
+        except Exception:
+            agent_data = None
+    if agent_data is None:
+        prompt = build_attribute_prompt(en, sentences, fewshot)
+        if agent_fn is not None:
+            try:
+                agent_data = agent_fn(en, prompt)
+            except SystemExit:
+                raise
+            except Exception as e:
+                _fail(f"{en} agent_fn fail: {e!r}")
+        else:
+            full_prompt = prompt + f"\n\n只写相对路径 `steps/04-attributes/per_attr/{_safe_term(en)}.json`，禁 `..` 与绝对盘符。\n"
+            log_path = workdir / "steps" / "04-attributes" / f"agent-{_safe_term(en)}.log"
+            out_rel = f"steps/04-attributes/per_attr/{_safe_term(en)}.json"
+            if per_path.exists() and force:
+                try:
+                    per_path.unlink()
+                except Exception:
+                    pass
+            transient_left = 2
+            format_left = 1
+            backoff = (5.0, 15.0)
+            bi = 0
+            while True:
+                try:
+                    _spawn_agent_once(workdir, full_prompt, out_rel, log_path, timeout=timeout)
+                except RuntimeError as e:
+                    msg = str(e)
+                    if msg.startswith("transient:"):
+                        if transient_left <= 0:
+                            _fail(f"{en} transient top: {msg}")
+                        wait = backoff[bi] if bi < len(backoff) else 15.0
+                        bi += 1
+                        transient_left -= 1
+                        time.sleep(wait)
+                        continue
+                    else:
+                        if format_left <= 0:
+                            _fail(f"{en} missing top: {msg}")
+                        format_left -= 1
+                        continue
+                try:
+                    txt = per_path.read_text(encoding="utf-8")
+                    cand = _extract_json(txt, en)
+                    validate_attribute_output(cand, en, sentences, cnt)
+                    agent_data = cand
+                    per_path.write_text(json.dumps(agent_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                    break
+                except SystemExit:
+                    if format_left <= 0:
+                        raise
+                    format_left -= 1
+                    try:
+                        if per_path.exists():
+                            per_path.unlink()
+                    except Exception:
+                        pass
+                    continue
+        if agent_fn is not None and agent_data is not None:
+            validate_attribute_output(agent_data, en, sentences, cnt)
+            per_path.write_text(json.dumps(agent_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    assert agent_data is not None
+    return build_final_entry(en, zh, typ, cnt, agent_data, sentences)
 
-    - agent_fn(term_en, prompt_text) -> dict (测试 seam; 缺省为真 RPC 子进程).
-    - 每轮只塞 基准fewshot + 全量整句 + 这一个属性名.
-    - count 由代码回填, agent 不填. 缺件/编 quote 即 fail loud.
-    - 复用: per_attr/<term>.json 已在 + 形状绿即 SKIP; force 才覆盖.
-    - 落盘: steps/04-attributes/per_attr/*.json (agent 原始) + ratings.json (+ outputs/ratings.json).
-    """
+
+def run_step04_loop(workdir, sentences, agent_fn=None, timeout=1800.0, force=False, max_workers=8):
+    import concurrent.futures
+    import json
     terms = load_terms()
     fewshot = load_fewshot()
     counts = _dynamic_counts(sentences)
-    # term meta
     meta_by = {t["en"].strip(): t for t in terms}
     per_dir = workdir / "steps" / "04-attributes" / "per_attr"
     per_dir.mkdir(parents=True, exist_ok=True)
-
-    ratings: list[dict] = []
-    for t in terms:
-        en = t["en"].strip()
-        zh = t.get("zh", "")
-        typ = t.get("type", "")
-        cnt, _ = counts.get(en, (0, []))
-        cnt = int(cnt)
-        per_path = per_dir / f"{_safe_term(en)}.json"
-        agent_data = None
-        # 复用已绿 SKIP
-        if per_path.exists() and not force:
-            try:
-                cand = json.loads(per_path.read_text(encoding="utf-8"))
-                validate_attribute_output(cand, en, sentences, cnt)
-                agent_data = cand
-            except SystemExit:
-                # 复用文件红灯即 fail (不静默重跑, 交重修; 此处抛给调用方)
-                raise
-            except Exception:
-                agent_data = None
-        if agent_data is None:
-            prompt = build_attribute_prompt(en, sentences, fewshot)
-            if agent_fn is not None:
-                # 测试/注入 seam ( deterministic, 无网络 )
-                try:
-                    agent_data = agent_fn(en, prompt)
-                except SystemExit:
-                    raise
-                except Exception as e:
-                    _fail(f"{en} agent_fn 异常即 fail: {e!r}")
-            else:
-                # 真子进程: 每属性一起 session, cwd 锁定 workdir, 最小工具集
-                # prompt 经 stdin 发 prompt, agent 写 per_attr/<term>.json (相对路径, 禁 ..).
-                # 为防 agent 写错路径, 主脚本传明确写盘指令后缀.
-                full_prompt = (
-                    prompt
-                    + f"\n\n只写相对路径 `{('steps/04-attributes/per_attr/' + _safe_term(en) + '.json')}`，"
-                    + "禁 `..` 与绝对盘符。只写这一件 JSON 对象文件，不输出其它文件。\n"
-                )
-                log_path = workdir / "steps" / "04-attributes" / f"agent-{_safe_term(en)}.log"
-                out_rel = f"steps/04-attributes/per_attr/{_safe_term(en)}.json"
-                # 若旧文件存在且 force, 先删 (同 cwd 覆盖, 不开新目录)
-                if per_path.exists() and force:
-                    try:
-                        per_path.unlink()
-                    except Exception:
-                        pass
-                # 重试口径 (沿 run_chain Q1-Q2, 无成本熔断沿 #54):
-                # transient max2 (退避5s->15s); 缺件/格式错 max1 立即.
-                transient_left = 2
-                format_left = 1
-                backoff = (5.0, 15.0)
-                bi = 0
-                while True:
-                    try:
-                        _spawn_agent_once(workdir, full_prompt, out_rel, log_path, timeout=timeout)
-                    except RuntimeError as e:
-                        msg = str(e)
-                        if msg.startswith("transient:"):
-                            if transient_left <= 0:
-                                _fail(f"{en} transient 到顶 (max2): {msg} (现场保留, 不回落)")
-                            wait = backoff[bi] if bi < len(backoff) else 15.0
-                            bi += 1
-                            transient_left -= 1
-                            time.sleep(wait)
-                            continue
-                        else:
-                            if format_left <= 0:
-                                _fail(f"{en} 缺件到顶 (max1): {msg} (不补空)")
-                            format_left -= 1
-                            continue
-                    # 落盘后读 + 形状校验 (格式错 max1)
-                    try:
-                        txt = per_path.read_text(encoding="utf-8")
-                        # agent 可能输出 markdown 包裹 ```json: 剥离
-                        cand = _extract_json(txt, en)
-                        validate_attribute_output(cand, en, sentences, cnt)
-                        agent_data = cand
-                        # 规范落盘 (agent 原始, 保序去重不改语义)
-                        per_path.write_text(json.dumps(agent_data, ensure_ascii=False, indent=2) + "\n",
-                                            encoding="utf-8")
-                        break
-                    except SystemExit as e:
-                        if format_left <= 0:
-                            raise
-                        format_left -= 1
-                        try:
-                            if per_path.exists():
-                                per_path.unlink()
-                        except Exception:
-                            pass
-                        continue
-            # 注入 seam 落盘 (测试也落盘, 保幂等可查)
-            if agent_fn is not None and agent_data is not None:
-                validate_attribute_output(agent_data, en, sentences, cnt)
-                per_path.write_text(json.dumps(agent_data, ensure_ascii=False, indent=2) + "\n",
-                                    encoding="utf-8")
-        assert agent_data is not None
-        entry = build_final_entry(en, zh, typ, cnt, agent_data, sentences)
-        ratings.append(entry)
-
-    # 39 全量 + 顺序按 terms.csv (主17+次22)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futs = {ex.submit(_do_one_term, workdir, sentences, fewshot, counts, meta_by, per_dir, t, agent_fn, timeout, force): t["en"].strip() for t in terms}
+        by_en = {}
+        for fut in concurrent.futures.as_completed(futs):
+            en = futs[fut]
+            by_en[en] = fut.result()
+    ratings = [by_en[t["en"].strip()] for t in terms]
     if len(ratings) != 39:
         _fail(f"ratings must be 39, got {len(ratings)}")
     outdir = workdir / "steps" / "04-attributes"
     outdir.mkdir(parents=True, exist_ok=True)
-    (outdir / "ratings.json").write_text(json.dumps(ratings, ensure_ascii=False, indent=2) + "\n",
-                                         encoding="utf-8")
+    (outdir / "ratings.json").write_text(json.dumps(ratings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (workdir / "outputs").mkdir(parents=True, exist_ok=True)
-    (workdir / "outputs" / "ratings.json").write_text(json.dumps(ratings, ensure_ascii=False, indent=2) + "\n",
-                                                      encoding="utf-8")
+    (workdir / "outputs" / "ratings.json").write_text(json.dumps(ratings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return ratings
-
 
 def _extract_json(text: str, term_en: str) -> dict:
     """剥离 ```json 包裹并解析, 非 JSON 即 fail loud."""

@@ -240,7 +240,7 @@ def _safe_term(term_en: str) -> str:
 
 
 def _spawn_agent_once(workdir: Path, prompt_text: str, output_rel: str,
-                      log_path: Path, timeout: float = 1800.0, model=None, thinking="xhigh") -> Path:
+                      log_path: Path, timeout: float = 1800.0, model=None, thinking="medium") -> Path:
     """单次 RPC spawn (复用 run_chain 口径: transient/缺件/格式由调用方重试).
 
     本函数只做单次, 不重试. transient 抛 RuntimeError("transient: ..."),
@@ -362,7 +362,7 @@ def _spawn_agent_once(workdir: Path, prompt_text: str, output_rel: str,
     return out_path
 
 
-def _do_one_term(workdir, sentences, fewshot, per_dir, t, agent_fn=None, timeout=1800.0, force=False, model=None, thinking="xhigh"):
+def _do_one_term(workdir, sentences, fewshot, per_dir, t, agent_fn=None, timeout=1800.0, force=False, model=None, thinking="medium"):
     import json
     import time
     en = t["en"].strip()
@@ -443,7 +443,7 @@ def _do_one_term(workdir, sentences, fewshot, per_dir, t, agent_fn=None, timeout
     return build_final_entry(en, zh, typ, agent_data, sentences)
 
 
-def run_step04_loop(workdir, sentences, agent_fn=None, timeout=1800.0, force=False, max_workers=2, stagger=5.0, model=None, thinking="xhigh"):
+def run_step04_loop(workdir, sentences, agent_fn=None, timeout=1800.0, force=False, max_workers=4, stagger=5.0, model=None, thinking="medium"):
     import concurrent.futures
     import json
     terms = load_terms()

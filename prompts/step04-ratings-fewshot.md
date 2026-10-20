@@ -1,9 +1,9 @@
-# Step04 评级 fewshot（DRAFT 待审：5 职业 × 6 档 = 30 例，看完再冻）
+# Step04 评级 fewshot（FROZEN 2026-10-20，用户已审“很好”）
 
 > 由来：5 份隔离重看（`data/work/{cyborg,engineer,ranger,doctor,one-armed}/isolation_summary.md`，
 > 每份只喂字幕+玩家任务，老方案全屏蔽）提炼。DEPRECATED 单 cyborg 版作废，不继承它任何一句话。
 > 本文件 30 条引文已逐条机验（逐字出自各角色整句，miss 即改，不编）。
-> 审过后才 freeze；审之前是 draft，不进 prompt。
+> 审过即 freeze：5 职业 × 6 档共 30 例，以后任何角色、任何变体只当 few-shot 读，绝不改、不加分支、不加特判。
 
 ## 通用标准（无机制私货，无动词表，无计数，无数字帽）
 

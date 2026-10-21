@@ -10,7 +10,7 @@
   python scripts/run_segment2.py --slug cyborg --variant ultimate --rpc
 
 输入 (cwd 锁定 G:/brotato-work/<slug>/<variant>/):
-  steps/01-sentences/sentences.json + inputs/meta.json (chapters 备查)
+  steps/01-sentences/sentences.json (全量整句, agent 自捞)
   steps/03-grouping/grouping.json + steps/04-attributes/ratings.json + steps/05-weapons/weapons.json (07 聚合)
   inputs/manifest.json (09 sha 锚点)
 全局 (repo 侧只读, 非 runtime): 无新增 (不读 terms/wiki-cache, 只读 inputs + steps 现场数据).
@@ -82,156 +82,18 @@ def _short(q: str, n: int = 60) -> str:
     return q[:n]
 
 
-def _load_chapters(workdir: Path) -> list[dict]:
-    """#45: 作者 8 chapters timed ([{title,start,end}], 秒, yt-dlp 原值).
+def step06(workdir: Path, sentences: list[dict], agent_fn=None, force: bool = False, timeout: float = 1800.0, model=None, thinking: str = "medium") -> list[dict]:
+    """06-phases (#63: frozen fewshot + segmentation/wording 两段 agent; #45 码分桶已退役).
 
-    老格式纯字符串数组视为缺取证 fail loud, 指引重跑 Step00 回填."""
-    meta = _load(workdir, "inputs/meta.json")
-    chs = meta.get("chapters")
-    if (not isinstance(chs, list) or not chs
-            or any(not isinstance(c, dict) for c in chs)
-            or any(not isinstance((c or {}).get("title"), str)
-                    or not isinstance((c or {}).get("start"), (int, float))
-                    or not isinstance((c or {}).get("end"), (int, float))
-                    for c in chs)):
-        raise SystemExit(
-            "step06 chapters 非 timed 格式 ([{title,start,end}]): 老格式纯字符串数组视为缺取证, "
-            "先跑 scripts/fetch_inputs.py --url <youtube-url> --slug <slug> --variant <variant> 回填 "
-            "(source.vtt 不动, sha 不变)")
-    return chs
-
-
-def _bucket_by_chapter(sentences: list[dict], chapters: list[dict],
-                       cap: int | None = None) -> list[tuple[list[str], list[dict]]]:
-    """#45+C: 按 chapter 时间窗确定性分桶 (sentence.start_s 落窗即收, 保序去重, 不cap全量).
-
-    窗口左闭右开 [start, end), 末章含 end (ss>=start). 空窗诚实空出 (quotes==[])."""
-    for s in sentences:
-        if s.get("start_s") is None:
-            raise SystemExit("step06 sentences 缺 start_s (需重跑 01 取整句时间戳): 现场时间窗分桶无依据")
-    qlookup = _quote_lookup(sentences)
-    out: list[tuple[list[str], list[dict]]] = []
-    for i, ch in enumerate(chapters):
-        s = float(ch["start"])
-        e = float(ch["end"])
-        is_last = (i == len(chapters) - 1)
-        seen: list[str] = []
-        for sent in sentences:
-            ss = float(sent["start_s"])
-            hit = (ss >= s and ss <= e) if is_last else (ss >= s and ss < e)
-            if hit and sent["text"] not in seen:
-                seen.append(sent["text"])
-                if cap is not None and len(seen) >= cap:
-                    break
-        details = []
-        for q in seen:
-            hits = qlookup.get(q, [])
-            h = hits[0] if hits else {"start": None, "end": None, "t": None, "context": q[:300]}
-            details.append({"quote": q, "start": h["start"], "end": h["end"],
-                            "t": h["t"], "context": h["context"]})
-        out.append((seen, details))
-    return out
-
-
-def step06_buckets(workdir: Path, sentences: list[dict]) -> tuple[list[dict], list[tuple[list[str], list[dict]]]]:
-    """#45跟进: 确定性分桶 (代码, 无 judgment). 写 buckets.json 供 agent 输入. N=章节数 (cyborg=8, 他例按实际)."""
-    chapters = _load_chapters(workdir)
-    buckets = _bucket_by_chapter(sentences, chapters, cap=None)
-    outdir = workdir / "steps" / "06-phases"
-    outdir.mkdir(parents=True, exist_ok=True)
-    dump = [{"phase": str(ch["title"]), "waves": f"{ch['start']}-{ch['end']}s",
-             "quotes": qs, "quote_details": qd}
-            for ch, (qs, qd) in zip(chapters, buckets)]
-    (outdir / "buckets.json").write_text(json.dumps(dump, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return chapters, buckets
-
-
-def _load_wordings(workdir: Path, chapters: list[dict]) -> list[dict]:
-    """#45跟进: agent judgment (人话三问). 缺件即 fail, 指引跑 prompts/step06-phases.md."""
-    p = workdir / "steps" / "06-phases" / "wordings.json"
-    if not p.exists():
-        raise SystemExit(
-            "step06 缺 wordings.json (agent 三问未写): 按 prompts/step06-phases.md "
-            "读 steps/06-phases/buckets.json 写 wordings.json (只写 goal/focus/pivot, 不改 quotes)")
-    try:
-        w = json.loads(p.read_text(encoding="utf-8"))
-    except Exception as e:
-        raise SystemExit(f"step06 wordings.json 解析失败: {e}")
-    if not isinstance(w, list) or len(w) != len(chapters):
-        raise SystemExit(f"step06 wordings 须 N={len(chapters)} (一章一段), got {len(w) if isinstance(w, list) else type(w)}")
-    for i, (ch, entry) in enumerate(zip(chapters, w)):
-        if not isinstance(entry, dict) or entry.get("phase") != str(ch["title"]):
-            raise SystemExit(f"step06 wordings[{i}] phase 须=章标题原文 {str(ch['title'])!r}")
-        for k in ("goal", "focus", "pivot"):
-            v = entry.get(k)
-            if not isinstance(v, str) or len(v.strip()) < 8:
-                raise SystemExit(f"step06 wordings {entry.get('phase')} 缺 {k} (人话一句≥8字)")
-        ex = entry.get("extra_quotes", [])
-        if ex is None:
-            ex = []
-        if not isinstance(ex, list) or any(not isinstance(q, str) for q in ex):
-            raise SystemExit(f"step06 wordings {entry.get('phase')} extra_quotes须字符串数组 (窗外补引用, 无则[])")
-    return w
-
-
-def step06_merge(workdir: Path, chapters: list[dict],
-                 buckets: list[tuple[list[str], list[dict]]],
-                 wordings: list[dict], sentences: list[dict]) -> list[dict]:
-    """#45跟进+C: 确定性合并 (代码, 无 judgment). buckets(窗内) + wordings(三问+extra≤2) → phases.json. N=章节数."""
-    phases: list[dict] = []
-    for i, ch in enumerate(chapters):
-        title = str(ch["title"])
-        waves = f"{ch['start']}-{ch['end']}s"
-        qs, qd = buckets[i]
-        if not qs:
-            phases.append({
-                "phase": title, "waves": waves,
-                "goal": f"本章（{title}）为非打法章，作者未给可执行打法，仅作背景/回顾，不硬凑（类比 ratings `-`）。",
-                "focus": "本章无配装/走位要点，不脑补。",
-                "pivot": "无转向点，不编数字。",
-                "quotes": [], "quote_details": [],
-            })
-            continue
-        entry = wordings[i]
-        extra: list[str] = list(entry.get("extra_quotes") or [])
-        by_text = {s["text"]: s for s in sentences if isinstance(s, dict)}
-        qlookup = _quote_lookup(sentences)
-        ex_details: list[dict] = []
-        for q in extra:
-            if q in qs:
-                raise SystemExit(f"step06 {title} extra_quotes 与窗内重复: {q[:40]}")
-            hit = by_text.get(q)
-            if hit is None:
-                raise SystemExit(f"step06 {title} extra_quotes 须逐字等于 sentences: {q[:40]}")
-            ss = float(hit.get("start_s", -1))
-            s0, e0 = float(ch["start"]), float(ch["end"])
-            is_last = (i == len(chapters) - 1)
-            inside = (ss >= s0 and ss <= e0) if is_last else (ss >= s0 and ss < e0)
-            if inside:
-                raise SystemExit(f"step06 {title} extra_quotes 须在窗外 (窗内已收): {q[:40]}")
-            h = (qlookup.get(q) or [None])[0] or {"start": None, "end": None, "t": None, "context": q[:300]}
-            ex_details.append({"quote": q, "start": h["start"], "end": h["end"],
-                               "t": h["t"], "context": h["context"], "out_of_window": True})
-        phases.append({
-            "phase": title, "waves": waves,
-            "goal": str(entry["goal"]).strip(),
-            "focus": str(entry["focus"]).strip(),
-            "pivot": str(entry["pivot"]).strip(),
-            "quotes": list(qs) + list(extra), "quote_details": list(qd) + ex_details,
-        })
-    outdir = workdir / "steps" / "06-phases"
-    outdir.mkdir(parents=True, exist_ok=True)
-    (outdir / "phases.json").write_text(json.dumps(phases, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (workdir / "outputs").mkdir(parents=True, exist_ok=True)
-    (workdir / "outputs" / "phases.json").write_text(json.dumps(phases, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return phases
-
-
-def step06(workdir: Path, sentences: list[dict]) -> list[dict]:
-    # #45跟进+C: 分桶(代码) + 三问+extra≤2(agent) + 合并(代码). 窗内quotes不可改, N=章节数.
-    chapters, buckets = step06_buckets(workdir, sentences)
-    wordings = _load_wordings(workdir, chapters)
-    return step06_merge(workdir, chapters, buckets, wordings, sentences)
+    调度 (loop, 语义零进代码): segmentation(串行, fewshot+全量整句→buckets, 自定义波次,
+    phase 运营语言不抄章题, waves 原话作证, 桶间不重叠, N 不定) → wording×N(并行,
+    每桶独立单 agent→三问+extra 真桶外) → 合并 (code: 桶内前缀须等于 buckets, 桶外补标 out_of_window).
+    退役: buckets 码分桶、meta chapters 作 06 输入、窗内锁死、N 数帽.
+    wordings.json schema 不变 (phase/goal/focus/pivot/extra_quotes), 07 无感.
+    缺件/编 quote/编波次即 fail loud, 不回落不补空.
+    """
+    from step06_loop import run_step06_loop
+    return run_step06_loop(workdir, sentences, agent_fn=agent_fn, force=force, timeout=timeout, model=model, thinking=thinking)
 
 
 def step07(workdir: Path, sentences: list[dict], ratings: list[dict],
@@ -440,7 +302,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.rpc:
         print(f'cd "{workdir}" && "F:/Pi/CLI/pi.cmd" --mode rpc --no-session '
               f"--no-skills --no-extensions --no-context-files --tools read,bash,write --thinking off")
-        print("子 prompt 见 prompts/step06-phases.md / step07-priorities.md / step08-pitfalls.md "
+        print("子 prompt 见 prompts/step06-phases-fewshot.md (FROZEN, segmentation/wording #63) / step07-priorities.md / step08-pitfalls.md "
               "/ step09-assemble.md")
         return 0
 
@@ -452,7 +314,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[segment2] 段1输入就绪 (sentences={len(sentences)} grouping={len(grouping)} "
           f"ratings={len(ratings)} weapons=T1:{len(weapons.get('t1', []))} T2:{len(weapons.get('t2', []))})")
     phases = step06(workdir, sentences)
-    print(f"[segment2] 06-phases: {len(phases)} 段 (作者 chapters 一章一段) -> steps/06-phases/phases.json")
+    print(f"[segment2] 06-phases: {len(phases)} 段 (运营波次自定义, 不抄章题) -> steps/06-phases/phases.json")
     pitfalls = step08(workdir, sentences)
     print(f"[segment2] 08-pitfalls: {len(pitfalls)} 条 -> steps/08-pitfalls/pitfalls.json")
     priorities = step07(workdir, sentences, ratings, grouping, phases)

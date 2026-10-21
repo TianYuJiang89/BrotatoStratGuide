@@ -16,7 +16,7 @@ Deterministic-first + No silent fallback:
   - 重修: check 红灯必须修 prompt/代码后再跑, 不直接重试本步.
 - 子 agent 调用 (沿 #35 SDK 调研结论):
   - Python 起 RPC 子进程一步一起 (--no-session), spawn cwd 锁到 G:/brotato-work/<slug>/<variant>/,
-    最小工具集 (read,write,bash), 只喂本步子 prompt 全文 (prompts/step06-phases.md /
+    最小工具集 (read,write,bash), 只喂本步子 prompt 全文 (prompts/step06-phases-fewshot.md /
     prompts/step08-pitfalls.md), 不喂旧 SOP 全文、不跨步.
   - 主脚本只做 cwd 锁 + 必要文件已在位校验 + sha 校验 + 重试计数 + fail loud;
     子 prompt 只写本步 SOP + 只读写相对路径, 不给重试/预算语.
@@ -52,7 +52,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 # 复用确定性代码 (不改锚规则与 schema, 只接线):
 # - run_segment1: ensure_inputs + step01..step05
-# - run_segment2: step06_buckets/_load_wordings/step06_merge + _recall_08/_load_wordings_08/step08 + step07/step09
+# - run_segment2: step06 (segmentation/wording #63) + _recall_08/_load_wordings_08/step08 + step07/step09
 # - fetch_inputs: Step00 取证
 # - check_segment1/check_segment2: 双 check
 
@@ -472,49 +472,19 @@ def run_01_05(workdir: Path, force: set[str]) -> tuple[list[dict], dict, list[di
 
 def run_06(workdir: Path, sentences: list[dict], force: set[str],
            timeout: float = LIVENESS_TIMEOUT) -> list[dict]:
-    """06-phases: buckets 代码 -> 真 agent 写 wordings -> merge 代码."""
-    from run_segment2 import step06_buckets, step06_merge, _load_chapters
-    chapters = _load_chapters(workdir)
-    # buckets (代码, 确定性)
-    b_path = workdir / "steps" / "06-phases" / "buckets.json"
-    b_data = _load_json(b_path)
-    if not should_force("06-buckets", force) and isinstance(b_data, list) and b_data:
-        print("[chain] 06-buckets SKIP (复用已绿)")
-        buckets = [(b.get("quotes", []), b.get("quote_details", [])) for b in b_data
-                   if isinstance(b, dict)]
-    else:
-        chapters, buckets = step06_buckets(workdir, sentences)
-        print(f"[chain] 06-buckets DONE: N={len(chapters)} -> steps/06-phases/buckets.json")
-    # wordings (真 agent, 禁手写; 主脚本只读校验不写盘)
-    w_path = workdir / "steps" / "06-phases" / "wordings.json"
-    w_rel = "steps/06-phases/wordings.json"
-    w_log = "steps/06-phases/agent.log"
-
-    def _validate_06() -> None:
-        from run_segment2 import _load_wordings as _lw
-        _lw(workdir, chapters)
-
-    if not should_force("06-wordings", force):
-        try:
-            from run_segment2 import _load_wordings as _lw
-            _lw(workdir, chapters)
-            print("[chain] 06-wordings SKIP (复用已绿, 真子进程既往产物)")
-        except SystemExit:
-            print("[chain] 06-wordings 缺件/格式红 -> 真子 agent 调起 (不手写)")
-            spawn_step_agent(workdir, "prompts/step06-phases.md", w_rel, w_log,
-                             timeout=timeout, validator=_validate_06)
-            print(f"[chain] 06-wordings DONE (真子进程落盘, 日志见 {w_log})")
-    else:
-        # --force-step 覆盖: 删旧 wordings 后真调 (同 cwd 覆盖, 不开新目录).
-        if w_path.exists():
-            w_path.unlink()
-        spawn_step_agent(workdir, "prompts/step06-phases.md", w_rel, w_log,
-                         timeout=timeout, validator=_validate_06)
-        print(f"[chain] 06-wordings DONE (强制真调, 日志见 {w_log})")
-    from run_segment2 import _load_wordings as _lw2
-    wordings = _lw2(workdir, chapters)
-    phases = step06_merge(workdir, chapters, buckets, wordings, sentences)
-    print(f"[chain] 06-merge DONE: {len(phases)} 段 -> steps/06-phases/phases.json")
+    """06-phases (#63: frozen fewshot + segmentation/wording 两段 agent)."""
+    from run_segment2 import step06 as _step06
+    force06 = should_force("06", force) or should_force("06-wordings", force) or should_force("06-buckets", force) or should_force("06-merge", force)
+    # 复用: buckets+wordings+phases+fewshot 存在即 SKIP (schema 绿由 check 验, 此处只验存在)
+    b_ok = (workdir / "steps" / "06-phases" / "buckets.json").exists()
+    w_ok = (workdir / "steps" / "06-phases" / "wordings.json").exists()
+    p_ok = (workdir / "steps" / "06-phases" / "phases.json").exists()
+    f_ok = (workdir / "steps" / "06-phases" / "fewshot.md").exists()
+    if not force06 and b_ok and w_ok and p_ok and f_ok:
+        print("[chain] 06-phases SKIP (复用已绿)")
+        return _load_json(workdir / "steps" / "06-phases" / "phases.json")
+    phases = _step06(workdir, sentences, force=force06, timeout=timeout, thinking="medium")
+    print(f"[chain] 06-phases DONE: N={len(phases)} -> steps/06-phases/phases.json (segmentation 自定义波次)")
     return phases
 
 
@@ -651,7 +621,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.print_agent_cmd:
         print(f'cd "{workdir}" && {" ".join(build_agent_cmd())}')
         print("子 prompt (只喂本步全文, 不喂旧 SOP、不跨步):")
-        print("  prompts/step06-phases.md -> steps/06-phases/wordings.json")
+        print("  prompts/step06-phases-fewshot.md (FROZEN, segmentation/wording #63) -> steps/06-phases/phases.json")
         print("  prompts/step08-pitfalls.md -> steps/08-pitfalls/wordings.json")
         return 0
 

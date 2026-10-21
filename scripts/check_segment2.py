@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Machine check for B-段2 (#45 + #49): 06-phases + 07-priorities + 08-pitfalls + 09-assemble.
+"""Machine check for B-段2 (#63 + #49): 06-phases + 07-priorities + 08-pitfalls + 09-assemble.
 
 沿 check_segment1.py (schema + 去重 + quote 对句 + sha + audit 一一对应), 加:
-- 06: N=8 作者 chapters 一章一段 (phase 名=章标题原文), 非空段 goal/focus/pivot + quotes 去重 + 对句,
-  空段 quotes==[] + quote_details==[] + goal 写明非打法章 (类比 ratings `-`)
+- 06 (#63: frozen fewshot + segmentation/wording, N 不定, 运营波次自定义): buckets.json + wordings.json + per_phase/* + phases.json, 桶间不重叠, 桶内前缀须等于 buckets, 桶外补标 out_of_window, 小结≠原文
 - 07 (#49 去 Top3 写死 + Peacock 按名顺延; #50 升级侧同商店刀法去 sa[:3] 写死): upgrades N 动态 + shop N 动态 (全在 ratings S/A / 新 grouping must_take verified 内,
   通用拒绝顺延 + 最大断层 TopN + 保底 Top1), 每项 why/how_to_get/quotes[0]
 - 08: >=3 条, severity 全在 fatal/risky/trap 内, 每条 why/how_to_avoid/quotes[0]
@@ -42,6 +41,9 @@ def main(argv: list[str] | None = None) -> int:
     warns: list[str] = []
 
     need = [
+        work / "steps" / "06-phases" / "buckets.json",
+        work / "steps" / "06-phases" / "wordings.json",
+        work / "steps" / "06-phases" / "fewshot.md",
         work / "steps" / "06-phases" / "phases.json",
         work / "outputs" / "phases.json",
         work / "steps" / "07-priorities" / "priorities.json",
@@ -98,79 +100,189 @@ def main(argv: list[str] | None = None) -> int:
                 fail(f"{tag} quote_details missing quote/context", errors)
                 break
 
-    # --- 06-phases (#45+C: 作者 chapters 一章一段, N=章节数(cyborg=8), phase 名=章标题原文) ---
+    # --- 06-phases (#63: frozen fewshot + segmentation/wording, N不定, 运营波次自定义) ---
     try:
-        _meta = json.loads((work / "inputs" / "meta.json").read_text(encoding="utf-8"))
+        _buckets = json.loads((work / "steps" / "06-phases" / "buckets.json").read_text(encoding="utf-8"))
     except Exception:
-        fail("missing inputs/meta.json for chapters timed 校验", errors)
-        _meta = {}
-    _chs = (_meta or {}).get("chapters") if isinstance(_meta, dict) else None
-    if (not isinstance(_chs, list) or not _chs
-            or any(not isinstance(c, dict) for c in _chs)):
-        fail("meta.json chapters 非 timed 格式 ([{title,start,end}]): 先回填 Step00", errors)
-        _chs = []
-    expect_titles = [str(c.get("title")) for c in _chs] if _chs else []
-    if not isinstance(phases, list) or (expect_titles and len(phases) != len(expect_titles)):
-        fail(f"phases must be N={len(expect_titles)} (作者 chapters 一章一段), got {len(phases) if isinstance(phases, list) else type(phases)}", errors)
-    elif expect_titles:
-        got_ph = [p.get("phase") for p in phases]
-        if got_ph != expect_titles:
-            fail(f"phases phase 名须=章标题原文, got {got_ph}", errors)
+        fail("missing steps/06-phases/buckets.json (segmentation, 缺节即 fail)", errors)
+        _buckets = []
+    try:
+        _wordings = json.loads((work / "steps" / "06-phases" / "wordings.json").read_text(encoding="utf-8"))
+    except Exception:
+        fail("missing steps/06-phases/wordings.json (wording, 缺节即 fail)", errors)
+        _wordings = []
+    if not isinstance(_buckets, list) or not _buckets:
+        fail("buckets must be non-empty array (N不定但>=1)", errors)
+        _buckets = []
+    if not isinstance(_wordings, list) or not _wordings:
+        fail("wordings must be non-empty array (N==buckets N)", errors)
+        _wordings = []
+    try:
+        _meta06 = json.loads((work / "inputs" / "meta.json").read_text(encoding="utf-8"))
+    except Exception:
+        _meta06 = {}
+    _chapter_titles = {str(c.get("title")) for c in ((_meta06 or {}).get("chapters") or []) if isinstance(c, dict)}
+    _b_phases = [b.get("phase") for b in _buckets if isinstance(b, dict)]
+    if len(_b_phases) != len(set(_b_phases)):
+        fail("buckets phase 须互异", errors)
+    for b in _buckets:
+        if not isinstance(b, dict):
+            fail("buckets entry must be object", errors)
+            continue
+        for k in ("phase", "waves", "quotes", "quote_details"):
+            if k not in b:
+                fail(f"buckets missing {k}: {b.get('phase')}", errors)
+        if b.get("phase") in _chapter_titles:
+            fail(f"buckets phase 不许抄作者章题: {b.get('phase')}", errors)
+        if not isinstance(b.get("waves"), str):
+            fail(f"buckets waves 须为字符串: {b.get('phase')}", errors)
+        elif str(b.get("waves", "")).strip():
+            _wl = str(b.get("waves", "")).lower()
+            _joined = " ".join(b.get("quotes", []) if isinstance(b.get("quotes"), list) else []).lower()
+            if _wl not in _joined:
+                _want = []
+                for _m in re.finditer(r"wave\s*\d+", _wl):
+                    _want.append(_m.group(0))
+                for _kw in ("horde", "elite", "boss", "final", "peacock", "mini", "whale", "wave"):
+                    if _kw in _wl and _kw not in _want:
+                        _want.append(_kw)
+                if not _want or not all(_tk in _joined for _tk in _want):
+                    fail(f"buckets waves 须原话作证: {b.get('phase')}={b.get('waves')}", errors)
+        _bq = b.get("quotes", [])
+        if not isinstance(_bq, list) or not _bq:
+            fail(f"buckets quotes 须非空: {b.get('phase')}", errors)
+            _bq = []
+        if isinstance(_bq, list) and len(_bq) != len(set(_bq)):
+            fail(f"buckets quotes 须去重: {b.get('phase')}", errors)
+        for q in _bq:
+            if q not in sent_texts:
+                fail(f"buckets quotes 须逐字: {b.get('phase')}", errors)
+                break
+        _bqd = b.get("quote_details", [])
+        if not isinstance(_bqd, list) or len(_bqd) != len(_bq):
+            fail(f"buckets quote_details 须平行: {b.get('phase')}", errors)
+    _all_bq = [q for b in _buckets if isinstance(b, dict) for q in (b.get("quotes", []) if isinstance(b.get("quotes"), list) else [])]
+    if len(_all_bq) != len(set(_all_bq)):
+        fail("buckets 桶间不重叠", errors)
+    if len(_wordings) != len(_buckets):
+        fail(f"wordings N 须==buckets N: 期望 {len(_buckets)}, 实得 {len(_wordings)}", errors)
+    _w_by = {w.get("phase"): w for w in _wordings if isinstance(w, dict)}
+    if set(_w_by.keys()) != set(_b_phases):
+        fail(f"wordings phase 须==buckets 自洽: 期望 {sorted(_b_phases)}, 实得 {sorted(_w_by.keys())}", errors)
+    import re as _re6
+    _short_re6 = _re6.compile(r'原话["“]([^"”]+)["”]')
+    for w in _wordings:
+        if not isinstance(w, dict):
+            continue
+        for k in ("phase", "goal", "focus", "pivot", "extra_quotes"):
+            if k not in w:
+                fail(f"wordings missing {k}: {w.get('phase')}", errors)
+        for k in ("goal", "focus", "pivot"):
+            _v = str(w.get(k, ""))
+            if len(_v.strip()) < 8:
+                fail(f"wordings {k} 须>=8字: {w.get('phase')}", errors)
+            if _v.strip() in sent_texts:
+                fail(f"wordings {k} 整句复制 quote: {w.get('phase')}", errors)
+            _shorts = [s.strip() for s in _short_re6.findall(_v) if s.strip()]
+            if not _shorts:
+                fail(f"wordings {k} 缺短引标记: {w.get('phase')}", errors)
+            _bq0 = []
+            for _b in _buckets:
+                if isinstance(_b, dict) and _b.get("phase") == w.get("phase"):
+                    _bq0 = _b.get("quotes", [])
+                    break
+            _allowed = set(_bq0) | set(w.get("extra_quotes", []) if isinstance(w.get("extra_quotes"), list) else [])
+            for _s in _shorts:
+                if not any(_s in _q for _q in _allowed if isinstance(_q, str)):
+                    fail(f"wordings {k} 短引须出自本桶或 extra: {w.get('phase')}", errors)
+                    break
+        _ex = w.get("extra_quotes", [])
+        if not isinstance(_ex, list):
+            fail(f"wordings extra_quotes 须数组: {w.get('phase')}", errors)
+            _ex = []
+        if len(_ex) != len(set(_ex)):
+            fail(f"wordings extra_quotes 须去重: {w.get('phase')}", errors)
+        _bq0 = []
+        for _b in _buckets:
+            if isinstance(_b, dict) and _b.get("phase") == w.get("phase"):
+                _bq0 = _b.get("quotes", []) if isinstance(_b.get("quotes"), list) else []
+                break
+        for q in _ex:
+            if q not in sent_texts:
+                fail(f"wordings extra 须逐字: {w.get('phase')}", errors)
+                break
+            if q in _bq0:
+                fail(f"wordings extra 须真桶外: {w.get('phase')}", errors)
+                break
+    if not isinstance(phases, list) or len(phases) != len(_buckets):
+        fail(f"phases must be N==buckets N, got {len(phases) if isinstance(phases, list) else type(phases)}", errors)
+    else:
         for p in phases:
             for k in ("phase", "waves", "goal", "focus", "pivot", "quotes"):
-                if k not in p or (isinstance(p[k], str) and not p[k].strip()):
+                if k not in p or (isinstance(p[k], str) and not p[k].strip() and k not in ("waves",)):
                     fail(f"phases missing {k}: {p.get('phase')}", errors)
+            _bq = []
+            _bw = ""
+            for b in (_buckets if isinstance(_buckets, list) else []):
+                if isinstance(b, dict) and b.get("phase") == p.get("phase"):
+                    _bq = b.get("quotes", []) if isinstance(b.get("quotes", []), list) else []
+                    _bw = b.get("waves", "")
+                    break
+            if p.get("phase") not in _b_phases:
+                fail(f"phases phase 须在 buckets 内: {p.get('phase')}", errors)
+                continue
+            if str(p.get("waves", "")) != str(_bw):
+                fail(f"phases waves 须==buckets: {p.get('phase')}", errors)
             if len(str(p.get("goal", ""))) < 8 or len(str(p.get("focus", ""))) < 8 or len(str(p.get("pivot", ""))) < 8:
                 fail(f"phases goal/focus/pivot too short: {p.get('phase')}", errors)
-            rs = str(p.get("goal", "")) + str(p.get("focus", ""))
-            if "字幕" in rs and "次" in rs and "原话" not in rs:
-                warns.append(f"WARN: phases 疑计数泄漏: {p.get('phase')}")
             qs = p.get("quotes", [])
             qd = p.get("quote_details", [])
-            if not qs:
-                # 空段诚实空出: quotes==[] + details==[] + goal 写明非打法章
-                if qs != [] or qd != []:
-                    fail(f"phases 空段须 quotes==[] + quote_details==[]: {p.get('phase')}", errors)
-                if "非打法章" not in str(p.get("goal", "")):
-                    fail(f"phases 空段 goal 须写明非打法章: {p.get('phase')}", errors)
-            else:
-                # C: 窗内全量前缀须等于buckets, 窗外补不限条须标out_of_window
-                try:
-                    _bk = json.loads((work / "steps" / "06-phases" / "buckets.json").read_text(encoding="utf-8"))
-                except Exception:
-                    _bk = []
-                _bq = []
-                for b in (_bk if isinstance(_bk, list) else []):
-                    if isinstance(b, dict) and b.get("phase") == p.get("phase"):
-                        _bq = b.get("quotes", []) if isinstance(b.get("quotes", []), list) else []
-                        break
-                if _bq and list(qs[:len(_bq)]) != list(_bq):
-                    fail(f"phases 窗内前缀须等于buckets (不可改写): {p.get('phase')}", errors)
-                _in_n = len(_bq) if _bq else len(qs)
-
-                _check_quotes(f"phases {p.get('phase')}", qs, qd)
-                # 窗外补须标out_of_window:true
-                for d in (qd[_in_n:] if isinstance(qd, list) else []):
-                    if not isinstance(d, dict) or d.get("out_of_window") is not True:
-                        fail(f"phases 窗外补须标 out_of_window:true: {p.get('phase')}", errors)
-                        break
-                # #45跟进: 三问人话质检 (FAIL=整句复制; WARN=模板黑话/无实体)
-                for k in ("goal", "focus", "pivot"):
-                    v = str(p.get(k, "")).strip()
-                    if v in qs:
-                        fail(f"phases {k} 整句复制 quote (须综合非复读): {p.get('phase')}", errors)
-                blob = str(p.get("goal", "")) + str(p.get("focus", "")) + str(p.get("pivot", ""))
-                if ("按本章节奏来" in blob or "转向下一章衔接点" in blob) and "原话" in blob:
-                    warns.append(f"WARN: phases 疑模板黑话 (须具体动作+条件): {p.get('phase')}")
-                low = blob.lower()
-                entities = ("screwdriver", "minigun", "smg", "submachine", "nuke", "turret",
-                            "pocket factory", "peacock", "whale", "elite", "boss", "horde",
-                            "engineering", "ranged", "life steal", "coffee", "scar", "beanie",
-                            "whistle", "tentacle", "scope", "wave 16", "wave 20", "halfway")
-                if not any(e in low for e in entities):
-                    warns.append(f"WARN: phases 无具体实体词 (武器/怪/波次至少一个): {p.get('phase')}")
+            if not isinstance(qs, list) or not qs:
+                fail(f"phases quotes 须非空: {p.get('phase')}", errors)
+                qs = []
+            if isinstance(qs, list) and _bq and list(qs[:len(_bq)]) != list(_bq):
+                fail(f"phases 桶内前缀须等于buckets: {p.get('phase')}", errors)
+            _in_n = len(_bq) if _bq else 0
+            _check_quotes(f"phases {p.get('phase')}", qs, qd)
+            for d in (qd[_in_n:] if isinstance(qd, list) else []):
+                if not isinstance(d, dict) or d.get("out_of_window") is not True:
+                    fail(f"phases 桶外补须标 out_of_window:true: {p.get('phase')}", errors)
+                    break
+            for k in ("goal", "focus", "pivot"):
+                v = str(p.get(k, "")).strip()
+                if v in qs:
+                    fail(f"phases {k} 整句复制 quote: {p.get('phase')}", errors)
+            blob = str(p.get("goal", "")) + str(p.get("focus", "")) + str(p.get("pivot", ""))
+            if ("按本章节奏来" in blob or "转向下一章衔接点" in blob):
+                warns.append(f"WARN: phases 疑模板黑话: {p.get('phase')}")
     if phases != phases_out:
         fail("outputs/phases.json must equal steps/06-phases/phases.json", errors)
+    try:
+        _few06_run = (work / "steps" / "06-phases" / "fewshot.md").read_bytes()
+        _few06_repo = (REPO / "prompts" / "step06-phases-fewshot.md").read_bytes()
+        if _few06_run != _few06_repo:
+            fail("steps/06-phases/fewshot.md must equal repo FROZEN fewshot", errors)
+    except Exception:
+        fail("steps/06-phases/fewshot.md 读失败", errors)
+    if not (work / "steps" / "06-phases" / "wordings.json").exists():
+        fail("steps/06-phases/wordings.json 缺失", errors)
+    if not (work / "steps" / "06-phases" / "segmentation.json").exists():
+        fail("steps/06-phases/segmentation.json 缺失", errors)
+    for _i, _b in enumerate(_buckets):
+        _tag = f"{_i:02d}"
+        _pp = work / "steps" / "06-phases" / "per_phase" / f"{_tag}.json"
+        if not _pp.exists():
+            _glob = list((work / "steps" / "06-phases" / "per_phase").glob("*.json")) if (work / "steps" / "06-phases" / "per_phase").exists() else []
+            if len(_glob) != len(_buckets):
+                fail(f"steps/06-phases/per_phase 缺 {_tag} ({_b.get('phase')})", errors)
+                break
+    _log06 = work / "steps" / "06-phases" / "agent-segmentation.log.jsonl"
+    if not _log06.exists() or _log06.stat().st_size == 0:
+        fail("06审计节点缺log: agent-segmentation.log.jsonl", errors)
+    _wlogs = list((work / "steps" / "06-phases").glob("agent-wording-*.log.jsonl"))
+    if len(_wlogs) != len(_buckets):
+        fail(f"06审计节点缺wording log: 期望 {len(_buckets)} 个 agent-wording-*.log.jsonl, 实得 {len(_wlogs)}", errors)
+
 
     # --- 07-priorities (#62: frozen fewshot + priority-ranking 单 agent, shape only) ---
     # 新口径: {upgrades[N], shop[N]} 每项 {name,kind,why,how_to_get,quotes,analysis,quote_details}.

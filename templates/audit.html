@@ -701,7 +701,7 @@ html { scroll-behavior: smooth; }
 
 <script>
 // App state (无mock，只读真实数据 ?base=/picker)
-let appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], discovery05:null, fewshot05:{}, ranking05:null, evidence05:{}, itemCandidates:[], discovery03:null, fewshot03:'', ranking03:null, evidence03:{}, fewshot07:'', ranking07:null, phases:[], priorities:[]};
+let appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], discovery05:null, fewshot05:{}, ranking05:null, evidence05:{}, itemCandidates:[], discovery03:null, fewshot03:'', ranking03:null, evidence03:{}, fewshot07:'', ranking07:null, buckets06:[], fewshot06:'', segmentation06:null, wordings06:[], evidence06:{}, phases:[], priorities:[]};
 
 const state = {
   dataSource: 'empty',
@@ -902,18 +902,19 @@ function render() {
       </div>
     </div>
 
-    <!-- Pipeline Step 6: 06-phases（#41已落地，卡片+抽屉，缺节即 fail） -->
+    <!-- Pipeline Step 6: 06-phases（#63已落地，卡片+抽屉，缺节即 fail） -->
     <div class="pipeline-step completed" id="audit-06-phases" data-dag-layer="L1">
       <div class="card">
         <div class="card-header">
           <div class="card-title">
-            <span>🗺️ steps/06-phases/ · 作者章节分段（8 章一章一段 + 转向点）</span>
+            <span>🗺️ steps/06-phases/ · 运营波次切分（agent 自定义波次 + 三问）</span>
           </div>
           <span class="badge badge-verified">check_06 对应节</span>
           <span class="badge" style="margin-left:4px;">DAG L1并行层</span>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 作者章节分段（#45）落地 prompts/step06-phases.md + <code>steps/06-phases/phases.json</code>（N=8 一章一段，phase 名=章标题原文）；审计与实现同 PR 进，不接受功能先上审计后补。</p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（<code>start_s</code> 落窗分桶，窗口左闭右开 [start, end) 末章含 end, 保序去重全量不cap） + <code>meta.json chapters timed [{title,start,end}]</code> → <code>steps/06-phases/phases.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>，没读 02/03）</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： #63 frozen fewshot + segmentation/wording 两段 agent 落地 prompts/step06-phases-fewshot.md + <code>steps/06-phases/phases.json</code>（N 不定运营波次，phase 运营语言）；来源 segmentation + wording；审计与实现同 PR 进。</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code> 全量整句 + <code>steps/06-phases/fewshot.md</code> → segmentation 自定义波次 <code>steps/06-phases/buckets.json</code> + wording 三问 → <code>steps/06-phases/phases.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>，没读 02/03）</p>
+        ${(()=>{ const bk=(appData.buckets06||[]); const phs0=(appData.phases||[]); if(!bk.length && !phs0.length) return '<div style="color:#999;">待加载：请载入 steps/06-phases/buckets.json（缺节即 fail）。</div>'; const sl=`<a href="#" data-fileview="sentences">sentences.json</a>`; const fl=`<a href="#" data-stepfile="steps/06-phases/fewshot.md" data-kind="result" data-rkey="fewshot06">steps/06-phases/fewshot.md</a>`; const lp=(f)=>`<a href="#" data-stepfile="${f}" data-kind="prompt">${f.split('/').pop()}</a>`; const lr=(f,k)=>`<a href="#" data-stepfile="${f}" data-kind="result" data-rkey="${k}">${f.split('/').pop()}</a>`; const blk=(t,a,b,c)=>`<div style="padding:6px 0;border-bottom:1px dashed var(--line);font-size:12px;"><div><span class="dyn">${t}</span></div><div style="margin-left:12px;">入参：${a}</div><div style="margin-left:12px;">prompt：${b}</div><div style="margin-left:12px;">结果：${c}</div></div>`; const rows=[]; rows.push(blk('S segmentation 自定义波次', `${sl} + ${fl}`, lp('steps/06-phases/agent-segmentation.log.jsonl'), `${lr('steps/06-phases/segmentation.json','segmentation06')} → ${lr('steps/06-phases/buckets.json','buckets06')}（终稿）`)); (bk||[]).forEach((b,i)=>{ const tag=String(i).padStart(2,'0'); rows.push(blk('W wording/'+b.phase, `${sl} + ${fl} + 桶${i+1}`, lp('steps/06-phases/agent-wording-'+tag+'.log.jsonl'), lr('steps/06-phases/per_phase/'+tag+'.json','w:'+b.phase))); }); return `<div style="margin-bottom:10px;">${rows.join('')}</div>`; })()}
         ${phasesSectionHtml()}
       </div>
     </div>
@@ -1030,7 +1031,7 @@ function manifestUrl() {
 function quoteRowHtml(q, d) {
   const mu = manifestUrl();
   const tlink = (d && d.t != null) ? `<a href="${mu}${mu.includes('?') ? '&' : '?'}t=${d.t}s" target="_blank">⏱${d.start || ('t='+d.t)}</a>` : '<span style="color:#aaa;">无时间戳</span>';
-  const oow = (d && d.out_of_window) ? '<span class="badge" style="background:#faf5ff;color:#7c3aed;border:1px solid #ddd6fe;margin-left:4px;">窗外补</span>' : '';
+  const oow = (d && d.out_of_window) ? '<span class="badge" style="background:#faf5ff;color:#7c3aed;border:1px solid #ddd6fe;margin-left:4px;">桶外补</span>' : '';
   const sid = sentenceIdForQuote(q);
   return `
     <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;margin-bottom:6px;">
@@ -1772,6 +1773,16 @@ async function loadFromDirectoryHandle(dirHandle) {
       if (ev05 && Object.keys(ev05).length) appData.evidence05 = ev05;
       const p6 = await readJsonFile(dirHandle, 'steps', '06-phases', 'phases.json');
       if (p6) appData.phases = p6;
+      const b06 = await readJsonFile(dirHandle, 'steps', '06-phases', 'buckets.json');
+      if (b06) appData.buckets06 = b06;
+      const f06 = await readTextFile(dirHandle, 'steps', '06-phases', 'fewshot.md');
+      if (f06) appData.fewshot06 = f06;
+      const s06 = await readJsonFile(dirHandle, 'steps', '06-phases', 'segmentation.json');
+      if (s06) appData.segmentation06 = s06;
+      const w06 = await readJsonFile(dirHandle, 'steps', '06-phases', 'wordings.json');
+      if (w06) appData.wordings06 = w06;
+      const ev06 = await readDirJsonFiles(dirHandle, 'steps', '06-phases', 'per_phase');
+      if (ev06 && Object.keys(ev06).length) { const m06={}; Object.values(ev06).forEach(d=>{ if(d && d.phase) m06[d.phase]=d; else m06[JSON.stringify(d).slice(0,12)]=d; }); if (Object.keys(m06).length) appData.evidence06 = m06; }
       const p7 = await readJsonFile(dirHandle, 'steps', '07-priorities', 'priorities.json');
       if (p7) appData.priorities = p7;
       const f07 = await readTextFile(dirHandle, 'steps', '07-priorities', 'fewshot.md');
@@ -1866,6 +1877,22 @@ document.getElementById('fallbackDirInput').addEventListener('change', async (e)
   if (Object.keys(evMapF).length) appData.evidence05 = evMapF;
   const p6 = await readBySuffix('steps/06-phases/phases.json');
   if (p6) appData.phases = p6;
+  const b06 = await readBySuffix('steps/06-phases/buckets.json');
+  if (b06) appData.buckets06 = b06;
+  const f06key = Object.keys(byPath).find(k => k.replace(/\\/g, '/').endsWith('steps/06-phases/fewshot.md'));
+  if (f06key) { try { appData.fewshot06 = await byPath[f06key].text(); } catch (err) { console.warn('fallback miss fewshot06', err); } }
+  const s06 = await readBySuffix('steps/06-phases/segmentation.json');
+  if (s06) appData.segmentation06 = s06;
+  const w06 = await readBySuffix('steps/06-phases/wordings.json');
+  if (w06) appData.wordings06 = w06;
+  const evMap06F = {};
+  for (const k of Object.keys(byPath)) {
+    const kn = k.replace(/\\/g, '/');
+    if (!/steps\/06-phases\/per_phase\/[^/]+\.json$/.test(kn)) continue;
+    try { const d = await byPath[k].json(); evMap06F[d.phase || kn.split('/').pop().replace(/\.json$/, '')] = d; }
+    catch (err) { console.warn('fallback miss per_phase', k, err); }
+  }
+  if (Object.keys(evMap06F).length) appData.evidence06 = evMap06F;
   const p7 = await readBySuffix('steps/07-priorities/priorities.json');
   if (p7) appData.priorities = p7;
   const rk07f = await readBySuffix('steps/07-priorities/ranking.json');
@@ -1952,6 +1979,11 @@ document.addEventListener('click', (e) => {
       else if (rk === 'grouping') o = appData.items;
       else if (rk === 'fewshot03') o = appData.fewshot03;
       else if (rk === 'fewshot07') o = appData.fewshot07;
+      else if (rk === 'fewshot06') o = appData.fewshot06;
+      else if (rk === 'buckets06') o = appData.buckets06;
+      else if (rk === 'segmentation06') o = appData.segmentation06;
+      else if (rk === 'wordings06' || rk === 'wordings') o = appData.wordings06;
+      else if (rk && rk.indexOf('w:') === 0) o = (appData.evidence06 || {})[rk.slice(2)];
       else if (rk === 'weapons') o = appData.weapons;
       else if (rk === 'sentences') o = appData.sentences;
       else if (rk && rk.indexOf('ev:') === 0) o = (appData.evidence05 || {})[rk.slice(3)];
@@ -2020,6 +2052,19 @@ async function loadFromHttpBase(base) {
       if (Object.keys(evMapH).length) appData.evidence05 = evMapH;
       const p6 = await fetchJson(`${base}/steps/06-phases/phases.json`);
       if (p6) appData.phases = p6;
+      const b06 = await fetchJson(`${base}/steps/06-phases/buckets.json`);
+      if (b06) appData.buckets06 = b06;
+      const f06h = await fetchText(`${base}/steps/06-phases/fewshot.md`);
+      if (f06h) appData.fewshot06 = f06h;
+      const s06h = await fetchJson(`${base}/steps/06-phases/segmentation.json`);
+      if (s06h) appData.segmentation06 = s06h;
+      const w06h = await fetchJson(`${base}/steps/06-phases/wordings.json`);
+      if (w06h) appData.wordings06 = w06h;
+      for (let _i = 0; _i < (b06 || []).length; _i++) {
+        const _tag = String(_i).padStart(2, '0');
+        const _d = await fetchJson(`${base}/steps/06-phases/per_phase/${_tag}.json`);
+        if (_d) { (appData.evidence06 = appData.evidence06 || {})[_d.phase || _tag] = _d; }
+      }
       const p7 = await fetchJson(`${base}/steps/07-priorities/priorities.json`);
       if (p7) appData.priorities = p7;
       const f07h = await fetchText(`${base}/steps/07-priorities/fewshot.md`);
@@ -2093,7 +2138,7 @@ function setupFilterListeners() {
 
 function loadEmptyData() {
   // 无mock：清空为真实数据占位，须经 picker/?base= 载入 steps/*/*.json
-  appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], discovery05:null, fewshot05:{}, ranking05:null, evidence05:{}, itemCandidates:[], discovery03:null, fewshot03:'', ranking03:null, evidence03:{}, fewshot07:'', ranking07:null, phases:[], priorities:{}, pitfalls:[], candidates08:[], wordings08:[], assemble:{}};
+  appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], discovery05:null, fewshot05:{}, ranking05:null, evidence05:{}, itemCandidates:[], discovery03:null, fewshot03:'', ranking03:null, evidence03:{}, fewshot07:'', ranking07:null, buckets06:[], fewshot06:'', segmentation06:null, wordings06:[], evidence06:{}, phases:[], priorities:{}, pitfalls:[], candidates08:[], wordings08:[], assemble:{}};
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -2106,7 +2151,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
   // 缺省不吃广告纸: 不自动载 mock, 只显示待加载; live 经 picker/?base 进来, mock 仅点按钮显式进
-  appData = {manifest: null, sentences: [], verbs: {verified: [], candidates: []}, items: [], ratings: [], weapons: {t1: [], t2: []}, weaponCandidates: [], discovery05: null, fewshot05: {}, ranking05: null, evidence05: {}, itemCandidates: [], discovery03: null, fewshot03: '', ranking03: null, evidence03: {}, fewshot07: '', ranking07: null, phases: [], priorities: {}, pitfalls: [], candidates08: [], wordings08: [], assemble: {}};
+  appData = {manifest: null, sentences: [], verbs: {verified: [], candidates: []}, items: [], ratings: [], weapons: {t1: [], t2: []}, weaponCandidates: [], discovery05: null, fewshot05: {}, ranking05: null, evidence05: {}, itemCandidates: [], discovery03: null, fewshot03: '', ranking03: null, evidence03: {}, fewshot07: '', ranking07: null, buckets06: [], fewshot06: '', segmentation06: null, wordings06: [], evidence06: {}, phases: [], priorities: {}, pitfalls: [], candidates08: [], wordings08: [], assemble: {}};
   state.dataSource = 'empty';
   const params = new URLSearchParams(window.location.search);
   const baseParam = params.get('base');

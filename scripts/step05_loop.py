@@ -529,6 +529,9 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
     per_dir = outdir / "per_weapon"
     outdir.mkdir(parents=True, exist_ok=True)
     per_dir.mkdir(parents=True, exist_ok=True)
+    # fewshot 快照进工作区 (#61跟进: 审计只读工作区约定路径, file:///picker/?base= 全通;
+    # 快照与 repo FROZEN 文件逐字节一致, check 验相等, 即本次运行 provenance)
+    (outdir / "fewshot.md").write_text(fewshot, encoding="utf-8")
 
     # ---- discovery (串行) ----
     disc_path = outdir / "candidates.json"

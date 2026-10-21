@@ -256,6 +256,9 @@ def test_run_loop_with_fake_agents_cyborg_shape(tmp_path):
     assert sorted(c["name_en"] for c in cands) == sorted(quotes_by.keys())
     for c in cands:
         assert c["count"] == len(c["quotes"])
+    # fewshot 运行快照: 与 repo FROZEN 文件逐字节一致 (审计离线可读即认此件)
+    snap = (workdir / "steps" / "05-weapons" / "fewshot.md").read_text(encoding="utf-8")
+    assert snap == (REPO / "prompts" / "step05-weapons-fewshot.md").read_text(encoding="utf-8")
     # per_weapon 落盘
     for n in quotes_by:
         import re
@@ -318,3 +321,6 @@ def test_audit_05_shows_analysis_not_anchors():
     for marker in ('data-fileview="sentences"', 'data-fileview="vocab"',
                    'data-fileview="fewshot"', 'id="fileModal"', 'WEAPON_VOCAB_78'):
         assert marker in html, f"audit 05输入须可点击直达modal ({marker})"
+    # fewshot 快照：审计只读工作区（file:///picker/?base= 全通），check 验逐字节一致
+    for marker in ('fewshot05', 'steps/05-weapons/fewshot.md'):
+        assert marker in html, f"audit 须经工作区快照读fewshot ({marker})"

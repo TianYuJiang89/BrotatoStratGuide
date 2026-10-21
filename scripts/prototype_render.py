@@ -836,8 +836,11 @@ table.guide-table th {{
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <span style="font-weight:bold;color:#ffd966;">🛠️ 攻略单页渲染器契约原型 (Issue #57)</span>
       <span class="contract-badge">SHA: {short_sha}</span>
-      <span class="contract-badge">来源: guide.json (双 check 全绿)</span>
-      <span class="contract-badge">六节完整度: 39属性 / 4武器 / 68道具 / 8阶段 / 2优先 / 4避坑</span>
+      <span class="contract-badge">SABCD 语义落地 (#58)</span>
+      <span class="contract-badge">武器 D/E/R 落地 (#61)</span>
+      <span class="contract-badge">道具/优先级 Agent 落地 (#62)</span>
+      <span class="contract-badge">波次运营切分落地 (#63)</span>
+      <span class="contract-badge">六节完整度: 39属性 / 4武器 / 68道具 / {len(phases_data)}阶段 / {len(priorities_data.get('upgrades', [])) + len(priorities_data.get('shop', []))}优先 / 4避坑</span>
     </div>
     <button class="contract-toggle" onclick="document.getElementById('contractDrawer').classList.toggle('open')">查看契约决议草案 ▾</button>
   </div>
@@ -850,15 +853,16 @@ table.guide-table th {{
         <p>• <b>SHA 锚定</b>: 页面头部显式呈现 <code>SHA {short_sha}</code>，与审计 09 组装及 manifest 一致。</p>
       </div>
       <div class="contract-box">
-        <h4>2. 模板路线与六节段序</h4>
-        <p>• <b>路线</b>: 另起独立单页渲染器（旧 character.html 字段不足），复用经典布局与悬浮逻辑。</p>
-        <p>• <b>六节映射</b>: 属性(ratings) → 武器(weapons) → 优先级(priorities) → 道具池(groups) → 波次(phases) → 避坑(pitfalls)。</p>
-        <p>• <b>段序</b>: 核心单页固定段序，不手改产物。</p>
+        <h4>2. 属性/武器/道具/波次标准 (#58 / #61 / #62 / #63 决议)</h4>
+        <p>• <b>属性 SABCD</b>: 1S / 3A / 5B / 5C / 3D 梯队，废除助动词计数。</p>
+        <p>• <b>武器三段架构</b>: T1/T2 分档 + 人话 note + copies 持枪配置建议。</p>
+        <p>• <b>道具与优先级 (#62)</b>: Discovery 逐个打勾 → Evidence → Grouping-Ranking(四组人话 note) → Priority-Ranking(升级/商店 TopN 告别断层硬码与动词表)。</p>
+        <p>• <b>运营节奏 (#63)</b>: Frozen 20-shot 切分 + 三问(目标/焦点/转折) Agent，波次原话作证不脑补，N 不定自由分段。</p>
       </div>
       <div class="contract-box">
         <h4>3. 缺项与徽标 (Fail-loud)</h4>
         <p>• <b>待补照发口径</b>: 缺项显示 <code>作者未提及 — 待补</code> 徽标，warn 不中断；结构损坏直接 fail loud。</p>
-        <p>• <b>微标沿用</b>: 继承旧链 S/A/B/C/D 评级色系、DLC/待校对角标、新增置信度(核准/候选)与严重度(致命/危险/陷阱)。</p>
+        <p>• <b>微标沿用</b>: 继承旧链 S/A/B/C/D 评级色系、T1/T2 武器分档、持枪配置徽标、严重度(致命/危险/陷阱)。</p>
       </div>
       <div class="contract-box">
         <h4>4. 秒级视频点跳契约 (?t=)</h4>
@@ -880,14 +884,12 @@ table.guide-table th {{
         <div class="hero-meta">
           <span class="badge badge-covers">{esc(covers[0] if covers else "Ultimate")}</span>
           <span class="badge badge-sha">SHA: {short_sha}</span>
-          <span>双修半波转换 · 远程枪转高工程螺丝刀</span>
         </div>
       </div>
     </div>
     <div class="hero-source-card">
-      <div style="font-size:11px;color:#9a8f7c;margin-bottom:2px;">📺 取材源实况 (点击原声秒级试听):</div>
+      <div style="font-size:11px;color:#9a8f7c;margin-bottom:2px;">📺 取材源实况:</div>
       <a href="{esc(video_url)}" target="_blank" rel="noopener">{esc(video_title)}</a>
-      <div class="subtext">Brotato Ultimate Nightmares · 原视频时长 33m23s</div>
     </div>
   </div>
 
@@ -899,9 +901,10 @@ table.guide-table th {{
     <div class="toc-nav">
       <a href="#va-ratings">📊 属性评级</a>
       <a href="#va-weapons">⚔️ 武器路线</a>
-      <a href="#va-priorities">🎯 优先级策略</a>
       <a href="#va-groups">🎒 道具决策</a>
       <a href="#va-phases">⏳ 波次运营</a>
+      <a href="#va-upgrade">⬆️ 升级优先级</a>
+      <a href="#va-shop">🛒 商店优先级</a>
       <a href="#va-pitfalls">⚠️ 避坑陷阱</a>
     </div>
 
@@ -911,33 +914,26 @@ table.guide-table th {{
         <h2 class="card-title"><span>📊</span> 核心属性评级 (Ratings · 39 项)</h2>
         <span class="card-subtext">鼠标悬浮属性名查看 Wiki 关联道具</span>
       </div>
-      <p style="font-size:13px;color:var(--ink-secondary);margin-top:0;">
-        赛博格核心机制：波次过半（前 50% 时间）为<b>强力远程</b>，过半后全部远程伤害按 1:1 转化为<b>工程学</b>。因此前期必须拉满远程伤害，同时依靠螺丝刀与 minigun 的吸血/攻速保证转换后近战生存。
-      </p>
       
-      <h3 style="font-size:14px;margin:14px 0 8px;color:var(--ink);">一级主属性 (Primary Attributes)</h3>
+      <h3 style="font-size:14px;margin:14px 0 8px;color:var(--ink);">一级主属性 (Primary Attributes · 17 项)</h3>
       <div class="table-wrap">
         <table class="guide-table">
           <thead>
             <tr>
-              <th style="width:200px;">属性</th>
+              <th style="width:220px;">属性</th>
               <th style="width:70px;text-align:center;">评级</th>
-              <th style="width:60px;text-align:center;">频次</th>
-              <th>抓取理由与出处原声</th>
+              <th>打法总评与实战建议</th>
             </tr>
           </thead>
           <tbody>
 """
 
-    # 填充 Variant A 的 Ratings (Primary)
+    # 填充 Variant A 的 Ratings (Primary)，严格按 Wiki Stats 原序 (data/terms.csv 原序)
     for r in [x for x in ratings_data if x.get("type") == "primary"]:
         en = r.get("term_en", "")
         zh = r.get("term_zh", "")
         rating = r.get("rating", "-")
-        count = r.get("count", 0)
-        reason = r.get("summary", "") or r.get("reason", "") or r.get("analysis", "")  # #60 compat
-        qds = r.get("quote_details", [])
-        qd_first = qds[0] if qds else None
+        summary = r.get("summary", "") or r.get("reason", "") or r.get("analysis", "")
         
         stat_wiki = wiki.get("stats", {}).get(en, {})
         stat_thumb = stat_wiki.get("thumb")
@@ -946,15 +942,22 @@ table.guide-table th {{
         stat_tip_elem = stat_tooltip_html(stat_tooltips)
         
         name_cell = f'<span class="has-tip" tabindex="0">{stat_icon}{esc(zh)} ({esc(en)}){stat_tip_elem}</span>'
-        quote_html = render_quote_badge(video_url, qd_first)
+        
+        if rating in ("-", "", None):
+            rating_cell = '<span class="rating rating-none">—</span>'
+        else:
+            rating_cell = f'<span class="rating rating-{esc(rating)}">{esc(rating)}</span>'
+
+        if not summary or summary == "作者未提及。":
+            summary_html = '<span style="color:var(--muted);font-style:italic;">作者未提及</span>'
+        else:
+            summary_html = esc(summary)
         
         html_out += f"""            <tr>
               <td>{name_cell}</td>
-              <td style="text-align:center;"><span class="rating rating-{esc(rating)}">{esc(rating)}</span></td>
-              <td style="text-align:center;color:var(--muted);">{count}次</td>
+              <td style="text-align:center;">{rating_cell}</td>
               <td>
-                <div>{esc(reason)}</div>
-                {quote_html}
+                <div style="font-size:13px;line-height:1.5;margin-bottom:3px;font-weight:500;">{summary_html}</div>
               </td>
             </tr>
 """
@@ -969,34 +972,40 @@ table.guide-table th {{
           <table class="guide-table">
             <thead>
               <tr>
-                <th style="width:200px;">属性</th>
+                <th style="width:220px;">次级属性</th>
                 <th style="width:70px;text-align:center;">评级</th>
-                <th style="width:60px;text-align:center;">频次</th>
-                <th>说明</th>
+                <th>打法总评与实战建议</th>
               </tr>
             </thead>
             <tbody>
 """
+    # 填充 Variant A 的 Ratings (Secondary)，严格按 Wiki Stats 原序 (data/terms.csv 原序)
     for r in [x for x in ratings_data if x.get("type") != "primary"]:
         en = r.get("term_en", "")
         zh = r.get("term_zh", "")
         rating = r.get("rating", "-")
-        count = r.get("count", 0)
-        reason = r.get("summary", "") or r.get("reason", "") or r.get("analysis", "")  # #60 compat
-        qds = r.get("quote_details", [])
-        qd_first = qds[0] if qds else None
+        summary = r.get("summary", "") or r.get("reason", "") or r.get("analysis", "")
         stat_wiki = wiki.get("stats", {}).get(en, {})
         stat_thumb = stat_wiki.get("thumb")
         stat_icon = icon_html(stat_thumb, en)
         stat_tooltips = stat_wiki.get("tooltip", [])
         stat_tip_elem = stat_tooltip_html(stat_tooltips)
         name_cell = f'<span class="has-tip" tabindex="0">{stat_icon}{esc(zh)} ({esc(en)}){stat_tip_elem}</span>'
-        quote_html = render_quote_badge(video_url, qd_first)
+        
+        if rating in ("-", "", None):
+            rating_cell = '<span class="rating rating-none">—</span>'
+        else:
+            rating_cell = f'<span class="rating rating-{esc(rating)}">{esc(rating)}</span>'
+
+        if not summary or summary == "作者未提及。":
+            summary_html = '<span style="color:var(--muted);font-style:italic;">作者未提及</span>'
+        else:
+            summary_html = esc(summary)
+
         html_out += f"""              <tr>
                 <td>{name_cell}</td>
-                <td style="text-align:center;"><span class="rating rating-{esc(rating)}">{esc(rating)}</span></td>
-                <td style="text-align:center;color:var(--muted);">{count}次</td>
-                <td><div>{esc(reason)}</div>{quote_html}</td>
+                <td style="text-align:center;">{rating_cell}</td>
+                <td><div style="font-size:13px;line-height:1.5;margin-bottom:3px;">{summary_html}</div></td>
               </tr>
 """
 
@@ -1015,80 +1024,53 @@ table.guide-table th {{
       <div class="weapon-grid">
 """
 
-    # 填充 Weapons
+    # 填充 Weapons (#61 最新消费标准: tier + note + copies)
     for tier_key, tier_label, tier_badge in [("t1", "T1 核心毕业武器", "badge-must-take"), ("t2", "T2 前中期过渡武器", "badge-candidate")]:
         for w_item in weapons_data.get(tier_key, []):
             name_en = w_item.get("name_en", "")
             note = w_item.get("note", "")
+            copies = w_item.get("copies", "")
             w_wiki = wiki.get("weapons", {}).get(name_en, {})
             w_thumb = w_wiki.get("thumb", "")
-            w_zh = w_wiki.get("zh", name_en)
+            w_zh = w_wiki.get("zh")
             w_icon = icon_html(w_thumb, name_en)
             w_tip_elem = weapon_tip(name_en, w_wiki, terms)
-            qds = w_item.get("quote_details", [])
-            qd_first = qds[0] if qds else None
-            quote_html = render_quote_badge(video_url, qd_first)
+            w_disp = f"{esc(w_zh)} ({esc(name_en)})" if w_zh and w_zh != name_en else esc(name_en)
+            copies_html = f'<span class="badge" style="background:var(--card-subtle);border:1px solid var(--line);font-size:11px;color:var(--ink-secondary);">配置建议: {esc(copies)}</span>' if copies and copies != "未提及" else ''
             
             html_out += f"""        <div class="weapon-card">
           <div class="weapon-card-header">
             <div class="weapon-card-name">
               {w_icon}
-              <span class="has-tip" tabindex="0">{esc(w_zh)} ({esc(name_en)}){w_tip_elem}</span>
+              <span class="has-tip" tabindex="0">{w_disp}{w_tip_elem}</span>
             </div>
-            <span class="badge {tier_badge}">{tier_label.split()[0]}</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              {copies_html}
+              <span class="badge {tier_badge}">{tier_label.split()[0]}</span>
+            </div>
           </div>
-          <div style="font-size:13px;color:var(--ink-secondary);margin-bottom:8px;">{esc(note)}</div>
-          {quote_html}
+          <div style="font-size:13px;color:var(--ink-secondary);margin-bottom:8px;line-height:1.5;">{esc(note)}</div>
         </div>
 """
 
     html_out += """      </div>
     </div>
-
-    <!-- 3. 优先级策略 -->
-    <div class="card" id="va-priorities">
-      <div class="card-header">
-        <h2 class="card-title"><span>🎯</span> 优先级策略 (Priorities)</h2>
-        <span class="card-subtext">升级选点与商店购买的权衡基准</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:14px;">
 """
 
-    for prio_type, prio_title, prio_icon in [("upgrades", "升级加点优先级", "⬆️"), ("shop", "商店选购优先级", "🛒")]:
-        items = priorities_data.get(prio_type, [])
-        for p in items:
-            p_name = p.get("name", "")
-            why = p.get("why", "")
-            how = p.get("how_to_get", "")
-            qds = p.get("quote_details", [])
-            qd_first = qds[0] if qds else None
-            quote_html = render_quote_badge(video_url, qd_first)
-            html_out += f"""        <div style="background:var(--card-subtle);border:1px solid var(--line);border-radius:12px;padding:14px;">
-          <div style="font-weight:700;font-size:15px;margin-bottom:6px;">{prio_icon} {prio_title}: <span style="color:var(--accent);">{esc(p_name)}</span></div>
-          <div style="font-size:13px;margin-bottom:4px;"><b>核心论证:</b> {esc(why)}</div>
-          <div style="font-size:13px;margin-bottom:8px;"><b>如何获取:</b> {esc(how)}</div>
-          {quote_html}
-        </div>
-"""
-
-    html_out += """      </div>
-    </div>
-
-    <!-- 4. 道具池决策 -->
-    <div class="card" id="va-groups">
+    # 3. 道具池决策 (#62 落地: 动态统计 + note 人话)
+    html_out += f"""    <div class="card" id="va-groups">
       <div class="card-header">
-        <h2 class="card-title"><span>🎒</span> 道具池决策 (Groups · 68 件)</h2>
-        <span class="card-subtext">必拿 8 件 / 禁用 2 件 / 提过未拿 1 件 / 路过 57 件</span>
+        <h2 class="card-title"><span>🎒</span> 道具池决策 (Groups · {len(groups_data)} 件)</h2>
+        <span class="card-subtext">必拿 {len(must_take)} 件 / 禁用 {len(bans)} 件 / 提过未拿 {len(skips)} 件 / 路过 {len(casuals)} 件</span>
       </div>
 
-      <h4 style="color:#166534;margin:12px 0 6px;">⭐ 必拿道具 (Must Take · 遇到即锁即买)</h4>
+      <h4 style="color:#166534;margin:12px 0 6px;">⭐ 必拿道具 (Must Take · {len(must_take)} 件 · 见即买)</h4>
       <div class="table-wrap">
         <table class="guide-table">
           <thead>
             <tr>
-              <th style="width:200px;">道具</th>
-              <th style="width:60px;text-align:center;">提及</th>
-              <th>决策依据与出处</th>
+              <th style="width:220px;">道具</th>
+              <th>打法总评与实战建议</th>
             </tr>
           </thead>
           <tbody>
@@ -1097,65 +1079,63 @@ table.guide-table th {{
     for g in must_take:
         name_en = g.get("name_en", "")
         name_zh = g.get("name_zh", "")
-        count = g.get("count", 0)
-        reason = g.get("reason", "")
+        note = g.get("note", "") or g.get("reason", "")
         i_wiki = wiki.get("items", {}).get(name_en, {})
         i_thumb = i_wiki.get("thumb", "")
         i_icon = icon_html(i_thumb, name_en)
         i_tip_elem = item_tip(name_en, i_wiki, terms)
-        qds = g.get("quote_details", [])
-        qd_first = qds[0] if qds else None
-        quote_html = render_quote_badge(video_url, qd_first)
-        name_cell = f'<span class="has-tip" tabindex="0">{i_icon}{esc(name_zh or name_en)} ({esc(name_en)}){i_tip_elem}</span>'
+        name_display = f"{esc(name_zh)} ({esc(name_en)})" if name_zh and name_zh != name_en else esc(name_en)
+        name_cell = f'<span class="has-tip" tabindex="0">{i_icon}{name_display}{i_tip_elem}</span>'
         html_out += f"""            <tr>
               <td>{name_cell}</td>
-              <td style="text-align:center;"><span class="badge badge-must-take">{count}次</span></td>
-              <td><div>{esc(reason)}</div>{quote_html}</td>
+              <td><div style="font-size:13px;line-height:1.5;">{esc(note)}</div></td>
             </tr>
 """
 
-    html_out += """          </tbody>
+    html_out += f"""          </tbody>
         </table>
       </div>
 
-      <h4 style="color:#9f1239;margin:18px 0 6px;">🚫 明确禁用 (Ban · 负收益/破坏构筑)</h4>
+      <h4 style="color:#9f1239;margin:18px 0 6px;">🚫 明确禁用 (Ban · {len(bans)} 件 · 负收益/破坏构筑)</h4>
       <div class="table-wrap">
         <table class="guide-table">
+          <thead>
+            <tr>
+              <th style="width:220px;">道具</th>
+              <th>避坑原因与处置建议</th>
+            </tr>
+          </thead>
           <tbody>
 """
     for g in bans:
         name_en = g.get("name_en", "")
         name_zh = g.get("name_zh", "")
-        count = g.get("count", 0)
-        reason = g.get("reason", "")
+        note = g.get("note", "") or g.get("reason", "")
         i_wiki = wiki.get("items", {}).get(name_en, {})
         i_thumb = i_wiki.get("thumb", "")
         i_icon = icon_html(i_thumb, name_en)
         i_tip_elem = item_tip(name_en, i_wiki, terms)
-        qds = g.get("quote_details", [])
-        qd_first = qds[0] if qds else None
-        quote_html = render_quote_badge(video_url, qd_first)
-        name_cell = f'<span class="has-tip" tabindex="0">{i_icon}{esc(name_zh or name_en)} ({esc(name_en)}){i_tip_elem}</span>'
+        name_display = f"{esc(name_zh)} ({esc(name_en)})" if name_zh and name_zh != name_en else esc(name_en)
+        name_cell = f'<span class="has-tip" tabindex="0">{i_icon}{name_display}{i_tip_elem}</span>'
         html_out += f"""            <tr>
-              <td style="width:200px;">{name_cell}</td>
-              <td style="width:60px;text-align:center;"><span class="badge badge-ban">{count}次</span></td>
-              <td><div>{esc(reason)}</div>{quote_html}</td>
+              <td>{name_cell}</td>
+              <td><div style="font-size:13px;line-height:1.5;color:#991b1b;">{esc(note)}</div></td>
             </tr>
 """
 
-    html_out += """          </tbody>
+    html_out += f"""          </tbody>
         </table>
       </div>
 
       <details style="margin-top:16px;">
-        <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--accent);">展开路过与未拿道具 (Casual & Skipped · 58 件) ▾</summary>
+        <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--accent);">展开路过与未拿道具 (Casual & Skipped · {len(skips) + len(casuals)} 件) ▾</summary>
         <div class="table-wrap" style="margin-top:8px;">
           <table class="guide-table">
             <thead>
               <tr>
-                <th style="width:200px;">道具</th>
-                <th style="width:70px;text-align:center;">状态</th>
-                <th>提及原话</th>
+                <th style="width:220px;">道具</th>
+                <th style="width:80px;text-align:center;">状态</th>
+                <th>提及原话与说明</th>
               </tr>
             </thead>
             <tbody>
@@ -1166,19 +1146,17 @@ table.guide-table th {{
         grp_type = g.get("group", "")
         badge_cls = "badge-skip" if grp_type == "mentioned_not_taken" else "badge-casual"
         badge_lbl = "提过未拿" if grp_type == "mentioned_not_taken" else "路过提及"
-        reason = g.get("reason", "")
+        note = g.get("note", "") or g.get("reason", "")
         i_wiki = wiki.get("items", {}).get(name_en, {})
         i_thumb = i_wiki.get("thumb", "")
         i_icon = icon_html(i_thumb, name_en)
         i_tip_elem = item_tip(name_en, i_wiki, terms)
-        qds = g.get("quote_details", [])
-        qd_first = qds[0] if qds else None
-        quote_html = render_quote_badge(video_url, qd_first)
-        name_cell = f'<span class="has-tip" tabindex="0">{i_icon}{esc(name_zh or name_en)} ({esc(name_en)}){i_tip_elem}</span>'
+        name_display = f"{esc(name_zh)} ({esc(name_en)})" if name_zh and name_zh != name_en else esc(name_en)
+        name_cell = f'<span class="has-tip" tabindex="0">{i_icon}{name_display}{i_tip_elem}</span>'
         html_out += f"""              <tr>
                 <td>{name_cell}</td>
                 <td style="text-align:center;"><span class="badge {badge_cls}">{badge_lbl}</span></td>
-                <td><div>{esc(reason)}</div>{quote_html}</td>
+                <td><div style="font-size:13px;line-height:1.5;">{esc(note)}</div></td>
               </tr>
 """
 
@@ -1191,7 +1169,7 @@ table.guide-table th {{
     <!-- 5. 波次运营分段 -->
     <div class="card" id="va-phases">
       <div class="card-header">
-        <h2 class="card-title"><span>⏳</span> 波次运营节奏 (Phases · 8 个阶段)</h2>
+        <h2 class="card-title"><span>⏳</span> 波次运营节奏 (Phases · {len(phases_data)} 个阶段)</h2>
         <span class="card-subtext">目标 Goal · 焦点 Focus · 转折 Pivot</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;">
@@ -1207,22 +1185,83 @@ table.guide-table th {{
         qd_first = qds[0] if qds else None
         quote_html = render_quote_badge(video_url, qd_first)
 
+        waves_badge = f'<span class="badge" style="background:#3a3229;color:#fff;">波次: {esc(waves)}</span>' if waves else '<span class="badge" style="background:#5a544c;color:#fff;font-size:11px;">阶段过渡</span>'
         html_out += f"""        <div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--card-subtle);">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
             <div style="font-weight:700;font-size:15px;">Phase {i+1}: {esc(phase_title)}</div>
-            <span class="badge" style="background:#3a3229;color:#fff;">波次: {esc(waves)}</span>
+            {waves_badge}
           </div>
           <div style="font-size:13px;line-height:1.5;margin-bottom:4px;">🎯 <b>本阶段目标:</b> {esc(goal)}</div>
           <div style="font-size:13px;line-height:1.5;margin-bottom:4px;">🔍 <b>操作与构筑焦点:</b> {esc(focus)}</div>
           <div style="font-size:13px;line-height:1.5;margin-bottom:6px;">⚡ <b>进入下一阶段转折点:</b> {esc(pivot)}</div>
-          {quote_html}
+          
         </div>
 """
 
     html_out += """      </div>
     </div>
 
-    <!-- 6. 避坑与反思 -->
+    <!-- 5. 升级优先级 -->
+    <div class="card" id="va-upgrade">
+      <div class="card-header">
+        <h2 class="card-title"><span>⬆️</span> 升级优先级 (Upgrade Priorities)</h2>
+        <span class="card-subtext">每波结束升级加点 Top 顺位与保命取舍</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:14px;">
+"""
+    for p in priorities_data.get("upgrades", []):
+        p_name = p.get("name", "")
+        u_zh = term_text(p_name, terms)
+        stat_wiki = wiki.get("stats", {}).get(p_name, {})
+        stat_thumb = stat_wiki.get("thumb")
+        u_icon = icon_html(stat_thumb, p_name)
+        why = p.get("why", "")
+        how = p.get("how_to_get", "")
+        html_out += f"""        <div style="background:var(--card-subtle);border:1px solid var(--line);border-radius:12px;padding:14px;">
+          <div style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:15px;margin-bottom:8px;">
+            {u_icon} <span>{esc(u_zh)}</span>
+            <span class="badge badge-must-take" style="margin-left:auto;">优先直取</span>
+          </div>
+          <div style="font-size:13px;line-height:1.5;color:var(--ink);margin-bottom:6px;"><b>核心论证:</b> {esc(why)}</div>
+          <div style="font-size:12px;color:var(--ink-secondary);"><b>获取建议:</b> {esc(how)}</div>
+        </div>
+"""
+
+    html_out += """      </div>
+    </div>
+
+    <!-- 6. 商店优先级 -->
+    <div class="card" id="va-shop">
+      <div class="card-header">
+        <h2 class="card-title"><span>🛒</span> 商店优先级 (Shop Priorities)</h2>
+        <span class="card-subtext">局间商店直购道具/结构与刷新基准</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:14px;">
+"""
+    item_map = {g.get("name_en"): g.get("name_zh") for g in groups_data}
+    for p in priorities_data.get("shop", []):
+        p_name = p.get("name", "")
+        i_wiki = wiki.get("items", {}).get(p_name, {})
+        i_thumb = i_wiki.get("thumb")
+        i_icon = icon_html(i_thumb, p_name)
+        i_zh = item_map.get(p_name) or terms.get(p_name, {}).get("zh", p_name)
+        i_disp = f"{esc(i_zh)} ({esc(p_name)})" if i_zh and i_zh != p_name else esc(p_name)
+        why = p.get("why", "")
+        how = p.get("how_to_get", "")
+        html_out += f"""        <div style="background:var(--card-subtle);border:1px solid var(--line);border-radius:12px;padding:14px;">
+          <div style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:15px;margin-bottom:8px;">
+            {i_icon} <span>{i_disp}</span>
+            <span class="badge badge-must-take" style="margin-left:auto;">必买结构</span>
+          </div>
+          <div style="font-size:13px;line-height:1.5;color:var(--ink);margin-bottom:6px;"><b>核心论证:</b> {esc(why)}</div>
+          <div style="font-size:12px;color:var(--ink-secondary);"><b>获取建议:</b> {esc(how)}</div>
+        </div>
+"""
+
+    html_out += """      </div>
+    </div>
+
+    <!-- 7. 避坑与反思 -->
     <div class="card" id="va-pitfalls">
       <div class="card-header">
         <h2 class="card-title"><span>⚠️</span> 避坑与致命陷阱 (Pitfalls · 4 大戒律)</h2>
@@ -1249,7 +1288,7 @@ table.guide-table th {{
           </div>
           <div style="font-size:13px;margin-bottom:6px;"><b>为什么是坑:</b> {esc(why)}</div>
           <div style="font-size:13px;margin-bottom:8px;color:#854d0e;"><b>如何避开:</b> {esc(avoid)}</div>
-          {quote_html}
+          
         </div>
 """
 
@@ -1265,15 +1304,16 @@ table.guide-table th {{
     <div class="b-layout">
       <!-- 左侧阶段导轨 -->
       <div class="b-rail">
-        <h3>⏳ 20 波次运营导轨</h3>
+        <h3>⏳ 运营节奏导轨 ({len(phases_data)} 个阶段)</h3>
 """
 
     for i, p in enumerate(phases_data):
         phase_title = p.get("phase", "")
         waves = p.get("waves", "")
+        waves_sub = esc(waves) if waves else "阶段过渡"
         html_out += f"""        <a href="#vb-phase-{i+1}" class="b-rail-item">
           <b>{i+1}. {esc(phase_title[:10])}</b>
-          <small>{esc(waves)}</small>
+          <small>{waves_sub}</small>
         </a>
 """
 
@@ -1297,20 +1337,15 @@ table.guide-table th {{
         qd_first = qds[0] if qds else None
         quote_html = render_quote_badge(video_url, qd_first)
 
-        # 针对具体波次注入关联武器/避坑提示
+        # 严格使用源数据，不私造波次提示
         injected_tips = ""
-        if i == 0:
-            injected_tips = '<div style="background:#eaf6ed;border:1px solid #86efac;border-radius:6px;padding:8px 10px;font-size:12px;margin-top:8px;"><b>起手关键:</b> 核心锁定 Minigun + 螺丝刀，依靠前半波 3 倍远程直购输出，后半波转工程。</div>'
-        elif i == 4:
-            injected_tips = '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:8px 10px;font-size:12px;margin-top:8px;"><b>Horde 应对:</b> 合出核弹发射器（Nuclear Launcher）依靠大范围爆炸清场，慎拿诅咒袋工厂。</div>'
-        elif i == 5 or i == 6:
-            injected_tips = '<div style="background:#fee2e2;border:1px solid #f87171;border-radius:6px;padding:8px 10px;font-size:12px;margin-top:8px;"><b>⚠️ 致命警报:</b> 孔雀增伤 30% 波次切勿让孵化怪无限产怪，必须远程段秒杀精英！</div>'
 
+        waves_badge_b = f'<span class="badge badge-covers" style="margin-left:auto;">波次: {esc(waves)}</span>' if waves else '<span class="badge" style="background:var(--card-subtle);border:1px solid var(--line);color:var(--ink-secondary);font-size:11px;margin-left:auto;">阶段过渡</span>'
         html_out += f"""        <div class="card phase-card" id="vb-phase-{i+1}">
           <div class="phase-tag-row">
             <span class="badge" style="background:#1a1815;color:#fff;font-size:12px;">阶段 {i+1}</span>
             <h3 style="margin:0;font-size:18px;">{esc(phase_title)}</h3>
-            <span class="badge badge-covers" style="margin-left:auto;">波次: {esc(waves)}</span>
+            {waves_badge_b}
           </div>
 
           <div class="phase-box-grid">
@@ -1329,7 +1364,7 @@ table.guide-table th {{
           </div>
 
           {injected_tips}
-          <div style="margin-top:10px;">{quote_html}</div>
+          <div style="margin-top:10px;"></div>
         </div>
 """
 
@@ -1349,9 +1384,7 @@ table.guide-table th {{
           <div class="card-header">
             <h3 class="card-title"><span>⚔️</span> 武器路线与成型架构</h3>
           </div>
-          <div style="font-size:13px;line-height:1.6;margin-bottom:12px;">
-            <b>双修原则:</b> 前半波吃 3x 远程伤害加成，过半全部转工程。起手 Minigun 刷伤害，螺丝刀借工程吃近战肉搏。
-          </div>
+
           <div class="weapon-grid">
 """
 
@@ -1359,18 +1392,24 @@ table.guide-table th {{
         name_en = w_item.get("name_en", "")
         note = w_item.get("note", "")
         tier = w_item.get("tier", "T1")
+        copies = w_item.get("copies", "")
         w_wiki = wiki.get("weapons", {}).get(name_en, {})
         w_thumb = w_wiki.get("thumb", "")
-        w_zh = w_wiki.get("zh", name_en)
+        w_zh = w_wiki.get("zh")
         w_icon = icon_html(w_thumb, name_en)
         w_tip_elem = weapon_tip(name_en, w_wiki, terms)
+        w_disp = f"{esc(w_zh)} ({esc(name_en)})" if w_zh and w_zh != name_en else esc(name_en)
         badge_cls = "badge-must-take" if tier == "T1" else "badge-candidate"
+        copies_html = f'<span class="badge" style="background:var(--card-subtle);border:1px solid var(--line);font-size:11px;color:var(--ink-secondary);margin-right:4px;">{esc(copies)}</span>' if copies and copies != "未提及" else ''
         html_out += f"""            <div class="weapon-card" style="padding:10px;">
               <div class="weapon-card-header">
-                <span style="font-weight:700;">{w_icon}<span class="has-tip">{esc(w_zh)} ({esc(name_en)}){w_tip_elem}</span></span>
-                <span class="badge {badge_cls}">{tier}</span>
+                <span style="font-weight:700;">{w_icon}<span class="has-tip">{w_disp}{w_tip_elem}</span></span>
+                <div style="display:flex;align-items:center;">
+                  {copies_html}
+                  <span class="badge {badge_cls}">{tier}</span>
+                </div>
               </div>
-              <div style="font-size:12px;color:var(--muted);">{esc(note[:60])}...</div>
+              <div style="font-size:12px;color:var(--ink-secondary);line-height:1.4;">{esc(note)}</div>
             </div>
 """
 
@@ -1425,7 +1464,7 @@ table.guide-table th {{
           </div>
 """
 
-    html_out += """        </div>
+    html_out += f"""        </div>
       </div><!-- /c-pane-left -->
 
       <!-- 右栏: 商店 30 秒决策速查面板 -->
@@ -1442,11 +1481,11 @@ table.guide-table th {{
         </div>
 
         <div class="c-filter-tabs">
-          <button class="c-filter-btn active" data-filter="all" onclick="setShopFilter('all', this)">全部 (68)</button>
-          <button class="c-filter-btn" data-filter="must_take" onclick="setShopFilter('must_take', this)">⭐ 必拿 (8)</button>
-          <button class="c-filter-btn" data-filter="ban" onclick="setShopFilter('ban', this)">🚫 禁选 (2)</button>
-          <button class="c-filter-btn" data-filter="mentioned_not_taken" onclick="setShopFilter('mentioned_not_taken', this)">⚪ 提过未拿 (1)</button>
-          <button class="c-filter-btn" data-filter="casual_mention" onclick="setShopFilter('casual_mention', this)">💬 路过 (57)</button>
+          <button class="c-filter-btn active" data-filter="all" onclick="setShopFilter('all', this)">全部 ({len(groups_data)})</button>
+          <button class="c-filter-btn" data-filter="must_take" onclick="setShopFilter('must_take', this)">⭐ 必拿 ({len(must_take)})</button>
+          <button class="c-filter-btn" data-filter="ban" onclick="setShopFilter('ban', this)">🚫 禁选 ({len(bans)})</button>
+          <button class="c-filter-btn" data-filter="mentioned_not_taken" onclick="setShopFilter('mentioned_not_taken', this)">⚪ 提过未拿 ({len(skips)})</button>
+          <button class="c-filter-btn" data-filter="casual_mention" onclick="setShopFilter('casual_mention', this)">💬 路过 ({len(casuals)})</button>
         </div>
 
         <div id="cShopList">
@@ -1456,14 +1495,12 @@ table.guide-table th {{
         name_en = g.get("name_en", "")
         name_zh = g.get("name_zh", "")
         grp = g.get("group", "")
-        reason = g.get("reason", "")
+        note = g.get("note", "") or g.get("reason", "")
         i_wiki = wiki.get("items", {}).get(name_en, {})
         i_thumb = i_wiki.get("thumb", "")
         i_icon = icon_html(i_thumb, name_en)
         i_tip_elem = item_tip(name_en, i_wiki, terms)
-        qds = g.get("quote_details", [])
-        qd_first = qds[0] if qds else None
-        quote_html = render_quote_badge(video_url, qd_first)
+        name_display = f"{esc(name_zh)} ({esc(name_en)})" if name_zh and name_zh != name_en else esc(name_en)
         badge_cls = {
             "must_take": "badge-must-take",
             "ban": "badge-ban",
@@ -1479,11 +1516,10 @@ table.guide-table th {{
 
         html_out += f"""          <div class="c-item-card" data-grp="{esc(grp)}" data-search="{esc(name_en.lower())} {esc(name_zh.lower())}">
             <div class="c-item-header">
-              <span style="font-weight:700;">{i_icon}<span class="has-tip">{esc(name_zh or name_en)} ({esc(name_en)}){i_tip_elem}</span></span>
+              <span style="font-weight:700;">{i_icon}<span class="has-tip">{name_display}{i_tip_elem}</span></span>
               <span class="badge {badge_cls}">{grp_lbl}</span>
             </div>
-            <div style="font-size:12px;color:var(--ink-secondary);">{esc(reason)}</div>
-            {quote_html}
+            <div style="font-size:12px;color:var(--ink-secondary);line-height:1.4;">{esc(note)}</div>
           </div>
 """
 

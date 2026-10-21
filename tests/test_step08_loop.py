@@ -275,7 +275,7 @@ def test_context_pitfalls_points_to_fewshot():
 def test_audit_08_shows_nodes_not_markers():
     html = (REPO / "templates" / "audit.html").read_text(encoding="utf-8")
     assert "audit-08-pitfalls" in html
-    for marker in ("discovery", "wording", "candidates.json", "wordings.json", "fewshot"):
+    for marker in ("discovery", "wording", "candidates.json", "wordings.json", "fewshot", "per_pitfall", "W wording/"):
         assert marker.lower() in html.lower(), f"audit 08节须按调用列节点 ({marker})"
     # 新口径：来源 discovery + wording；描述禁警告标记/禁N≥3/禁锚字样
     import re as _re

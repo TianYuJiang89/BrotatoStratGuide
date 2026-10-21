@@ -917,7 +917,7 @@ function render() {
         </div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">链：<code>steps/05-weapons/candidates.json</code>（discovery，completeness） → <code>steps/05-weapons/per_weapon/*.json</code>（evidence×N，建议+tier） → <code>steps/05-weapons/ranking.json</code>（ranking终判，可推翻） → <code>steps/05-weapons/weapons.json</code>（终稿）；count=len(quotes)，无锚无断层禁数帽。</p>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code class="filelink" data-fileview="sentences" title="点击查看整句内容">steps/01-sentences/sentences.json</code> · <code class="filelink" data-fileview="vocab" title="点击查看78武器词汇表">武器词汇表78</code> · <code class="filelink" data-fileview="fewshot" title="点击查看FROZEN 20-shot快照">steps/05-weapons/fewshot.md</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>/02-verbs）</p>
-        ${(()=>{ const wc=(appData.weaponCandidates||[]); if(!wc.length) return '<div style="color:#999;">待加载：请载入 steps/05-weapons/candidates.json（discovery completeness，缺节即 fail）。</div>'; const w=(appData.weapons||{t1:[],t2:[]}); const fin={}; [...(w.t1||[]),...(w.t2||[])].forEach(x=>{fin[x.name_en]=x;}); if(!Object.keys(fin).length) return '<div style="color:#999;">待加载：请载入 steps/05-weapons/weapons.json（ranking终判终稿，缺节即 fail）。</div>'; const rk=(appData.ranking05||null); const rkBy={}; if(rk){ (rk.t1||[]).forEach(x=>{rkBy[x.name_en]={tier:'T1',note:x.note};}); (rk.t2||[]).forEach(x=>{rkBy[x.name_en]={tier:'T2',note:x.note};}); } const evm=(appData.evidence05||{}); const vurl=(m.sources&&m.sources[0]&&m.sources[0].url)?m.sources[0].url:'#'; const tl=(d)=>(d&&d.t!=null)?` <a href="${vurl}${vurl.includes('?')?'&':'?'}t=${d.t}s" target="_blank">⏱${d.start||('t='+d.t)}</a>`:''; const sj=(q)=>{ try{ const id=sentenceIdForQuote(q); return (id==null||id==undefined)?'':` <a href="#sent-${id}" data-jump-sent="${id}">📍句#${id}</a>`; }catch(e){ return ''; } }; const ql=(qs,det)=>{ const by={}; (det||[]).forEach(d=>{ if(d&&d.quote&&!(d.quote in by)) by[d.quote]=d; }); return (qs||[]).map(q=>`<div style="padding:2px 0;border-bottom:1px dashed var(--line);">“${q}”${sj(q)}${tl(by[q])}</div>`).join(''); }; return wc.map(c=>{ const n=c.name_en; const f=fin[n]||null; const ev=evm[n]||null; const rkb=rkBy[n]||null; const ft=f?f.tier:'—'; const over=(ev&&f&&ev.tier!==f.tier); const nchg=(ev&&rkb&&ev.note!==rkb.note); const estrip=ev?(`E ${ev.tier}建议 · D${c.count}→E${(ev.quotes||[]).length}条`):'<span style="color:#c00;">E 缺per_weapon（老数据重跑05回填）</span>'; const rstrip=rkb?(`R ${ft}终判 · `+(over?'<span class="badge" style="background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;">推翻</span>':'<span class="badge">维持</span>')+(nchg?' · note改写':' · note未改')):(f?(`R ${ft}终判 · 缺ranking.json（老数据重跑05回填）`):'R —'); return `<div class="item-card" data-weapon="${n}" style="margin-bottom:8px;"><div class="item-card-top"><div class="item-card-name"><span>${n}</span></div><div><span class="badge badge-verified">${ft}</span> <span class="badge-count-pill">count=${f?f.count:c.count}</span></div></div><div style="font-size:12px;margin:4px 0;">D ${c.count}条 → ${estrip} → ${rstrip}</div><details><summary style="font-size:12px;cursor:pointer;color:var(--accent);">展开链证据（D quotes / E analysis+note草稿 / R note定稿 / 终稿 quotes）</summary><div style="margin-top:6px;"><div style="font-size:11px;color:var(--muted);font-weight:700;">D · discovery quotes（${c.count}条，全量整句逐字）</div>${ql(c.quotes,c.quote_details)}${ev?(`<div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:6px;">E · evidence（${ev.tier}建议）</div><div style="font-size:12px;">分析：${ev.analysis||'—'}</div>`+(nchg?`<div style="font-size:12px;">note草稿：${ev.note}</div>`:'<div style="font-size:12px;color:var(--muted);">note草稿同定稿（未改）</div>')):''}${rkb?`<div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:6px;">R · ranking终判（${ft}）</div><div style="font-size:12px;">note定稿：${rkb.note}</div>`:''}${f?`<div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:6px;">终稿 · weapons.json（${ft} · count=${f.count}=len）</div>${ql(f.quotes,f.quote_details)}`:`<div style="color:#c00;">${n} 未进终稿（T1+T2≠candidates，check 即 fail）</div>`}</div></details></div>`; }).join(''); })()}
+        ${(()=>{ const wc=(appData.weaponCandidates||[]); if(!wc.length) return '<div style="color:#999;">待加载：请载入 steps/05-weapons/candidates.json（缺节即 fail）。</div>'; const ns=(appData.sentences||[]).length; const evm=(appData.evidence05||{}); const rk=(appData.ranking05||null); const lp=(f)=>`<a href="#" data-stepfile="${f}" data-kind="prompt">prompt全文</a>`; const lr=(f,k)=>`<a href="#" data-stepfile="${f}" data-kind="result" data-rkey="${k}">结果原文</a>`; const rows=[`<div style="padding:3px 0;border-bottom:1px dashed var(--line);font-size:12px;">D discovery · 入参：整句${ns}条全量+词表78+fewshot发现段 · ${lp('steps/05-weapons/agent-discovery.log.jsonl')} · 结果：${lr('steps/05-weapons/candidates.json','candidates')}（${wc.length}把）</div>`]; wc.forEach(c=>{ const s=safeName(c.name_en); const ev=evm[c.name_en]; rows.push(`<div style="padding:3px 0;border-bottom:1px dashed var(--line);font-size:12px;">E evidence/${c.name_en} · 入参：整句${ns}条全量+TASK_WEAPON=${c.name_en} · ${lp('steps/05-weapons/agent-evidence-'+s+'.log.jsonl')} · 结果：${lr('steps/05-weapons/per_weapon/'+s+'.json','ev:'+c.name_en)}（${ev?(ev.tier+'建议·'+(ev.quotes||[]).length+'条'):'缺per_weapon'}）</div>`); }); rows.push(`<div style="padding:3px 0;border-bottom:1px dashed var(--line);font-size:12px;">R ranking · 入参：整句${ns}条全量+${wc.length}份evidence · ${lp('steps/05-weapons/agent-ranking.log.jsonl')} · 结果：${lr('steps/05-weapons/ranking.json','ranking')}（${rk?((rk.t1||[]).length+'/'+(rk.t2||[]).length):'缺'}）→ ${lr('steps/05-weapons/weapons.json','weapons')}（终稿）</div>`); return `<div style="margin-bottom:10px;">${rows.join('')}</div>`; })()}
       </div>
     </div>
 
@@ -1843,6 +1843,7 @@ document.getElementById('btnPickDir').addEventListener('click', async () => {
       if (last && last.name) opts.startIn = last;
     } catch (e) { console.warn('读取上次目录失败', e); }
     const dirHandle = await window.showDirectoryPicker(opts);
+    window.__auditDir = dirHandle;
     await idbSetWorkdir(dirHandle);
     await loadFromDirectoryHandle(dirHandle);
   } catch (err) {
@@ -1943,6 +1944,7 @@ document.getElementById('fallbackDirInput').addEventListener('change', async (e)
   if (!files || files.length === 0) return;
   const byPath = {};
   for (const f of files) { byPath[f.webkitRelativePath || f.name] = f; }
+  window.__auditByPath = byPath;
   const readBySuffix = async (suffix) => {
     const key = Object.keys(byPath).find(k => k.replace(/\\/g, '/').endsWith(suffix));
     if (!key) return null;
@@ -2010,7 +2012,66 @@ document.getElementById('btnClearData').addEventListener('click', () => {
 // HTTP Base Fetch (约定路径动态读: inputs/ + steps/01-09 + outputs/)
 async function fetchJson(url) { try { const r = await fetch(url); if (r.ok) return await r.json(); } catch(e){ console.warn("fetch miss", url, e);} return null; }
 async function fetchText(url) { try { const r = await fetch(url); if (r.ok) return await r.text(); } catch(e){ console.warn("fetch miss", url, e);} return null; }
+function safeName(n) { return String(n || '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, ''); }
+async function stepText(rel) {
+  try {
+    if (window.__auditDir) {
+      const parts = rel.split('/');
+      let h = window.__auditDir;
+      for (let i = 0; i < parts.length - 1; i++) h = await h.getDirectoryHandle(parts[i]);
+      const fh = await h.getFileHandle(parts[parts.length - 1]);
+      return await (await fh.getFile()).text();
+    }
+  } catch (e) {}
+  try {
+    if (window.__auditByPath) {
+      const k = Object.keys(window.__auditByPath).find(k => k.replace(/\\/g, '/').endsWith(rel));
+      if (k) return await window.__auditByPath[k].text();
+    }
+  } catch (e) {}
+  try {
+    if (window.__auditBase) {
+      const r = await fetch(window.__auditBase + '/' + rel);
+      if (r.ok) return await r.text();
+    }
+  } catch (e) {}
+  return null;
+}
+function promptFromLog(t) {
+  for (const ln of String(t).split('\n')) {
+    if (ln.indexOf('"role":"user"') < 0) continue;
+    try {
+      const o = JSON.parse(ln);
+      const c = o && o.message && o.message.content;
+      const txt = c && c[0] && (c[0].text || c[0].input);
+      if (txt && txt.length > 50) return txt;
+    } catch (e) {}
+  }
+  return null;
+}
+document.addEventListener('click', (e) => {
+  const a = e.target && e.target.closest ? e.target.closest('[data-stepfile]') : null;
+  if (!a) return;
+  e.preventDefault();
+  const p = a.dataset.stepfile, k = a.dataset.kind, rk = a.dataset.rkey;
+  if (k === 'result') {
+    let o = null;
+    if (rk === 'candidates') o = appData.weaponCandidates;
+    else if (rk === 'ranking') o = appData.ranking05;
+    else if (rk === 'weapons') o = appData.weapons;
+    else if (rk && rk.indexOf('ev:') === 0) o = (appData.evidence05 || {})[rk.slice(3)];
+    openFileModal(p + (o ? '' : '（缺件）'), o ? `<pre>${escHtml(JSON.stringify(o, null, 1))}</pre>` : '<div style="color:#999;">未载入：请先载入工作区（缺节即 fail）。</div>');
+    return;
+  }
+  openFileModal(p + '（实际发出prompt）', '<div style="color:#999;">读取中…</div>');
+  stepText(p).then(t => {
+    if (!t) { document.getElementById('fileModalBody').innerHTML = '<div style="color:#999;">读不到该log（老数据缺log即fail，重跑05回填）。</div>'; return; }
+    const pr = promptFromLog(t);
+    document.getElementById('fileModalBody').innerHTML = `<div style="margin-bottom:8px;color:var(--muted);">发出prompt全文（${(pr || t).length}字）</div><pre>${escHtml(pr || t.slice(0, 20000))}</pre>`;
+  });
+});
 async function loadFromHttpBase(base) {
+  window.__auditBase = base;
   try {
     document.getElementById('sourceText').textContent = `读取 HTTP: ${base}...`;
     const man = await fetchJson(`${base}/inputs/manifest.json`);

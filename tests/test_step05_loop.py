@@ -320,8 +320,11 @@ def test_audit_05_shows_analysis_not_anchors():
     assert "analysis" in html, "audit 05节须展示analysis全过程"
     assert "discovery" in html.lower() and "ranking" in html.lower()
     assert "weaponCandidates" in html or "candidates.json" in html
-    for marker in ("evidence05", "ranking05", "per_weapon", "终判", "维持"):
-        assert marker in html, f"audit 05节须立链条 D->E->R->终稿 ({marker})"
+    # 审计节点: 每次 LLM 调用一行 (入参 prompt 全文 + 结果原文, 点开展示)
+    for marker in ("agent-discovery.log.jsonl", "agent-evidence-",
+                   "agent-ranking.log.jsonl", 'data-stepfile',
+                   "evidence05", "ranking05", "per_weapon"):
+        assert marker in html, f"audit 05节须按调用列节点 (入参+结果) ({marker})"
     assert "ranking.json" in html and "candidates.json" in html
     # 05 输入直达：三项可点击 + modal 弹窗展示内容
     for marker in ('data-fileview="sentences"', 'data-fileview="vocab"',

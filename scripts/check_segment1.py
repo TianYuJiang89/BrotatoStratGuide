@@ -428,6 +428,19 @@ def main(argv: list[str] | None = None) -> int:
         _eq = _ev.get("quotes", [])
         if not isinstance(_eq, list) or not _eq:
             fail(f"per_weapon quotes 须非空: {_n}", errors)
+        for _q in _eq:
+            if _q not in sent_texts:
+                fail(f"per_weapon quotes 须逐字 (扩引也逐字): {_n}", errors)
+                break
+    # 审计节点三元组: 每次 LLM 调用须留 log (入参 prompt 可查), 缺 log 即 fail
+    _logs = [work / "steps" / "05-weapons" / "agent-discovery.log.jsonl",
+             work / "steps" / "05-weapons" / "agent-ranking.log.jsonl"]
+    for _n in cand_names:
+        _safe = re.sub(r"[^A-Za-z0-9]+", "_", str(_n)).strip("_")
+        _logs.append(work / "steps" / "05-weapons" / f"agent-evidence-{_safe}.log.jsonl")
+    for _lp in _logs:
+        if not _lp.exists() or _lp.stat().st_size == 0:
+            fail(f"05审计节点缺log (入参不可查, 重跑05回填): {_lp.name}", errors)
 
     # --- audit 常设对应节 (check 与审计节一一对应, 缺节即 fail) ---
     audit_html = (REPO / "templates" / "audit.html").read_text(encoding="utf-8")

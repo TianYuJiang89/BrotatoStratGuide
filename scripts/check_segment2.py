@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Machine check for B-段2 (#63 + #49): 06-phases + 07-priorities + 08-pitfalls + 09-assemble.
+"""Machine check for B-段2 (#64 + #63 + #62): 06-phases + 07-priorities + 08-pitfalls + 09-assemble.
 
 沿 check_segment1.py (schema + 去重 + quote 对句 + sha + audit 一一对应), 加:
 - 06 (#63: frozen fewshot + segmentation/wording, N 不定, 运营波次自定义): buckets.json + wordings.json + per_phase/* + phases.json, 桶间不重叠, 桶内前缀须等于 buckets, 桶外补标 out_of_window, 小结≠原文
-- 07 (#49 去 Top3 写死 + Peacock 按名顺延; #50 升级侧同商店刀法去 sa[:3] 写死): upgrades N 动态 + shop N 动态 (全在 ratings S/A / 新 grouping must_take verified 内,
-  通用拒绝顺延 + 最大断层 TopN + 保底 Top1), 每项 why/how_to_get/quotes[0]
-- 08: >=3 条, severity 全在 fatal/risky/trap 内, 每条 why/how_to_avoid/quotes[0]
+- 07 (#62: frozen fewshot + priority-ranking 单 agent, shape only): upgrades/shop N 动态, ban 件禁入 TopN
+- 08 (#64: frozen fewshot + discovery/wording 两段 agent, 警告子串召回已退役): candidates[{title,seeds,extra}] + wordings[{title,severity,why,how_to_avoid,reason,seeds,extra}] + per_pitfall/* + pitfalls.json, 桶间不重叠, ban 反向 allowlist, severity 三档保留
+- 09: 双写一致 + 六节聚合一致 + sha 对上 manifest + source.vtt
 - 09: 双写一致 + 六节聚合一致 + sha 对上 manifest + source.vtt
 - audit 常设对应节 (check 与审计节一一对应, 缺节即 fail; 06-09 须为实节非空占位)
 
@@ -363,91 +363,182 @@ def main(argv: list[str] | None = None) -> int:
     if not _log07.exists() or _log07.stat().st_size == 0:
         fail("07审计节点缺log (入参不可查, 重跑07回填): agent-ranking.log.jsonl", errors)
 
-    # --- 08-pitfalls (两跳: 种子池 + 种子链约束, 闭集词表已废) ---
+    # --- 08-pitfalls (#64: frozen fewshot + discovery/wording) ---
     try:
-        _cands = json.loads((work / "steps" / "08-pitfalls" / "candidates.json").read_text(encoding="utf-8"))
+        _cands08 = json.loads((work / "steps" / "08-pitfalls" / "candidates.json").read_text(encoding="utf-8"))
     except Exception:
-        fail("missing steps/08-pitfalls/candidates.json (先跑 step08 第一跳召回)", errors)
-        _cands = []
-    _pool = {c.get("quote") for c in (_cands if isinstance(_cands, list) else []) if isinstance(c, dict)}
-    if not isinstance(pitfalls, list) or len(pitfalls) < 3:
-        fail(f"pitfalls must be >=3, got {len(pitfalls) if isinstance(pitfalls, list) else type(pitfalls)}", errors)
+        fail("missing steps/08-pitfalls/candidates.json (先跑 step08 discovery)", errors)
+        _cands08 = None
+    try:
+        _wordings08 = json.loads((work / "steps" / "08-pitfalls" / "wordings.json").read_text(encoding="utf-8"))
+    except Exception:
+        fail("missing steps/08-pitfalls/wordings.json (先跑 step08 wording)", errors)
+        _wordings08 = None
+    _ban08 = {g.get("name_en") for g in (grouping if isinstance(grouping, list) else [])
+              if isinstance(g, dict) and g.get("group") == "ban"}
+    # candidates: new schema [{title,seeds,extra}], N不定可空数组诚实交
+    if not isinstance(_cands08, list):
+        fail("candidates must be array (discovery, N不定可空)", errors)
+        _cands08 = []
     else:
-        for p in pitfalls:
-            for k in ("title", "severity", "why", "how_to_avoid", "quotes", "kind", "quote", "reason", "inferred", "seeds", "extra"):
-                if k not in p:
-                    fail(f"pitfalls missing {k}: {p.get('title')}", errors)
-            if p.get("severity") not in ("fatal", "risky", "trap"):
-                fail(f"pitfalls severity must be fatal/risky/trap: {p.get('title')}", errors)
-            if p.get("kind") not in ("anchor", "discretion"):
-                fail(f"pitfalls kind must be anchor/discretion: {p.get('title')}", errors)
-            akeys = p.get("anchors", [])
-            if not isinstance(akeys, list):
-                fail(f"pitfalls anchors must be array: {p.get('title')}", errors)
-                akeys = []
-            seeds = p.get("seeds", [])
-            extra = p.get("extra", [])
-            if not isinstance(seeds, list) or not isinstance(extra, list):
-                fail(f"pitfalls seeds/extra must be arrays: {p.get('title')}", errors)
-                seeds, extra = [], []
-            want_kind = "anchor" if akeys else "discretion"
-            if p.get("kind") != want_kind:
-                fail(f"pitfalls kind须与anchors一致 (有锚anchor/无锚discretion): {p.get('title')}", errors)
-            if (p.get("anchor") or None) != (akeys[0] if akeys else None):
-                fail(f"pitfalls anchor须=anchors[0]: {p.get('title')}", errors)
-            if list(p.get("quotes", []) if isinstance(p.get("quotes"), list) else []) != list(seeds) + list(extra):
-                fail(f"pitfalls quotes须=seeds+extra原序: {p.get('title')}", errors)
-            if len(str(p.get("why", ""))) < 8 or len(str(p.get("how_to_avoid", ""))) < 8:
-                fail(f"pitfalls why/how_to_avoid too short: {p.get('title')}", errors)
-            if not isinstance(p.get("reason"), str) or len(p["reason"].strip()) < 4:
-                fail(f"pitfalls missing reason (分组/扩展依据, 锚定条也要): {p.get('title')}", errors)
-            if not isinstance(p.get("inferred"), bool):
-                fail(f"pitfalls inferred must be bool: {p.get('title')}", errors)
-            if want_kind == "anchor" and p.get("inferred") is not False:
-                fail(f"pitfalls 锚定条inferred须false: {p.get('title')}", errors)
-            if want_kind == "discretion" and p.get("inferred") is not True:
-                fail(f"pitfalls 裁量条inferred须true: {p.get('title')}", errors)
-            _check_quotes(f"pitfalls {p.get('title')}", p.get("quotes", []), p.get("quote_details", []))
-            if p.get("quote") not in (p.get("quotes", []) if isinstance(p.get("quotes"), list) else []):
-                fail(f"pitfalls quote须等于quotes成员: {p.get('title')}", errors)
-            if want_kind == "anchor" and (p.get("quotes", []) or [None])[0] not in seeds:
-                fail(f"pitfalls 锚定条quotes[0]须是种子直引: {p.get('title')}", errors)
-            # (#50: take 系出局走 prompt 锚规则 + 召回约束, 代码侧不点名; merge 只校验种子链, 不做按名过滤)
-            if want_kind == "anchor" and not seeds:
-                fail(f"pitfalls 锚定条至少一句链回seed: {p.get('title')}", errors)
-            for q in seeds:
-                if q not in _pool:
-                    fail(f"pitfalls seed须出自种子池逐字: {p.get('title')} :: {str(q)[:40]}", errors)
+        _seen08 = set()
+        for _c in _cands08:
+            if not isinstance(_c, dict):
+                fail("candidates entry must be object", errors)
+                continue
+            for _k in ("title", "seeds", "extra"):
+                if _k not in _c:
+                    fail(f"candidates missing {_k}: {_c.get('title')}", errors)
+            for _old in ("quote", "signals", "anchors", "inferred", "kind", "anchor",
+                         "severity", "why", "how_to_avoid", "reason", "count", "quote_details"):
+                if _old in _c:
+                    fail(f"candidates retired field must be absent: {_old}", errors)
+            _t = _c.get("title")
+            if not isinstance(_t, str) or not _t.strip():
+                fail("candidates title must be nonempty", errors)
+            _s = _c.get("seeds", [])
+            _e = _c.get("extra", [])
+            if not isinstance(_s, list) or not _s:
+                fail(f"candidates seeds must be non-empty (空证据即 fail): {_t}", errors)
+                _s = []
+            if not isinstance(_e, list):
+                fail(f"candidates extra must be array: {_t}", errors)
+                _e = []
+            if isinstance(_s, list) and len(_s) != len(set(_s)):
+                fail(f"candidates seeds must be deduped: {_t}", errors)
+            if isinstance(_e, list) and len(_e) != len(set(_e)):
+                fail(f"candidates extra must be deduped: {_t}", errors)
+            if isinstance(_s, list) and isinstance(_e, list) and set(_s) & set(_e):
+                fail(f"candidates seeds/extra must be disjoint (交叠即 fail): {_t}", errors)
+            for _q in (list(_s) + list(_e) if isinstance(_s, list) and isinstance(_e, list) else []):
+                if _q not in sent_texts:
+                    fail(f"candidates quotes must be verbatim: {_t} :: {str(_q)[:40]}", errors)
                     break
-            for q in extra:
-                if q not in sent_texts:
-                    fail(f"pitfalls extra须出自sentences逐字: {p.get('title')} :: {str(q)[:40]}", errors)
+                if _q in _seen08:
+                    fail(f"candidates must be globally deduped (桶间不重叠): {str(_q)[:40]}", errors)
                     break
-            for a in akeys:
-                if not any(str(a).lower() in str(q).lower() for q in seeds):
-                    fail(f"pitfalls anchor须出自本条种子句逐字: {p.get('title')}={a}", errors)
+            for _q in (list(_s) + list(_e) if isinstance(_s, list) and isinstance(_e, list) else []):
+                _seen08.add(_q)
+            for _q in (list(_s) + list(_e) if isinstance(_s, list) and isinstance(_e, list) else []):
+                for _b in _ban08:
+                    if _b and _b.lower() in str(_q).lower():
+                        fail(f"candidates ban scope (坑不重复进): {_t}含ban名 {_b}", errors)
+                        break
+    # wordings: new schema, N==candidates 自洽
+    if not isinstance(_wordings08, list):
+        fail("wordings must be array (wordingxN)", errors)
+        _wordings08 = []
+    else:
+        if len(_wordings08) != len(_cands08):
+            fail(f"wordings N must == candidates N 自洽: 期望 {len(_cands08)}, 实得 {len(_wordings08)}", errors)
+        _wseen08 = set()
+        for _w in _wordings08:
+            if not isinstance(_w, dict):
+                fail("wordings entry must be object", errors)
+                continue
+            for _k in ("title", "severity", "why", "how_to_avoid", "reason", "seeds", "extra"):
+                if _k not in _w:
+                    fail(f"wordings missing {_k}: {_w.get('title')}", errors)
+            for _old in ("anchors", "inferred", "kind", "anchor", "quote", "signals", "count", "quote_details"):
+                if _old in _w:
+                    fail(f"wordings retired field must be absent: {_old} ({_w.get('title')})", errors)
+            if _w.get("severity") not in ("fatal", "risky", "trap"):
+                fail(f"wordings severity must be fatal/risky/trap: {_w.get('title')}", errors)
+            if not isinstance(_w.get("why"), str) or len(str(_w.get("why", "")).strip()) < 8:
+                fail(f"wordings why too short: {_w.get('title')}", errors)
+            if not isinstance(_w.get("how_to_avoid"), str) or len(str(_w.get("how_to_avoid", "")).strip()) < 8:
+                fail(f"wordings how_to_avoid too short: {_w.get('title')}", errors)
+            if not isinstance(_w.get("reason"), str) or len(str(_w.get("reason", "")).strip()) < 4:
+                fail(f"wordings missing reason: {_w.get('title')}", errors)
+            _ws = _w.get("seeds", [])
+            _we = _w.get("extra", [])
+            if not isinstance(_ws, list) or not _ws:
+                fail(f"wordings seeds must be non-empty (空证据即 fail): {_w.get('title')}", errors)
+                _ws = []
+            if not isinstance(_we, list):
+                fail(f"wordings extra must be array: {_w.get('title')}", errors)
+                _we = []
+            if isinstance(_ws, list) and len(_ws) != len(set(_ws)):
+                fail(f"wordings seeds must be deduped: {_w.get('title')}", errors)
+            if isinstance(_we, list) and len(_we) != len(set(_we)):
+                fail(f"wordings extra must be deduped: {_w.get('title')}", errors)
+            if isinstance(_ws, list) and isinstance(_we, list) and set(_ws) & set(_we):
+                fail(f"wordings seeds/extra must be disjoint (交叠即 fail): {_w.get('title')}", errors)
+            for _q in (list(_ws) + list(_we) if isinstance(_ws, list) and isinstance(_we, list) else []):
+                if _q not in sent_texts:
+                    fail(f"wordings quotes must be verbatim: {_w.get('title')} :: {str(_q)[:40]}", errors)
                     break
+                if _q in _wseen08:
+                    fail(f"wordings must be globally deduped (桶间不重叠): {str(_q)[:40]}", errors)
+                    break
+            for _q in (list(_ws) + list(_we) if isinstance(_ws, list) and isinstance(_we, list) else []):
+                _wseen08.add(_q)
+            for _q in (list(_ws) + list(_we) if isinstance(_ws, list) and isinstance(_we, list) else []):
+                for _b in _ban08:
+                    if _b and _b.lower() in str(_q).lower():
+                        fail(f"wordings ban scope (坑不重复进): {_w.get('title')}含ban名 {_b}", errors)
+                        break
+    # pitfalls: merge (quotes=seeds+extra原序, quote_details平行)
+    if not isinstance(pitfalls, list):
+        fail(f"pitfalls must be array, got {type(pitfalls)}", errors)
+    else:
+        if len(pitfalls) != len(_wordings08):
+            fail(f"pitfalls N must == wordings N 自洽: 期望 {len(_wordings08)}, 实得 {len(pitfalls)}", errors)
+        else:
+            for _p, _w in zip(pitfalls, _wordings08):
+                if not isinstance(_p, dict) or not isinstance(_w, dict):
+                    fail("pitfalls/wordings entry must be object", errors)
+                    continue
+                for _k in ("title", "severity", "why", "how_to_avoid", "reason", "seeds", "extra", "quotes", "quote_details"):
+                    if _k not in _p:
+                        fail(f"pitfalls missing {_k}: {_p.get('title')}", errors)
+                for _old in ("anchors", "inferred", "kind", "anchor", "quote", "signals"):
+                    if _old in _p:
+                        fail(f"pitfalls retired field must be absent: {_old} ({_p.get('title')})", errors)
+                if _p.get("severity") not in ("fatal", "risky", "trap"):
+                    fail(f"pitfalls severity must be fatal/risky/trap: {_p.get('title')}", errors)
+                _ps = _p.get("seeds", [])
+                _pe = _p.get("extra", [])
+                if list(_p.get("quotes", []) if isinstance(_p.get("quotes"), list) else []) != list(_ps if isinstance(_ps, list) else []) + list(_pe if isinstance(_pe, list) else []):
+                    fail(f"pitfalls quotes must == seeds+extra原序: {_p.get('title')}", errors)
+                _check_quotes(f"pitfalls {_p.get('title')}", _p.get("quotes", []), _p.get("quote_details", []))
+                for _q in (list(_ps) + list(_pe) if isinstance(_ps, list) and isinstance(_pe, list) else []):
+                    for _b in _ban08:
+                        if _b and _b.lower() in str(_q).lower():
+                            fail(f"pitfalls ban scope (坑不重复进): {_p.get('title')}含ban名 {_b}", errors)
+                            break
     if pitfalls != pitfalls_out:
         fail("outputs/pitfalls.json must equal steps/08-pitfalls/pitfalls.json", errors)
-
-    # --- 08-candidates.json (召回池实况: 全捞不取舍, 审计漏斗面板直读) ---
-    if not isinstance(candidates, list) or not candidates:
-        fail("candidates must be non-empty array (代码召回全捞)", errors)
-    else:
-        _cquotes = [c.get("quote") for c in candidates if isinstance(c, dict)]
-        if len(_cquotes) != len(set(_cquotes)):
-            fail("candidates quotes must be deduped", errors)
-        for c in candidates:
-            if not isinstance(c, dict) or not isinstance(c.get("quote"), str) or not c["quote"].strip():
-                fail("candidates entry must have quote", errors)
-                break
-            if c["quote"] not in sent_texts:
-                fail(f"candidates quote must equal sentences text: {str(c['quote'])[:60]}", errors)
-                break
-            if not isinstance(c.get("signals"), list) or not c["signals"]:
-                fail("candidates entry must have non-empty signals", errors)
-                break
-            # (#50: 召回纯标记 + 情态约束, 不点名; take 系出局走 prompt, candidates 允许警告标记句含 taken 件名, 由 agent 提名时剔除)
+    # 08 运行快照 + 审计节点: fewshot单本须与repo FROZEN逐字节一致, per_pitfall落盘, log可查
+    try:
+        _few08_run = (work / "steps" / "08-pitfalls" / "fewshot.md").read_bytes()
+        _few08_repo = (REPO / "prompts" / "step08-pitfalls-fewshot.md").read_bytes()
+        if _few08_run != _few08_repo:
+            fail("steps/08-pitfalls/fewshot.md must equal repo FROZEN fewshot (逐字节, 重跑08即回填)", errors)
+    except Exception:
+        fail("steps/08-pitfalls/fewshot.md 读失败 (缺运行快照, 重跑08即回填)", errors)
+    if not (work / "steps" / "08-pitfalls" / "wordings.json").exists():
+        fail("steps/08-pitfalls/wordings.json 缺失", errors)
+    if not (work / "steps" / "08-pitfalls" / "discovery.json").exists():
+        fail("steps/08-pitfalls/discovery.json 缺失 (discovery原始, 缺节即 fail)", errors)
+    for _i in range(len(_wordings08) if isinstance(_wordings08, list) else 0):
+        _pp = work / "steps" / "08-pitfalls" / "per_pitfall" / f"{_i:02d}.json"
+        if not _pp.exists():
+            fail(f"steps/08-pitfalls/per_pitfall/{_i:02d}.json 缺失 (wording原始, 缺节即 fail)", errors)
+            break
+        try:
+            _pev08 = json.loads(_pp.read_text(encoding="utf-8"))
+        except Exception:
+            fail(f"per_pitfall/{_i:02d}.json 非法 JSON", errors)
+            continue
+        if not isinstance(_pev08, dict) or _pev08.get("severity") not in ("fatal", "risky", "trap"):
+            fail(f"per_pitfall/{_i:02d}.json severity 须三档之一", errors)
+    _log08d = work / "steps" / "08-pitfalls" / "agent-discovery.log.jsonl"
+    if not _log08d.exists() or _log08d.stat().st_size == 0:
+        fail("08审计节点缺log (入参不可查, 重跑08回填): agent-discovery.log.jsonl", errors)
+    _wlogs08 = list((work / "steps" / "08-pitfalls").glob("agent-wording-*.log.jsonl"))
+    if len(_wlogs08) != (len(_wordings08) if isinstance(_wordings08, list) else 0):
+        fail(f"08审计节点缺wording log: 期望 {(len(_wordings08) if isinstance(_wordings08, list) else 0)} 个 agent-wording-*.log.jsonl, 实得 {len(_wlogs08)}", errors)
 
     # --- 09-assemble ---
     if guide != guide_out:

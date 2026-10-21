@@ -916,7 +916,7 @@ function render() {
       </div>
     </div>
 
-    <!-- Pipeline Step 8: 08-pitfalls（#41已落地，卡片+抽屉，缺节即 fail） -->
+    <!-- Pipeline Step 8: 08-pitfalls（#64 discovery/wording，卡片+抽屉，缺节即 fail） -->
     <div class="pipeline-step completed" id="audit-08-pitfalls" data-dag-layer="L1">
       <div class="card">
         <div class="card-header">
@@ -926,8 +926,9 @@ function render() {
           <span class="badge badge-verified">check_08 对应节</span>
           <span class="badge" style="margin-left:4px;">DAG L1并行层</span>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step08-pitfalls.md + <code>steps/08-pitfalls/pitfalls.json</code>；可与段1并行先跑，验收按段1→段2两闸算。</p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>→ <code>steps/08-pitfalls/candidates.json</code>（第一跳：纯警告标记产种子池，零游戏名词；#50 收敛：删纯语法粘连 "'d "，情态须同句另含非情态锚才收） → wordings.json（agent提名主题扩展＋分组分级＋种子链） → <code>steps/08-pitfalls/pitfalls.json</code>（merge：锚定条至少一句种子直引，扩展须出自sentences逐字；take 系 verified 拿取出局通用规则不点名，拿不是坑；308–310 去向：308/309 无警告标记不进池（309 另为 take 系 verified 拿取），310 含 hurt/lose 进池但 agent 未提名，属正常召回未选中；禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： #64 落地 prompts/step08-pitfalls-fewshot.md（FROZEN 20-shot 只读：发现8+分级8+负例4） + discovery/wording 两段 agent + <code>steps/08-pitfalls/pitfalls.json</code>；来源 discovery + wording，可与段1并行先跑（ban scope 读 grouping），验收按段1→段2两闸算。</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（全量整句，agent 自捞） + <code>steps/03-grouping/grouping.json</code>（ban 组 scope 约束，坑不重复进，码验） + frozen fewshot → <code>steps/08-pitfalls/candidates.json</code>（discovery：[{title建议,seeds≥1,extra}]，N 不定，无事件空数组诚实交） → wordings.json（wording×N：每条独立单 agent→{title,severity,why,how_to_avoid,reason,seeds,extra}，severity 三档绝对，trap 须论证看着赚，take 已拿不算坑） → <code>steps/08-pitfalls/pitfalls.json</code>（merge：quotes=seeds+extra 原序 + quote_details 回填，桶间不重叠；禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
+        ${(()=>{ const rk8=(appData.wordings08||null); if(!rk8 && !(appData.candidates08||[]).length) return '<div style="color:#999;">待加载：请载入 steps/08-pitfalls/candidates.json（缺节即 fail）。</div>'; const sl=`<a href="#" data-fileview="sentences">sentences.json</a>`; const fl8=`<a href="#" data-stepfile="steps/08-pitfalls/fewshot.md" data-kind="result" data-rkey="fewshot08">steps/08-pitfalls/fewshot.md</a>`; const lp=(f)=>`<a href="#" data-stepfile="${f}" data-kind="prompt">${f.split('/').pop()}</a>`; const lr=(f,k)=>`<a href="#" data-stepfile="${f}" data-kind="result" data-rkey="${k}">${f.split('/').pop()}</a>`; const blk=(t,a,b,c)=>`<div style="padding:6px 0;border-bottom:1px dashed var(--line);font-size:12px;"><div><span class="dyn">${t}</span></div><div style="margin-left:12px;">入参：${a}</div><div style="margin-left:12px;">prompt：${b}</div><div style="margin-left:12px;">结果：${c}</div></div>`; return `<div style="margin-bottom:10px;">${blk('D discovery', `${sl} + ${fl8}`, lp('steps/08-pitfalls/agent-discovery.log.jsonl'), `${lr('steps/08-pitfalls/discovery.json','candidates08')} → ${lr('steps/08-pitfalls/candidates.json','candidates08')}（N不定）`)}${((appData.wordings08||[]).length?blk('R wording×N', `1条候选 + ${sl} + ${fl8}`, `agent-wording-*.log.jsonl`, `${lr('steps/08-pitfalls/wordings.json','wordings08')}（N==candidates）`):'')}</div>`; })()}
         ${pitfallsSectionHtml()}
       </div>
     </div>
@@ -1067,33 +1068,70 @@ function recallPanelHtml() {
     if (!quoted.has(q)) quoted.set(q, []);
     quoted.get(q).push(p.title);
   })));
+  // 新 schema candidates08: [{title,seeds,extra}]；旧 schema 兼容: [{quote,signals}]（有quote展，无则按新展）
+  const isOld = cs.length && cs[0] && typeof cs[0].quote === 'string';
+  const allSeeds = [];
+  if (isOld) {
+    cs.forEach(c => { if (c.quote) allSeeds.push(c.quote); });
+  } else {
+    cs.forEach(c => { (c.seeds || []).forEach(q => allSeeds.push(q)); (c.extra || []).forEach(q => allSeeds.push(q)); });
+  }
   let used = 0;
-  cs.forEach(c => { if (quoted.has(c.quote)) used++; });
+  if (isOld) {
+    cs.forEach(c => { if (quoted.has(c.quote)) used++; });
+  } else {
+    allSeeds.forEach(q => { if (quoted.has(q)) used++; });
+  }
   const quotedTotal = quoted.size;
-  const expanded = quotedTotal - used;
-  const sigCount = {};
-  cs.forEach(c => ((c.signals || []).forEach(s => { sigCount[s] = (sigCount[s] || 0) + 1; })));
-  const top = Object.entries(sigCount).sort((a, b) => b[1] - a[1]);
   const wcount = (appData.wordings08 || []).length;
-  const rows = cs.map(c => {
-    const owners = quoted.get(c.quote) || [];
-    const sid = sentenceIdForQuote(c.quote);
-    const short = c.quote.length > 110 ? c.quote.slice(0, 110) + '…' : c.quote;
-    const sigs = ((c.signals || [])).join(' / ');
-    const badge = owners.length
-      ? '<span class="badge badge-verified" title="被 pits 引用">引</span>'
-      : '<span class="badge" title="召回命中但 agent 未采用">弃</span>';
-    const own = owners.length ? '<span style="color:var(--muted);font-size:11px;white-space:nowrap;">' + owners.join(' / ') + '</span>' : '';
-    const jump = (sid == null) ? '' : ' <a href="#sent-' + sid + '" data-jump-sent="' + sid + '" title="跳到原文句看 context">📍句#' + sid + '</a>';
-    return '<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;border-bottom:1px dashed var(--line);font-size:12px;">'
-      + badge + '<span style="flex:1;">“' + short + '”</span>' + own
-      + '<span style="color:var(--muted);font-size:11px;white-space:nowrap;">' + sigs + '</span>' + jump + '</div>';
+  let rows = '';
+  if (isOld) {
+    const sigCount = {};
+    cs.forEach(c => ((c.signals || []).forEach(s => { sigCount[s] = (sigCount[s] || 0) + 1; })));
+    const top = Object.entries(sigCount).sort((a, b) => b[1] - a[1]);
+    rows = cs.map(c => {
+      const owners = quoted.get(c.quote) || [];
+      const sid = sentenceIdForQuote(c.quote);
+      const short = c.quote.length > 110 ? c.quote.slice(0, 110) + '…' : c.quote;
+      const sigs = ((c.signals || [])).join(' / ');
+      const badge = owners.length
+        ? '<span class="badge badge-verified" title="被 pits 引用">引</span>'
+        : '<span class="badge" title="召回命中但 agent 未采用">弃</span>';
+      const own = owners.length ? '<span style="color:var(--muted);font-size:11px;white-space:nowrap;">' + owners.join(' / ') + '</span>' : '';
+      const jump = (sid == null) ? '' : ' <a href="#sent-' + sid + '" data-jump-sent="' + sid + '" title="跳到原文句看 context">📍句#' + sid + '</a>';
+      return '<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;border-bottom:1px dashed var(--line);font-size:12px;">'
+        + badge + '<span style="flex:1;">“' + short + '”</span>' + own
+        + '<span style="color:var(--muted);font-size:11px;white-space:nowrap;">' + sigs + '</span>' + jump + '</div>';
+    }).join('');
+    return `
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px;">种子漏斗（旧链警告标记召回，兼容显示） <span style="color:var(--muted);font-weight:normal;">${cs.length}种子 → ${used}引用 / ${(appData.pitfalls || []).length}条${wcount ? `（wordings.json ${wcount}条判断）` : ''}</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">${top.map(entry => `<span class="badge-count-pill">${entry[0]}×${entry[1]}</span>`).join('')}</div>
+      <details><summary style="font-size:12px;cursor:pointer;color:var(--accent);">展开${cs.length}粒种子（点📍跳原文看 context）</summary><div style="margin-top:6px;">${rows}</div></details>
+    </div>`;
+  }
+  rows = cs.map((c, ci) => {
+    const seeds = c.seeds || [];
+    const extra = c.extra || [];
+    const all = [...seeds, ...extra];
+    const ownRows = all.map(q => {
+      const owners = quoted.get(q) || [];
+      const sid = sentenceIdForQuote(q);
+      const short = q.length > 110 ? q.slice(0, 110) + '…' : q;
+      const badge = owners.length
+        ? '<span class="badge badge-verified" title="被 pits 引用">引</span>'
+        : '<span class="badge" title="未被 pits 引用">弃</span>';
+      const jump = (sid == null) ? '' : ' <a href="#sent-' + sid + '" data-jump-sent="' + sid + '" title="跳到原文句看 context">📍句#' + sid + '</a>';
+      return '<div style="display:flex;gap:8px;align-items:baseline;padding:2px 0 2px 12px;font-size:12px;">'
+        + badge + '<span style="flex:1;">“' + short + '”</span>' + jump + '</div>';
+    }).join('');
+    return '<div style="padding:4px 0;border-bottom:1px dashed var(--line);font-size:12px;"><strong>' + (c.title || ('坑'+(ci+1))) + '</strong>'
+      + '<span style="color:var(--muted);"> S' + seeds.length + 'E' + extra.length + '</span>' + ownRows + '</div>';
   }).join('');
   return `
     <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:10px;">
-      <div style="font-size:12px;font-weight:700;margin-bottom:6px;">种子漏斗（纯警告标记召回 → agent主题扩展＋判断 → merge种子链校验） <span style="color:var(--muted);font-weight:normal;">${cs.length}种子 → ${used}种子引 + ${expanded}扩展 = ${quotedTotal}引 / ${(appData.pitfalls || []).length}条${wcount ? `（wordings.json ${wcount}条判断）` : ''} · 弃用 ${cs.length - used}粒</span></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">${top.map(entry => `<span class="badge-count-pill" title="警告标记命中句数（标记可重叠）">${entry[0]}×${entry[1]}</span>`).join('')}</div>
-      <details><summary style="font-size:12px;cursor:pointer;color:var(--accent);">展开${cs.length}粒种子（绿=被 pits 引用为种子或扩展，灰=agent弃用，点📍跳原文看 context）</summary><div style="margin-top:6px;">${rows}</div></details>
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px;">发现漏斗（discovery + wording，来源可查） <span style="color:var(--muted);font-weight:normal;">${cs.length}候选 → ${quotedTotal}引 / ${(appData.pitfalls || []).length}条${wcount ? `（wordings.json ${wcount}条判断，N==candidates）` : ''}</span></div>
+      <details><summary style="font-size:12px;cursor:pointer;color:var(--accent);">展开${cs.length}候选（S=seeds直引 / E=extra扩展，点📍跳原文看 context）</summary><div style="margin-top:6px;">${rows}</div></details>
     </div>`;
 }
 
@@ -1109,16 +1147,21 @@ function pitfallsSectionHtml() {
   return `
     ${panel}
     <div style="display:flex;flex-direction:column;gap:8px;">
-    ${ps.map((x, idx) => `
-      <div class="item-card ${x.kind === 'discretion' ? 'is-candidate' : ''}" data-pitfall="${idx}" style="cursor:pointer;${x.kind === 'discretion' ? 'border-color:#f59e0b;background:#fffbeb;' : ''}">
+    ${ps.map((x, idx) => {
+      const hasKind = (x.kind === 'discretion' || x.kind === 'anchor');
+      const kindBadge = !hasKind ? '' : (x.kind === 'discretion' ? '<span class="badge badge-candidate">裁量黄</span>' : '<span class="badge badge-verified">锚定绿</span>');
+      const kindCls = (x.kind === 'discretion') ? 'is-candidate' : '';
+      const kindStyle = (x.kind === 'discretion') ? 'border-color:#f59e0b;background:#fffbeb;' : '';
+      return `
+      <div class="item-card ${kindCls}" data-pitfall="${idx}" style="cursor:pointer;${kindStyle}">
         <div class="item-card-top">
           <div class="item-card-name"><span>⚠️ ${x.title}</span></div>
-          <div><span class="badge" style="${sevStyle(x.severity)}">${x.severity}</span>${x.kind === 'discretion' ? '<span class="badge badge-candidate">裁量黄</span>' : '<span class="badge badge-verified">锚定绿</span>'}<span class="badge-count-pill">${(x.quotes||[]).length} 引用</span>${((x.seeds || x.extra) ? `<span class="badge-count-pill" title="种子直引 S / 主题扩展 E">S${(x.seeds || []).length}E${(x.extra || []).length}</span>` : '')}</div>
+          <div><span class="badge" style="${sevStyle(x.severity)}">${x.severity}</span>${kindBadge}<span class="badge-count-pill">${(x.quotes||[]).length} 引用</span>${((x.seeds || x.extra) ? `<span class="badge-count-pill" title="种子直引 S / 主题扩展 E">S${(x.seeds || []).length}E${(x.extra || []).length}</span>` : '')}</div>
         </div>
         ${(x.anchors && x.anchors.length) ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">${x.anchors.map(a => `⚓${a}`).join(' · ')}</div>` : ''}
         <div class="item-card-reason"><strong>成因:</strong> ${x.why || ''}</div>
         ${(x.quotes && x.quotes.length) ? `<div class="item-card-quote">“${x.quotes[0]}”</div>` : ''}
-      </div>`).join('')}
+      </div>`; }).join('')}
     </div>`;
 }
 
@@ -1131,17 +1174,13 @@ function assembleSectionHtml() {
   const aw = a.weapons || { t1: [], t2: [] };
   const pu = ((appData.priorities || {}).upgrades || []).length + ((appData.priorities || {}).shop || []).length;
   const au = (((a.priorities || {}).upgrades) || []).length + (((a.priorities || {}).shop) || []).length;
-  const pitA = (arr) => (arr || []).filter(p => (p.kind || 'anchor') !== 'discretion').length;
-  const pitD = (arr) => (arr || []).filter(p => (p.kind || 'anchor') === 'discretion').length;
-  const gA = pitA(a.pitfalls), gD = pitD(a.pitfalls);
-  const lA = pitA(appData.pitfalls), lD = pitD(appData.pitfalls);
   const rows = [
     ['03-grouping', `内嵌 ${(a.groups || []).length} / live ${(appData.items || []).length}`, (a.groups || []).length === (appData.items || []).length],
     ['04-attributes', `内嵌 ${(a.ratings || []).length} / live ${(appData.ratings || []).length}`, (a.ratings || []).length === (appData.ratings || []).length],
     ['05-weapons', `内嵌 ${((aw.t1 || []).length + (aw.t2 || []).length)} / live ${((w.t1 || []).length + (w.t2 || []).length)}`, (((aw.t1 || []).length + (aw.t2 || []).length) === (((w.t1 || []).length + (w.t2 || []).length)))],
     ['06-phases', `内嵌 ${(a.phases || []).length} / live ${(appData.phases || []).length}`, (a.phases || []).length === (appData.phases || []).length],
     ['07-priorities', `内嵌 ${au} / live ${pu}`, au === pu],
-    ['08-pitfalls', `内嵌 ${gA + gD} (锚${gA}+裁${gD}🟡) / live ${lA + lD} (锚${lA}+裁${lD}🟡)`, (gA === lA && gD === lD)],
+    ['08-pitfalls', `内嵌 ${(a.pitfalls || []).length} / live ${(appData.pitfalls || []).length}`, (a.pitfalls || []).length === (appData.pitfalls || []).length],
   ];
   return `
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
@@ -1453,7 +1492,7 @@ function openPitfallDrawer(idx) {
       <h3>1. 定级</h3>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;">
         ${sevBadge}
-        ${(x.kind === 'discretion') ? '<span class="badge badge-candidate">裁量黄永不进绿</span>' : '<span class="badge badge-verified">锚定绿</span>'}
+        ${((x.kind === 'discretion') ? '<span class="badge badge-candidate">裁量黄永不进绿</span>' : ((x.kind === 'anchor') ? '<span class="badge badge-verified">锚定绿</span>' : ''))}
         <span class="badge-count-pill">${(x.quotes || []).length} 引用</span>
         ${(x.anchors && x.anchors.length) ? `<span style="font-size:11px;color:var(--muted);">${x.anchors.map(a => `⚓${a}`).join(' · ')}</span>` : ''}
       </div>
@@ -1462,7 +1501,7 @@ function openPitfallDrawer(idx) {
     <div class="drawer-section">
       <h3>2. 成因与躲法</h3>
       <div style="font-size:12px;line-height:1.8;">
-        <div><strong>类型:</strong> ${(x.kind || '')}${(x.anchors && x.anchors.length) ? ' · 锚 ' + x.anchors.join('/') : ''}${(x.reason) ? ' · <span style="background:#fffbeb;border:1px solid #f59e0b;border-radius:4px;padding:0 4px;">' + x.reason + '</span>' : ''}${(x.inferred === true) ? ' · inferred:true' : ''}</div>
+        <div><strong>分组依据:</strong> ${(x.reason) ? '<span style="background:#fffbeb;border:1px solid #f59e0b;border-radius:4px;padding:0 4px;">' + x.reason + '</span>' : ''}${(x.kind) ? ' · 类型:' + x.kind : ''}${(x.anchors && x.anchors.length) ? ' · 锚 ' + x.anchors.join('/') : ''}${(x.inferred === true) ? ' · inferred:true' : ''}</div>
         <div><strong>为什么翻车:</strong> ${x.why || ''}</div>
         <div><strong>怎么躲:</strong> ${x.how_to_avoid || ''}</div>
       </div>
@@ -1478,34 +1517,34 @@ function openPitfallDrawer(idx) {
   showDrawer();
 }
 
-// 召回与合并证据: 种子链(merge口径) + 锚逐字行(锚定条, 相对种子) / 黄盒(裁量条)
+// 发现与合并证据 (#64: discovery+wording; 旧链 signals/anchors 兼容显示，有则展无则不展)
 function recallEvidenceSectionHtml(x) {
   const byQ = {};
-  (appData.candidates08 || []).forEach(c => { byQ[c.quote] = c; });
+  (appData.candidates08 || []).forEach(c => {
+    if (c.quote) { byQ[c.quote] = c; }
+    else { ((c.seeds || []).concat(c.extra || [])).forEach(q => { byQ[q] = c; }); }
+  });
   const qs = x.quotes || [];
   const seeds = (x.seeds && x.seeds.length) ? x.seeds : qs;
   const extra = x.extra || [];
-  const sigAgg = {};
-  seeds.forEach(q => {
-    const c = byQ[q];
-    if (c) ((c.signals || []).forEach(s => { sigAgg[s] = (sigAgg[s] || 0) + 1; }));
-  });
-  const pills = Object.entries(sigAgg).sort((a, b) => b[1] - a[1]).map(entry => '<span class="badge-count-pill">' + entry[0] + '×' + entry[1] + '</span>').join(' ');
+  const hasOld = (x.anchors && x.anchors.length) || (x.kind === 'discretion' || x.kind === 'anchor');
   let mid = '';
-  if ((x.kind || 'anchor') !== 'discretion') {
+  if (hasOld && (x.kind || 'anchor') !== 'discretion') {
     const aks = x.anchors || [];
     const rows = aks.map(ak => {
       const n = seeds.filter(q => q.toLowerCase().includes(String(ak).toLowerCase())).length;
-      return '<div style="font-size:12px;">⚓ <strong>' + ak + '</strong> <span style="color:var(--muted);">— ' + n + '/' + seeds.length + '种子句含锚逐字（扩展句不抬锚）</span></div>';
+      return '<div style="font-size:12px;">⚓ <strong>' + ak + '</strong> <span style="color:var(--muted);">— ' + n + '/' + seeds.length + '种子句含锚逐字（旧链兼容）</span></div>';
     }).join('');
     mid = rows + '<div style="font-size:12px;margin-top:4px;"><strong>分组依据:</strong> ' + (x.reason || '') + '</div>';
+  } else if (hasOld) {
+    const seedLine = seeds.length ? '<div style="font-size:12px;margin-bottom:4px;">另链种子 ' + seeds.length + '句（旧链裁量兼容）</div>' : '';
+    mid = '<div style="background:#fffbeb;border:1px solid #fde68c;border-radius:6px;padding:8px 10px;font-size:12px;margin-bottom:6px;">⚠️ 旧链裁量兼容显示</div>' + seedLine
+      + '<div style="font-size:12px;line-height:1.8;"><div><strong>代表原话:</strong> “' + (x.quote || (qs[0] || '')) + '”</div><div><strong>为什么算坑:</strong> ' + (x.reason || '') + '</div></div>';
   } else {
-    const seedLine = seeds.length ? '<div style="font-size:12px;margin-bottom:4px;">另链种子 ' + seeds.length + '句（代价证据，非锚）</div>' : '';
-    mid = '<div style="background:#fffbeb;border:1px solid #fde68c;border-radius:6px;padding:8px 10px;font-size:12px;margin-bottom:6px;">⚠️ 裁量判断，无警告锚定 — 待人点，永不进绿</div>' + seedLine
-      + '<div style="font-size:12px;line-height:1.8;"><div><strong>代表原话:</strong> “' + (x.quote || (qs[0] || '')) + '”</div><div><strong>为什么算坑:</strong> ' + (x.reason || '') + '</div><div><strong>inferred:</strong> ' + (x.inferred === true ? 'true (判断)' : String(x.inferred)) + '</div></div>';
+    mid = '<div style="font-size:12px;margin-top:4px;"><strong>分组依据:</strong> ' + (x.reason || '') + '（来源 discovery + wording，severity 绝对档）</div>';
   }
-  return '<div class="drawer-section"><h3>3. 召回与合并证据</h3>'
-    + '<div style="font-size:12px;margin-bottom:6px;">种子 ' + seeds.length + '句（链回seed✓） + 扩展 ' + extra.length + '句（主题续接，见分组依据） = ' + qs.length + '引 · 警告标记 ' + (pills || '—') + '</div>'
+  return '<div class="drawer-section"><h3>3. 发现与合并证据</h3>'
+    + '<div style="font-size:12px;margin-bottom:6px;">种子 ' + seeds.length + '句 + 扩展 ' + extra.length + '句 = ' + qs.length + '引</div>'
     + mid + '</div>';
 }
 

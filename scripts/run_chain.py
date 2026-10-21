@@ -17,7 +17,7 @@ Deterministic-first + No silent fallback:
 - 子 agent 调用 (沿 #35 SDK 调研结论):
   - Python 起 RPC 子进程一步一起 (--no-session), spawn cwd 锁到 G:/brotato-work/<slug>/<variant>/,
     最小工具集 (read,write,bash), 只喂本步子 prompt 全文 (prompts/step06-phases-fewshot.md /
-    prompts/step08-pitfalls.md), 不喂旧 SOP 全文、不跨步.
+    prompts/step08-pitfalls-fewshot.md), 不喂旧 SOP 全文、不跨步.
   - 主脚本只做 cwd 锁 + 必要文件已在位校验 + sha 校验 + 重试计数 + fail loud;
     子 prompt 只写本步 SOP + 只读写相对路径, 不给重试/预算语.
 - 验收: cyborg/ultimate 用新 orchestrator 从零重跑一次 (旧 G 目录先备份再清),
@@ -52,7 +52,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 # 复用确定性代码 (不改锚规则与 schema, 只接线):
 # - run_segment1: ensure_inputs + step01..step05
-# - run_segment2: step06 (segmentation/wording #63) + _recall_08/_load_wordings_08/step08 + step07/step09
+# - run_segment2: step06 (segmentation/wording #63) + step08 (discovery/wording #64) + step07/step09
 # - fetch_inputs: Step00 取证
 # - check_segment1/check_segment2: 双 check
 
@@ -488,45 +488,20 @@ def run_06(workdir: Path, sentences: list[dict], force: set[str],
     return phases
 
 
-def run_08(workdir: Path, sentences: list[dict], force: set[str],
+def run_08(workdir: Path, sentences: list[dict], grouping, force: set[str],
            timeout: float = LIVENESS_TIMEOUT) -> list[dict]:
-    """08-pitfalls: recall 代码 -> 真 agent 写 wordings -> merge 代码 (两跳召回 + 种子链)."""
-    from run_segment2 import _recall_08
-    # recall (代码, 确定性)
-    c_path = workdir / "steps" / "08-pitfalls" / "candidates.json"
-    if not should_force("08-recall", force) and _load_json(c_path):
-        print("[chain] 08-recall SKIP (复用已绿)")
-    else:
-        cands = _recall_08(workdir, sentences)
-        print(f"[chain] 08-recall DONE: 种子池={len(cands)} -> steps/08-pitfalls/candidates.json")
-    # wordings (真 agent, 禁手写)
-    w_path = workdir / "steps" / "08-pitfalls" / "wordings.json"
-    w_rel = "steps/08-pitfalls/wordings.json"
-    w_log = "steps/08-pitfalls/agent.log"
-
-    def _validate_08() -> None:
-        from run_segment2 import _load_wordings_08 as _lw8
-        _lw8(workdir)
-
-    if not should_force("08-wordings", force):
-        try:
-            from run_segment2 import _load_wordings_08 as _lw8
-            _lw8(workdir)
-            print("[chain] 08-wordings SKIP (复用已绿, 真子进程既往产物)")
-        except SystemExit:
-            print("[chain] 08-wordings 缺件/格式红 -> 真子 agent 调起 (不手写)")
-            spawn_step_agent(workdir, "prompts/step08-pitfalls.md", w_rel, w_log,
-                             timeout=timeout, validator=_validate_08)
-            print(f"[chain] 08-wordings DONE (真子进程落盘, 日志见 {w_log})")
-    else:
-        if w_path.exists():
-            w_path.unlink()
-        spawn_step_agent(workdir, "prompts/step08-pitfalls.md", w_rel, w_log,
-                         timeout=timeout, validator=_validate_08)
-        print(f"[chain] 08-wordings DONE (强制真调, 日志见 {w_log})")
+    """08-pitfalls (#64: frozen fewshot + discovery/wording 两段 agent; 码召回已退役)."""
     from run_segment2 import step08 as _step08
-    pitfalls = _step08(workdir, sentences)
-    print(f"[chain] 08-merge DONE: {len(pitfalls)} 条 -> steps/08-pitfalls/pitfalls.json")
+    force08 = should_force("08", force) or should_force("08-wordings", force) or should_force("08-recall", force)
+    p_ok = (workdir / "steps" / "08-pitfalls" / "pitfalls.json").exists()
+    c_ok = (workdir / "steps" / "08-pitfalls" / "candidates.json").exists()
+    w_ok = (workdir / "steps" / "08-pitfalls" / "wordings.json").exists()
+    f_ok = (workdir / "steps" / "08-pitfalls" / "fewshot.md").exists()
+    if not force08 and p_ok and c_ok and w_ok and f_ok:
+        print("[chain] 08-pitfalls SKIP (复用已绿)")
+        return _load_json(workdir / "steps" / "08-pitfalls" / "pitfalls.json")
+    pitfalls = _step08(workdir, sentences, grouping, force=force08, timeout=timeout, thinking="medium")
+    print(f"[chain] 08-pitfalls DONE: {len(pitfalls)} 条 (discovery+wording) -> steps/08-pitfalls/pitfalls.json")
     return pitfalls
 
 
@@ -622,7 +597,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f'cd "{workdir}" && {" ".join(build_agent_cmd())}')
         print("子 prompt (只喂本步全文, 不喂旧 SOP、不跨步):")
         print("  prompts/step06-phases-fewshot.md (FROZEN, segmentation/wording #63) -> steps/06-phases/phases.json")
-        print("  prompts/step08-pitfalls.md -> steps/08-pitfalls/wordings.json")
+        print("  prompts/step08-pitfalls-fewshot.md (FROZEN, discovery/wording #64) -> steps/08-pitfalls/pitfalls.json")
         return 0
 
     print(f"[chain] workdir={workdir} (spawn cwd 锁定, 只读写相对路径)")
@@ -632,14 +607,14 @@ def main(argv: list[str] | None = None) -> int:
     print("[chain] Step00 取证通过 (inputs 四件 + sha 对上, 只认 inputs)")
     sentences, verbs, grouping, ratings, weapons = run_01_05(workdir, force)
     phases = run_06(workdir, sentences, force, timeout=args.timeout)
-    pitfalls = run_08(workdir, sentences, force, timeout=args.timeout)
+    pitfalls = run_08(workdir, sentences, grouping, force, timeout=args.timeout)
     priorities, guide = run_07_09(workdir, sentences, grouping, ratings, weapons,
                                   phases, pitfalls, force)
     _ = (verbs, priorities, guide)
     run_checks(slug, vid, args.work_root)
     validate_audit(workdir)
     print(f"[chain] done. 产物见 {workdir}/steps + outputs; "
-          f"06/08 wordings 真子进程日志见 steps/06-phases/agent.log(.jsonl) + steps/08-pitfalls/agent.log(.jsonl)")
+          f"06/08 真子进程日志见 steps/06-phases/agent-segmentation.log.jsonl + agent-wording-*.log.jsonl + steps/08-pitfalls/agent-discovery.log.jsonl + agent-wording-*.log.jsonl")
     return 0
 
 

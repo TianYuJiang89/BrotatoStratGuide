@@ -6,7 +6,7 @@
 - 02/03 新字段: start/end/context 只读 (不进机检锚点, 但须存在)
 - 03 quotes 去重 (count 口径不动)
 - 04: 39 全量 (主 17 + 次级 22), 提过即算口径 (count>0 必 S-D, count==0 必 -)
-- 05 (#61): T1+T2 == candidates (discovery 自洽), T1>=1, note 只查非空 (意图保, 不保数字码检)
+- 05 (#61): T1+T2 == candidates (discovery 自洽), T1>=1, note 短引逐字验 (码保)
 
 Usage:
   python scripts/check_segment1.py --slug cyborg --variant ultimate
@@ -306,7 +306,9 @@ def main(argv: list[str] | None = None) -> int:
     # + ranking.json {t1[{name_en,note}],t2[]} (终判, 可推翻) + per_weapon/<Safe>.json (evidence 原始)
     # 链: ranking 名==candidates; per_weapon 每把存在+tier合法+名对上; 旧六件退役 (出现即 fail);
     # 每条 {name_en,count,tier,quotes,analysis,note,quote_details}; 旧六件退役 (出现即 fail);
-    # count==len(quotes); note 只查非空 (意图保, 不保数字码检); T1>=1; T1+T2==candidates.
+    # count==len(quotes); note 短引逐字验 (原话"..."/原话“...”须出自 quotes, 缺标记/改写即 fail); T1>=1; T1+T2==candidates.
+    import re as _re
+    _short_re = _re.compile(r'原话["“]([^"”]+)["”]')
     if not isinstance(weapon_candidates, list) or not weapon_candidates:
         fail("candidates must be non-empty array (discovery completeness)", errors)
         cand_names = []
@@ -376,9 +378,16 @@ def main(argv: list[str] | None = None) -> int:
         if len(_ana.strip()) < 4:
             fail(f"weapons analysis must be nonempty: {w.get('name_en')}", errors)
         if not w.get("note") or len(str(w.get("note")).strip()) < 2:
-            fail(f"weapons note too short (意图保, 码只查非空): {w.get('name_en')}", errors)
+            fail(f"weapons note too short: {w.get('name_en')}", errors)
         if len(str(w.get("note", ""))) > 120:
             fail(f"weapons note must be <=120: {w.get('name_en')}", errors)
+        _shorts = [s.strip() for s in _short_re.findall(str(w.get("note", ""))) if s.strip()]
+        if not _shorts:
+            fail(f"weapons note 缺短引标记 原话\"...\": {w.get('name_en')}", errors)
+        for _s in _shorts:
+            if not any(_s in _q for _q in qs if isinstance(_q, str)):
+                fail(f"weapons note 短引须逐字出自 quotes: {w.get('name_en')}", errors)
+                break
         qd = w.get("quote_details", [])
         if not isinstance(qd, list) or len(qd) != len(qs):
             fail(f"weapons quote_details must parallel quotes: {w.get('name_en')}", errors)
@@ -410,6 +419,22 @@ def main(argv: list[str] | None = None) -> int:
             for _x in (ranking.get(_t) or []):
                 if isinstance(_x, dict):
                     got_r.add(_x.get("name_en"))
+                    _rn, _rnote = _x.get("name_en"), str(_x.get("note", ""))
+                    _rs = [s.strip() for s in _short_re.findall(_rnote) if s.strip()]
+                    if not _rs:
+                        fail(f"ranking note 缺短引标记 原话\"...\": {_rn}", errors)
+                    else:
+                        _safe = re.sub(r"[^A-Za-z0-9]+", "_", str(_rn)).strip("_")
+                        _pp = work / "steps" / "05-weapons" / "per_weapon" / f"{_safe}.json"
+                        try:
+                            _pev = json.loads(_pp.read_text(encoding="utf-8"))
+                            _pqs = _pev.get("quotes", [])
+                        except Exception:
+                            _pqs = []
+                        for _s in _rs:
+                            if not any(_s in _q for _q in _pqs if isinstance(_q, str)):
+                                fail(f"ranking note 短引须逐字出自 evidence quotes: {_rn}", errors)
+                                break
         if set(cand_names) and got_r != set(cand_names):
             fail(f"ranking t1+t2 must equal candidates {sorted(cand_names)}, got {sorted(got_r)}", errors)
     # 链: per_weapon 每把存在 (Safe 名) + tier 合法 + 名对上 + quotes 非空
@@ -434,6 +459,13 @@ def main(argv: list[str] | None = None) -> int:
         for _q in _eq:
             if _q not in sent_texts:
                 fail(f"per_weapon quotes 须逐字 (扩引也逐字): {_n}", errors)
+                break
+        _eshorts = [s.strip() for s in _short_re.findall(str(_ev.get("note", ""))) if s.strip()]
+        if not _eshorts:
+            fail(f"per_weapon note 缺短引标记 原话\"...\": {_n}", errors)
+        for _s in _eshorts:
+            if not any(_s in _q for _q in _eq if isinstance(_q, str)):
+                fail(f"per_weapon note 短引须逐字出自 quotes: {_n}", errors)
                 break
     # 审计节点三元组: 每次 LLM 调用须留 log (入参 prompt 可查), 缺 log 即 fail
     _logs = [work / "steps" / "05-weapons" / "agent-discovery.log.jsonl",

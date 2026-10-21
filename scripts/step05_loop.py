@@ -22,7 +22,7 @@ Deterministic-first:
 - steps/05-weapons/weapons.json (+ outputs/weapons.json):
   {t1[], t2[]} 每条 {name_en, count, tier, quotes, analysis, note, quote_details}
   - confidence/kind/inferred/anchors/score/断层/数字词表/verified加分全退役 (出现即 fail).
-  - count==len(quotes); note 只查非空 (意图保, 码检不保数字).
+  - count==len(quotes); note 短引导逐字验 (原话"..."/原话“...”须出自 quotes, 码保, 缺标记/改写即 fail).
 """
 
 from __future__ import annotations
@@ -46,6 +46,21 @@ FEWSHOT_RANKING_REL = "prompts/step05-ranking-fewshot.md"
 VALID_TIERS = {"T1", "T2"}
 RETIRED_FIELDS = ("anchors", "confidence", "kind", "inferred", "score", "reason")
 NOTE_MAX_LEN = 120
+# note 短引标记: 原话"..."(直引号) 或 原话“...”(弯引号), 两种都认, 内容须逐字出自 quotes
+NOTE_SHORT_RE = re.compile(r'原话["“]([^"”]+)["”]')
+
+
+def _note_shorts(note: str) -> list[str]:
+    return [s.strip() for s in NOTE_SHORT_RE.findall(note or "") if s.strip()]
+
+
+def _fail_short(who: str, note: str, quotes: list[str]) -> None:
+    shorts = _note_shorts(note)
+    if not shorts:
+        _fail(f"{who} note 缺短引标记 原话\"...\" (人话须带逐字短引, 缺件即 fail)")
+    for s in shorts:
+        if not any(s in q for q in quotes):
+            _fail(f"{who} note 短引须逐字出自 quotes: {s[:60]!r} 改写/编造即 fail")
 
 
 def _fail(msg: str) -> NoReturn:
@@ -263,6 +278,7 @@ def validate_evidence(data: dict, name_en: str, sentences: list[dict]) -> dict:
         _fail(f"{name_en} evidence note 缺件即 fail")
     if len(note) > NOTE_MAX_LEN:
         _fail(f"{name_en} evidence note 须≤{NOTE_MAX_LEN}字, got {len(note)}")
+    _fail_short(f"{name_en} evidence", note, [q for q in qs if isinstance(q, str)])
     return {"name_en": name_en, "tier": data.get("tier"),
             "quotes": list(qs), "analysis": str(ana).strip(), "note": str(note).strip()}
 
@@ -308,6 +324,8 @@ def validate_ranking(data: dict, candidate_names: list[str], evidences: list[dic
                 _fail(f"ranking {name} note 缺件即 fail (意图保, 码只查非空)")
             if len(note) > NOTE_MAX_LEN:
                 _fail(f"ranking {name} note 须≤{NOTE_MAX_LEN}字, got {len(note)}")
+            _evq = ev_by.get(name, {}).get("quotes", [])
+            _fail_short(f"ranking {name}", note, [q for q in _evq if isinstance(q, str)])
             out_arr.append({"name_en": name, "note": str(note).strip()})
     if set(seen) != set(candidate_names):
         _fail(f"ranking T1+T2 须==candidates 自洽: 期望 {sorted(candidate_names)}, 实得 {sorted(seen)}")

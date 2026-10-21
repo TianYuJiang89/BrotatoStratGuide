@@ -3,8 +3,8 @@
 Seams (deterministic-first, no LLM in tests):
 - prompt building: fewshot + full sentences + vocab/one-name/N-evidence, no score/verified/fault/number logic in code
 - discovery validation: candidates non-empty/quotes verbatim/name in vocab/dedup
-- evidence validation: shape only (tier/quotes/analysis/note<=120, empty evidence fail)
-- ranking validation: T1>=1/T1+T2==candidates/self-consistency/no number cap
+- evidence validation: shape only (tier/quotes/analysis/note<=120), note 短引逐字 (原话"..."须出自 quotes)
+- ranking validation: T1>=1/T1+T2==candidates/self-consistency/no number cap, note 短引逐字 (须出自 evidence quotes)
 - count backfill by code (agent must not fill count)
 - old anchor fields retired (confidence/kind/inferred/anchors/score/reason must be absent)
 - fail loud on missing/fabricated/hallucinated (no fallback, no blank补)
@@ -167,6 +167,16 @@ def test_validate_evidence_ok_and_fail_loud():
     bad["note"] = "x" * 121
     with pytest.raises(SystemExit):
         m.validate_evidence(bad, "Minigun", sents)
+    # note无短引标记即fail (人话须带逐字短引)
+    bad = dict(good)
+    bad["note"] = "主力连发，没有引用。"
+    with pytest.raises(SystemExit):
+        m.validate_evidence(bad, "Minigun", sents)
+    # note短引改写即fail
+    bad = dict(good)
+    bad["note"] = "主力连发原话“take a third minigun”。"
+    with pytest.raises(SystemExit):
+        m.validate_evidence(bad, "Minigun", sents)
     # agent填count即fail
     bad = dict(good)
     bad["count"] = 5
@@ -237,12 +247,12 @@ def test_run_loop_with_fake_agents_cyborg_shape(tmp_path):
             return {"name_en": name_en, "tier": tier,
                     "quotes": quotes_by[name_en],
                     "analysis": f"{name_en}来源→机制→{tier}。",
-                    "note": f"{name_en}人话，原话短引。"}
+                    "note": f"{name_en}人话原话\"{quotes_by[name_en][0][:12]}\"。"}
         if kind == "ranking":
-            return {"t1": [{"name_en": "Minigun", "note": "主力，原话短引。"},
-                           {"name_en": "Screwdriver", "note": "体系，原话短引。"}],
-                    "t2": [{"name_en": "SMG", "note": "过渡，原话短引。"},
-                           {"name_en": "Nuclear Launcher", "note": "horde位，原话短引。"}]}
+            return {"t1": [{"name_en": "Minigun", "note": f"主力原话\"{quotes_by['Minigun'][0][:12]}\"。"},
+                           {"name_en": "Screwdriver", "note": f"体系原话\"{quotes_by['Screwdriver'][0][:12]}\"。"}],
+                    "t2": [{"name_en": "SMG", "note": f"过渡原话\"{quotes_by['SMG'][0][:12]}\"。"},
+                           {"name_en": "Nuclear Launcher", "note": f"horde位原话\"{quotes_by['Nuclear Launcher'][0][:12]}\"。"}]}
         raise AssertionError(f"unknown kind {kind}")
 
     # 用小词汇表 monkeypatch load_weapon_vocab

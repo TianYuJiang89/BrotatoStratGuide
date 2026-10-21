@@ -29,6 +29,16 @@ body {
 }
 a { color: var(--accent); text-decoration: none; }
 button { font-family: inherit; cursor: pointer; }
+.filelink { cursor: pointer; border-bottom: 1px dashed var(--accent); }
+.filelink:hover { background: #e0f2fe; border-radius: 4px; }
+.file-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 90; display: none; }
+.file-modal-backdrop.open { display: block; }
+.file-modal { position: fixed; z-index: 91; top: 8vh; left: 50%; transform: translateX(-50%); width: min(760px, 92vw); max-height: 84vh; display: none; flex-direction: column; background: var(--card); border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
+.file-modal.open { display: flex; }
+.file-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.file-modal-head h2 { font-size: 14px; }
+.file-modal-body { padding: 12px 16px; overflow-y: auto; font-size: 12px; }
+.file-modal-body pre { white-space: pre-wrap; word-break: break-word; background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 10px; max-height: 50vh; overflow-y: auto; font-size: 12px; }
 
 /* Top Header Bar */
 .topbar {
@@ -678,6 +688,16 @@ html { scroll-behavior: smooth; }
   </div>
 </aside>
 
+<!-- File viewer modal (05输入直达: 整句/词表/fewshot) -->
+<div class="file-modal-backdrop" id="fileModalBackdrop"></div>
+<div class="file-modal" id="fileModal" role="dialog" aria-modal="true">
+  <div class="file-modal-head">
+    <h2 id="fileModalTitle">文件查看</h2>
+    <button class="drawer-close" id="fileModalCloseBtn">✕</button>
+  </div>
+  <div class="file-modal-body" id="fileModalBody"></div>
+</div>
+
 <script>
 // App state (无mock，只读真实数据 ?base=/picker)
 let appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], phases:[], priorities:[]};
@@ -898,7 +918,7 @@ function render() {
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">
           三段 agent（#61，frozen fewshot）：discovery（fewshot发现段+全量整句→candidates，completeness归它）→ evidence×N（每把独立单agent→tier建议/quotes/analysis/note）→ ranking（通览全量整句+N份evidence→切t1/t2+note定稿，T1≥1由它保，可推翻evidence tier，切分拿quote说话禁数帽）；count=len(quotes)（码回填，agent不填）；无锚无断层（confidence/kind/inferred/anchors/score退役）；quotes去重；quote_details供 ?t= 跳链。
         </p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code>（全量整句） + 武器词汇表（78，全局唯一） + <code>prompts/step05-weapons-fewshot.md</code>（FROZEN 20-shot，不读slice/verbs，禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code class="filelink" data-fileview="sentences" title="点击查看整句内容">steps/01-sentences/sentences.json</code>（全量整句） + <code class="filelink" data-fileview="vocab" title="点击查看78武器词汇表">武器词汇表</code>（78，全局唯一） + <code class="filelink" data-fileview="fewshot" title="点击查看FROZEN 20-shot全文">prompts/step05-weapons-fewshot.md</code>（FROZEN 20-shot，不读slice/verbs，禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
         ${(()=>{ const wc=(appData.weaponCandidates||[]); if(!wc.length) return '<div style="color:#999;margin-bottom:8px;">待加载：请载入 steps/05-weapons/candidates.json（discovery completeness，缺节即 fail）。</div>'; const w0=appData.weapons||{t1:[],t2:[]}; const t1n=new Set((w0.t1||[]).map(x=>x.name_en)); const t2n=new Set((w0.t2||[]).map(x=>x.name_en)); const vurl0=(m.sources && m.sources[0] && m.sources[0].url)?m.sources[0].url:'#'; const rows=wc.map(c=>{ const q0=(c.quotes&&c.quotes[0])?c.quotes[0]:''; const d0=(c.quote_details&&c.quote_details[0])?c.quote_details[0]:null; const tlink=(d0&&d0.t!=null)?`<a href="${vurl0}${vurl0.includes('?')?'&':'?'}t=${d0.t}s" target="_blank">⏱${d0.start||('t='+d0.t)}</a>`:''; const tag=t1n.has(c.name_en)?'<span class="badge badge-verified">→T1</span>':(t2n.has(c.name_en)?'<span class="badge badge-candidate">→T2</span>':'<span class="badge">未切分</span>'); return `<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;border-bottom:1px dashed var(--line);font-size:12px;"><span style="font-weight:700;">${c.name_en}</span><span class="badge-count-pill">${c.count}条</span>${tag}<span style="flex:1;color:#555;">“${q0}” ${tlink}</span></div>`; }).join(''); return `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;margin-bottom:10px;"><div style="font-size:12px;font-weight:700;margin-bottom:6px;">Discovery candidates（completeness 归 discovery，scan 已退役） <span style="color:var(--muted);font-weight:normal;">${wc.length}把 → T1:${(w0.t1||[]).length} + T2:${(w0.t2||[]).length}</span></div>${rows}<details><summary style="font-size:12px;cursor:pointer;color:var(--accent);">展开每把全部 quotes（点⏱跳原文看 context）</summary><div style="margin-top:6px;">${wc.map(c=>`<div style="font-size:12px;margin:4px 0;"><b>${c.name_en}</b>（${c.count}条）：${(c.quotes||[]).map(q=>`“${q}”`).join(' / ')}</div>`).join('')}</div></details></div>`; })()}
         ${(()=>{ const w = appData.weapons || {t1:[],t2:[]}; const all=[...(w.t1||[]),...(w.t2||[])]; if(!all.length) return '<div style="color:#999;">待加载：请载入 steps/05-weapons/weapons.json（+ candidates.json）。</div>'; const vurl=(m.sources && m.sources[0] && m.sources[0].url)?m.sources[0].url:'#'; const wc=(appData.weaponCandidates||[]); const wcNames=wc.map(c=>c.name_en).join('/'); return ['T1','T2'].map(tier=>{
           const arr = (tier==='T1'? w.t1 : w.t2) || [];
@@ -1676,6 +1696,70 @@ function closeDrawer() {
 document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer);
 document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
 
+// File viewer modal (05输入直达: data-fileview 点击弹窗, 与抽屉独立)
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+// 武器词汇表 78 (全局唯一, 与 data/wiki-cache.json weapons 键一致, 内嵌保证离线可看)
+const WEAPON_VOCAB_78 = ['Anchor', 'Blunderbuss', 'Brick', 'Cacti Club', "Captain's Sword", 'Chain Gun', 'Chainsaw', 'Chopper', 'Circular Saw', 'Claw', 'Crossbow', 'DEX-troyer', 'Double Barrel Shotgun', 'Drill', 'Excalibur', 'Fireball', 'Fist', 'Flamethrower', 'Flaming Brass Knuckles', 'Flute', 'Gatling Laser', 'Ghost Axe', 'Ghost Flint', 'Ghost Scepter', 'Grenade Launcher', 'Hammer', 'Hand', 'Harpoon Gun', 'Hatchet', 'Hiking Pole', 'Icicle', 'Javelin', 'Jousting Lance', 'Knife', 'Laser Gun', 'Lightning Shiv', 'Lute', 'Mace', 'Medical Gun', 'Minigun', 'Nuclear Launcher', 'Obliterator', 'Particle Accelerator', 'Pistol', 'Plank', 'Plasma Sledge', 'Potato Thrower', 'Power Fist', 'Pruner', 'Quarterstaff', 'Railgun', 'Revolver', 'Rock', 'Rocket Launcher', 'SMG', 'Scissors', 'Screwdriver', 'Scythe', 'Sharp Tooth', 'Shredder', 'Shuriken', 'Sickle', 'Slingshot', 'Sniper Gun', 'Spear', 'Spiky Shield', 'Spoon', 'Stick', 'Sword', 'Taser', 'Thief Dagger', 'Thunder Sword', 'Torch', 'Trident', 'Vorpal Sword', 'Wand', 'War Hammer', 'Wrench'];
+function openFileModal(title, bodyHtml) {
+  document.getElementById('fileModalTitle').textContent = title;
+  document.getElementById('fileModalBody').innerHTML = bodyHtml;
+  document.getElementById('fileModalBackdrop').classList.add('open');
+  document.getElementById('fileModal').classList.add('open');
+}
+function closeFileModal() {
+  document.getElementById('fileModalBackdrop').classList.remove('open');
+  document.getElementById('fileModal').classList.remove('open');
+}
+document.getElementById('fileModalBackdrop').addEventListener('click', closeFileModal);
+document.getElementById('fileModalCloseBtn').addEventListener('click', closeFileModal);
+function fileModalSentences() {
+  const ss = appData.sentences || [];
+  if (!ss.length) return '<div style="color:#999;">未载入：请先经 picker/?base= 载入 steps/01-sentences/sentences.json。</div>';
+  const t0 = ss[0] || {};
+  const t1 = ss[ss.length - 1] || {};
+  const sample = ss.slice(0, 10).map(s => {
+    const jump = (s.id != null) ? ` <a href="#sent-${s.id}" data-jump-sent="${s.id}" title="跳到01节看 context">📍句#${s.id}</a>` : '';
+    return `<div style="padding:3px 0;border-bottom:1px dashed var(--line);">#${s.id} [${escHtml(s.start || '')}→${escHtml(s.end || '')}] ${escHtml(s.text)}${jump}</div>`;
+  }).join('');
+  return `<div style="margin-bottom:8px;">共 <b>${ss.length}</b> 句整句（discovery 全量输入，不截断） · 起 ${escHtml(t0.start || '')} / 止 ${escHtml(t1.end || '')} · <a href="#audit-01-sentences">跳到01节看全文</a></div>`
+    + `<div style="background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;">${sample}<div style="color:var(--muted);margin-top:4px;">… 仅展示前 10 句，全量见 01 节或 candidates.json 逐条 quote。</div></div>`
+    + `<details><summary style="cursor:pointer;color:var(--accent);">展开全部 ${ss.length} 句 JSON</summary><pre>${escHtml(JSON.stringify(ss, null, 1))}</pre></details>`;
+}
+function fileModalVocab() {
+  const picked = new Set((appData.weaponCandidates || []).map(c => c.name_en));
+  const rows = WEAPON_VOCAB_78.map(n => {
+    const hit = picked.has(n) ? ' <span class="badge badge-verified" title="被 discovery 收录">收</span>' : ' <span style="color:#ccc;">路过</span>';
+    return `<span style="display:inline-block;margin:2px 4px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;">${escHtml(n)}${hit}</span>`;
+  }).join('');
+  return `<div style="margin-bottom:8px;">武器词汇表 <b>78</b>（全局唯一，discovery 名在表即验此表；<span class="badge badge-verified">收</span>=本变体 candidates 收录，灰色=本变体路过丢弃）</div><div>${rows}</div>`;
+}
+async function fileModalFewshot() {
+  openFileModal('prompts/step05-weapons-fewshot.md（FROZEN 20-shot）', '<div style="color:#999;">读取中…</div>');
+  const urls = ['../prompts/step05-weapons-fewshot.md', 'prompts/step05-weapons-fewshot.md'];
+  for (const u of urls) {
+    try {
+      const r = await fetch(u);
+      if (r.ok) {
+        const t = await r.text();
+        document.getElementById('fileModalBody').innerHTML = `<div style="margin-bottom:8px;color:var(--muted);">FROZEN 全文（${t.length} 字，discovery/evidence/ranking 三段任务契约以此为准）</div><pre>${escHtml(t)}</pre>`;
+        return;
+      }
+    } catch (e) { /* 试下一个路径 */ }
+  }
+  document.getElementById('fileModalBody').innerHTML = '<div style="color:#999;">读不到（file:// 或工作区 picker 模式下够不到 repo）。请直接打开 repo 内 <code>prompts/step05-weapons-fewshot.md</code> 看 FROZEN 20-shot 全文。</div>';
+}
+document.addEventListener('click', (e) => {
+  const link = e.target && e.target.closest ? e.target.closest('[data-fileview]') : null;
+  if (!link) return;
+  e.preventDefault();
+  const kind = link.dataset.fileview;
+  if (kind === 'sentences') openFileModal(`steps/01-sentences/sentences.json（全量整句，${(appData.sentences || []).length}句）`, fileModalSentences());
+  else if (kind === 'vocab') openFileModal('武器词汇表（78，全局唯一）', fileModalVocab());
+  else if (kind === 'fewshot') fileModalFewshot();
+});
+
 // 抽屉内“📍句#n”: 关抽屉并滚动到 01-sentences 对应行 + 高亮
 // (data-jump-sent 全局委托, 抽屉内容每次重绘无需重绑)
 document.addEventListener('click', (e) => {
@@ -1980,7 +2064,7 @@ function setupFilterListeners() {
   });
 
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeDrawer();
+    if (e.key === 'Escape') { closeDrawer(); closeFileModal(); }
   });
 }
 

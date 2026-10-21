@@ -314,3 +314,7 @@ def test_audit_05_shows_analysis_not_anchors():
     # discovery 结果必须有独立展示块（不止来源行），与 08 种子漏斗同级
     assert "Discovery candidates" in html, "audit 05节须独立展示discovery candidates（completeness可验）"
     assert "steps/05-weapons/candidates.json" in html
+    # 05 输入直达：三项可点击 + modal 弹窗展示内容
+    for marker in ('data-fileview="sentences"', 'data-fileview="vocab"',
+                   'data-fileview="fewshot"', 'id="fileModal"', 'WEAPON_VOCAB_78'):
+        assert marker in html, f"audit 05输入须可点击直达modal ({marker})"

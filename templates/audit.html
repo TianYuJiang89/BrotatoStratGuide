@@ -945,9 +945,7 @@ function render() {
           </div>
           <span class="badge badge-verified">check_07 对应节</span>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step07-priorities.md + <code>steps/07-priorities/priorities.json</code>；07 须段1绿后才开。</p>
-        ${(()=>{ const rk7=(appData.ranking07||null); if(!rk7) return ''; const lp=(f)=>`<a href="#" data-stepfile="${f}" data-kind="prompt">${f.split('/').pop()}</a>`; const lr=(f,k)=>`<a href="#" data-stepfile="${f}" data-kind="result" data-rkey="${k}">${f.split('/').pop()}</a>`; const sl=`<a href="#" data-fileview="sentences">sentences.json</a>`; const fl7=`<a href="#" data-stepfile="steps/07-priorities/fewshot.md" data-kind="result" data-rkey="fewshot07">steps/07-priorities/fewshot.md</a>`; const blk=(t,a,b,c)=>`<div style="padding:6px 0;border-bottom:1px dashed var(--line);font-size:12px;"><div><span class="dyn">${t}</span></div><div style="margin-left:12px;">入参：${a}</div><div style="margin-left:12px;">prompt：${b}</div><div style="margin-left:12px;">结果：${c}</div></div>`; return `<div style="margin-bottom:10px;">${blk('R priority-ranking', `${sl} + grouping + ratings + weapons + phases + ${fl7}`, lp('steps/07-priorities/agent-ranking.log.jsonl'), `${lr('steps/07-priorities/ranking.json','ranking07')} → ${lr('steps/07-priorities/priorities.json','priorities')}（终稿）`)}</div>`; })()}
-        ${prioritiesSectionHtml()}
+        ${(()=>{ const rk7=(appData.ranking07||null); if(!rk7) return '<div style="color:#999;">待加载：请载入 steps/07-priorities/ranking.json（缺节即 fail）。</div>'; const lp=(f)=>`<a href="#" data-stepfile="${f}" data-kind="prompt">${f.split('/').pop()}</a>`; const lr=(f,k)=>`<a href="#" data-stepfile="${f}" data-kind="result" data-rkey="${k}">${f.split('/').pop()}</a>`; const sl=`<a href="#" data-fileview="sentences">sentences.json</a>`; const fl7=`<a href="#" data-stepfile="steps/07-priorities/fewshot.md" data-kind="result" data-rkey="fewshot07">steps/07-priorities/fewshot.md</a>`; const blk=(t,a,b,c)=>`<div style="padding:6px 0;border-bottom:1px dashed var(--line);font-size:12px;"><div><span class="dyn">${t}</span></div><div style="margin-left:12px;">入参：${a}</div><div style="margin-left:12px;">prompt：${b}</div><div style="margin-left:12px;">结果：${c}</div></div>`; return `<div style="margin-bottom:10px;">${blk('R priority-ranking', `${sl} + grouping + ratings + weapons + phases + ${fl7}`, lp('steps/07-priorities/agent-ranking.log.jsonl'), `${lr('steps/07-priorities/ranking.json','ranking07')} → ${lr('steps/07-priorities/priorities.json','priorities')}（终稿）`)}</div>`; })()}
       </div>
     </div>
 
@@ -1126,30 +1124,6 @@ function pitfallsSectionHtml() {
     </div>`;
 }
 
-function prioritiesSectionHtml() {
-  const pr = appData.priorities || {};
-  const ups = pr.upgrades || [];
-  const shs = pr.shop || [];
-  if (!ups.length && !shs.length) return '<div style="color:#999;">待加载：请载入 steps/07-priorities/priorities.json（缺节即 fail）。</div>';
-  const card = (u, idx, kind) => `
-      <div class="item-card" data-priority="${kind}:${idx}" style="cursor:pointer;">
-        <div class="item-card-top">
-          <div class="item-card-name"><span>${kind === 'upgrades' ? 'U'+(idx+1) : 'S'+(idx+1)} · ${u.name}</span><span class="item-card-zh">${u.kind || ''}</span></div>
-          <div><span class="badge-count-pill">${(u.quotes||[]).length} 引用</span></div>
-        </div>
-        <div class="item-card-reason"><strong>为什么拿:</strong> ${u.why || ''}</div>
-        <div style="font-size:12px;margin-top:2px;"><strong>怎么拿:</strong> ${u.how_to_get || ''}</div>
-        ${(u.analysis) ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;"><strong>分析:</strong> ${u.analysis}</div>` : ''}
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${inheritLineHtml(kind, u.name)}</div>
-        ${(u.quotes && u.quotes.length) ? `<div class="item-card-quote">“${u.quotes[0]}”</div>` : ''}
-      </div>`;
-  return `
-    <div style="font-size:12px;font-weight:700;margin:6px 0 4px;">⬆️ 升级 TopN（agent 定，依赖 04 ratings + 05/06）</div>
-    <div style="display:flex;flex-direction:column;gap:8px;">${ups.map((u, i) => card(u, i, 'upgrades')).join('')}</div>
-    <div style="font-size:12px;font-weight:700;margin:8px 0 4px;">🛒 商店 TopN（agent 定，来源 03 candidates + ranking，ban 永不出局）</div>
-    <div style="display:flex;flex-direction:column;gap:8px;">${shs.map((u, i) => card(u, i, 'shop')).join('')}</div>`;
-}
-
 function assembleSectionHtml() {
   const a = appData.assemble;
   if (!(a && a.sha)) return '<div style="color:#999;">待加载：请载入 steps/09-assemble/guide.json（缺节即 fail）。</div>';
@@ -1183,39 +1157,6 @@ function assembleSectionHtml() {
         <span>${ok ? '✅ 一致' : '❌ 数量不一致'}</span>
       </div>`).join('')}
     </div>`;
-}
-
-// 07继承自上游结果 (非自创, #49/#50): 升级←04 S/A 断层TopN (与商店侧同一刀法), 商店←新03 must_take+verified 断层TopN+通用顺延 (与 run_segment2 口径一致, 不点名)
-function inheritLineHtml(kind, name) {
-  const key = (name || '').toLowerCase();
-  if (kind === 'shop') {
-    const cands = (appData.items || []).filter(x => x.group === 'must_take').sort((a, b) => b.count - a.count);
-    const i = cands.findIndex(x => (x.name_en || '').toLowerCase() === key);
-    const g = i >= 0 ? cands[i] : (appData.items || []).find(x => (x.name_en || '').toLowerCase() === key);
-    if (!g) return '';
-    return `继承自 03 · must_take${i >= 0 ? ' #' + (i + 1) : ''} · ${g.count}次`;
-  }
-  const r = (appData.ratings || []).find(x => (x.term_en || '').toLowerCase() === key);
-  if (!r) return '';
-  return `继承自 04 · ${r.rating || ''}级 · ${r.count}次`;
-}
-
-// 07依赖来源穿透: 04 ratings / 05 weapons / 03 grouping 同名 + 06 phases 文本提及
-function priorityDepHtml(name) {
-  const key = (name || '').toLowerCase();
-  const r = (appData.ratings || []).find(x => (x.term_en || '').toLowerCase() === key);
-  const allw = [...(((appData.weapons || {}).t1) || []), ...(((appData.weapons || {}).t2) || [])];
-  const w0 = allw.find(x => (x.name_en || '').toLowerCase() === key);
-  const g = (appData.items || []).find(x => (x.name_en || '').toLowerCase() === key);
-  const phs = (appData.phases || []).map((p, i) => ({ p, i })).filter(({ p }) => ((p.goal || '') + ' ' + (p.focus || '') + ' ' + (p.pivot || '') + ' ' + (p.quotes || []).join(' ')).toLowerCase().includes(key));
-  const row = (dep, label, sub) => `<div class="dep-row" data-dep="${dep}" title="点开展示来源抽屉"><strong>${label}</strong><span style="color:var(--muted);">${sub}</span></div>`;
-  const rows = [];
-  if (r) rows.push(row(`rating:${r.term_en}`, `04 · ${r.term_en}`, `${r.term_zh || ''} · ${r.rating || ''} · ${r.count}次 → 点开展示04抽屉`));
-  if (w0) rows.push(row(`weapon:${w0.name_en}`, `05 · ${w0.name_en}`, `${w0.tier || ''} · ${w0.count}次 → 点开展示05抽屉`));
-  if (g) rows.push(row(`group:${g.name_en}`, `03 · ${g.name_en}`, `${g.group || ''} · ${g.count}次 → 点开展示03抽屉`));
-  phs.forEach(({ p, i }) => rows.push(row(`phase:${i}`, `06 · ${p.phase}`, `${p.waves || ''} 阶段提及 → 点开展示06抽屉`)));
-  if (!rows.length) return '<div style="color:var(--muted);">未在04/05/03/06中找到同名输入（以收录为准）</div>';
-  return `<div style="display:flex;flex-direction:column;gap:6px;">${rows.join('')}</div>`;
 }
 
 // Drawer Interactions
@@ -1276,13 +1217,6 @@ function bindItemCardClicks() {
     el.addEventListener('click', (e) => {
       if (e.target.closest('a')) return;
       openPitfallDrawer(+el.dataset.pitfall);
-    });
-  });
-  document.querySelectorAll('[data-priority]').forEach(el => {
-    el.addEventListener('click', (e) => {
-      if (e.target.closest('a')) return;
-      const parts = (el.dataset.priority || '').split(':');
-      if (parts.length === 2) openPriorityDrawer(parts[0], +parts[1]);
     });
   });
 }
@@ -1541,44 +1475,6 @@ function openPitfallDrawer(idx) {
     <div class="drawer-section">
       <h3>4. 引用原文 (?t= 跳链 + 📍句 跳原文句 + 全量前后句)</h3>
       ${quotesSectionHtml(x.quotes, x.quote_details)}
-    </div>
-  `;
-  showDrawer();
-}
-
-// Step 07 priority detail: 排名拿法 + 为什么拿 + 依赖来源穿透 + 引用原文
-function openPriorityDrawer(kind, idx) {
-  const pr = appData.priorities || {};
-  const list = (kind === 'shop') ? (pr.shop || []) : (pr.upgrades || []);
-  const u = list[idx];
-  if (!u) return;
-  state.selectedItem = u;
-  const rank = (kind === 'shop' ? 'S' : 'U') + (idx + 1);
-  document.getElementById('drawerItemName').innerHTML = `${rank} · ${u.name} <span style="font-weight:normal;font-size:13px;color:var(--muted);">(steps/07-priorities · ${kind === 'shop' ? '商店' : '升级'})</span>`;
-  document.getElementById('drawerContent').innerHTML = `
-    <div class="drawer-section">
-      <h3>1. 排名与拿法</h3>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;margin-bottom:6px;">
-        <span class="badge-count-pill">${kind === 'shop' ? '商店 Top' + (idx + 1) : '升级 Top' + (idx + 1)}</span>
-        <span class="badge-count-pill">${(u.quotes || []).length} 引用</span>
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">${inheritLineHtml(kind, u.name)}</div>
-      <div style="font-size:12px;line-height:1.8;"><strong>怎么拿:</strong> ${u.how_to_get || ''}</div>
-    </div>
-
-    <div class="drawer-section">
-      <h3>2. 为什么拿</h3>
-      <div style="font-size:12px;line-height:1.5;">${u.why || ''}</div>
-    </div>
-
-    <div class="drawer-section">
-      <h3>3. 依赖来源穿透 (点行跳对应来源抽屉)</h3>
-      ${priorityDepHtml(u.name)}
-    </div>
-
-    <div class="drawer-section">
-      <h3>4. 引用原文 (?t= 跳链 + 📍句 跳原文句 + 全量前后句)</h3>
-      ${quotesSectionHtml(u.quotes, u.quote_details)}
     </div>
   `;
   showDrawer();

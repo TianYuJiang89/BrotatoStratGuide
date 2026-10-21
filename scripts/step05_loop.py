@@ -2,7 +2,7 @@
 """Step05 three-agent loop (#61): frozen fewshot + discovery/evidence/ranking.
 
 Deterministic-first:
-- 固定代码只做: prompt 组装 (fewshot + 全量整句 + 词汇表/一名/N份evidence) / 输出形状校验 /
+- 固定代码只做: prompt 组装 (任务手册 + 全量整句 + 词汇表/一名/N份evidence) / 输出形状校验 /
   count 回填 (=len(quotes), agent 不填) / quote_details 重建 (sentences lookup, 不信 agent) /
   名在表 (武器词汇表78, 幻觉即 fail) / 去重 / T1+T2==candidates 自洽 / 落盘
   (candidates.json + weapons.json + per_weapon/* + 日志).
@@ -12,7 +12,7 @@ Deterministic-first:
 - 缺件/编 quote/幻觉名即 fail loud, 不回落不补空.
 
 输入:
-- fewshot: prompts/step05-weapons-fewshot.md (FROZEN, 20-shot)
+- fewshot: prompts/step05-{discovery,evidence,ranking}-fewshot.md (FROZEN v2, 按任务拆三本, 各贴各的)
 - sentences: steps/01-sentences/sentences.json ([{id,text[,start,end],start_s,end_s,t}])
 - vocab: data/wiki-cache.json weapons 78 (全局唯一, 不读 registry-slice, 不读 02-verbs)
 
@@ -40,7 +40,9 @@ from typing import NoReturn
 
 REPO = Path(__file__).resolve().parent.parent
 
-FEWSHOT_REL = "prompts/step05-weapons-fewshot.md"
+FEWSHOT_DISCOVERY_REL = "prompts/step05-discovery-fewshot.md"
+FEWSHOT_EVIDENCE_REL = "prompts/step05-evidence-fewshot.md"
+FEWSHOT_RANKING_REL = "prompts/step05-ranking-fewshot.md"
 VALID_TIERS = {"T1", "T2"}
 RETIRED_FIELDS = ("anchors", "confidence", "kind", "inferred", "score", "reason")
 NOTE_MAX_LEN = 120
@@ -50,13 +52,13 @@ def _fail(msg: str) -> NoReturn:
     raise SystemExit(f"step05-loop FAIL: {msg}")
 
 
-def load_fewshot() -> str:
-    p = REPO / FEWSHOT_REL
+def load_fewshot(rel: str) -> str:
+    p = REPO / rel
     if not p.exists():
-        _fail(f"missing {FEWSHOT_REL} (frozen fewshot 缺件即 fail, 不回落)")
+        _fail(f"missing {rel} (frozen fewshot 缺件即 fail, 不回落)")
     txt = p.read_text(encoding="utf-8")
     if "FROZEN" not in txt:
-        _fail(f"{FEWSHOT_REL} 缺 FROZEN 头 (freeze 完整性 fail)")
+        _fail(f"{rel} 缺 FROZEN 头 (freeze 完整性 fail)")
     return txt
 
 
@@ -524,18 +526,26 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
       测试请传 (kind, name, prompt) 三参; 若传二参函数, 按 evidence 处理会 fail loud.
     """
     vocab = load_weapon_vocab()
-    fewshot = load_fewshot()
+    fewshot_d = load_fewshot(FEWSHOT_DISCOVERY_REL)
+    fewshot_e = load_fewshot(FEWSHOT_EVIDENCE_REL)
+    fewshot_r = load_fewshot(FEWSHOT_RANKING_REL)
     outdir = workdir / "steps" / "05-weapons"
     per_dir = outdir / "per_weapon"
     outdir.mkdir(parents=True, exist_ok=True)
     per_dir.mkdir(parents=True, exist_ok=True)
     # fewshot 快照进工作区 (#61跟进: 审计只读工作区约定路径, file:///picker/?base= 全通;
-    # 快照与 repo FROZEN 文件逐字节一致, check 验相等, 即本次运行 provenance)
-    (outdir / "fewshot.md").write_text(fewshot, encoding="utf-8")
+    # 快照与 repo FROZEN 文件逐字节一致, check 验相等, 即本次运行 provenance;
+    # Windows write_text 默认 \n→\r\n, 必须显式 newline="\n" 否则逐字节永对不上)
+    (outdir / "fewshot-discovery.md").write_text(fewshot_d, encoding="utf-8", newline="\n")
+    (outdir / "fewshot-evidence.md").write_text(fewshot_e, encoding="utf-8", newline="\n")
+    (outdir / "fewshot-ranking.md").write_text(fewshot_r, encoding="utf-8", newline="\n")
+    _legacy = outdir / "fewshot.md"
+    if _legacy.exists():
+        _legacy.unlink()  # v1 单本快照已退役, 删 stale 防混淆
 
     # ---- discovery (串行) ----
     disc_path = outdir / "candidates.json"
-    disc_prompt = build_discovery_prompt(sentences, vocab, fewshot)
+    disc_prompt = build_discovery_prompt(sentences, vocab, fewshot_d)
     disc_log = outdir / "agent-discovery.log"
     disc_rel = "steps/05-weapons/candidates.json"
 
@@ -619,7 +629,7 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
     def _do_one(name_en: str):
         safe = _safe_term(name_en)
         per_path = per_dir / f"{safe}.json"
-        ev_prompt = build_evidence_prompt(name_en, sentences, fewshot_text=fewshot)
+        ev_prompt = build_evidence_prompt(name_en, sentences, fewshot_text=fewshot_e)
 
         def _parse_ev(d):
             return validate_evidence(d, name_en, sentences)
@@ -674,7 +684,7 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
             evidences = [by_name[n] for n in candidate_names]
 
     # ---- ranking (串行) ----
-    rank_prompt = build_ranking_prompt(sentences, evidences, fewshot)
+    rank_prompt = build_ranking_prompt(sentences, evidences, fewshot_r)
     rank_path = outdir / "ranking.json"
     rank_log = outdir / "agent-ranking.log"
     rank_rel = "steps/05-weapons/ranking.json"

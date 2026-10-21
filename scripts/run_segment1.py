@@ -560,8 +560,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f'cd "{workdir}" && "F:/Pi/CLI/pi.cmd" --mode rpc --no-session '
               f"--no-skills --no-extensions --no-context-files --tools read,bash,write --thinking off")
         print("子 prompt 见 prompts/step01-sentences.md / step02-verbs.md / step03-grouping.md "
-              "/ prompts/step04-ratings-fewshot.md (FROZEN, for-loop x39) / prompts/step05-weapons-fewshot.md "
-              "(FROZEN, discovery/evidence/ranking 三段 agent, #61)")
+              "/ prompts/step04-ratings-fewshot.md (FROZEN, for-loop x39) / prompts/step05-{discovery,evidence,ranking}-fewshot.md "
+              "(FROZEN v2, 三本手册各贴各, discovery/evidence/ranking 三段 agent, #61)")
         return 0
 
     print(f"[segment1] workdir={workdir} (cwd 锁定, 只读写相对路径)")

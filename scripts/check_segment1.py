@@ -57,7 +57,9 @@ def main(argv: list[str] | None = None) -> int:
         work / "steps" / "04-attributes" / "ratings.json",
         work / "outputs" / "ratings.json",
         work / "steps" / "05-weapons" / "candidates.json",
-        work / "steps" / "05-weapons" / "fewshot.md",
+        work / "steps" / "05-weapons" / "fewshot-discovery.md",
+        work / "steps" / "05-weapons" / "fewshot-evidence.md",
+        work / "steps" / "05-weapons" / "fewshot-ranking.md",
         work / "steps" / "05-weapons" / "ranking.json",
         work / "steps" / "05-weapons" / "weapons.json",
         work / "outputs" / "weapons.json",
@@ -78,14 +80,15 @@ def main(argv: list[str] | None = None) -> int:
     weapons = json.loads((work / "steps" / "05-weapons" / "weapons.json").read_text(encoding="utf-8"))
     weapons_out = json.loads((work / "outputs" / "weapons.json").read_text(encoding="utf-8"))
     weapon_candidates = json.loads((work / "steps" / "05-weapons" / "candidates.json").read_text(encoding="utf-8"))
-    # fewshot 运行快照 provenance: 须与 repo FROZEN 文件逐字节一致 (审计离线可读即认此件)
-    try:
-        _few_run = (work / "steps" / "05-weapons" / "fewshot.md").read_bytes()
-        _few_repo = (REPO / "prompts" / "step05-weapons-fewshot.md").read_bytes()
-        if _few_run != _few_repo:
-            fail("steps/05-weapons/fewshot.md must equal repo FROZEN fewshot (逐字节, 重跑 05 即回填)", errors)
-    except Exception:
-        fail("steps/05-weapons/fewshot.md 读失败 (缺运行快照, 重跑 05 即回填)", errors)
+    # fewshot 运行快照 provenance: 三本任务手册须与 repo FROZEN 文件逐字节一致 (审计离线可读即认此件)
+    for _task in ("discovery", "evidence", "ranking"):
+        try:
+            _few_run = (work / "steps" / "05-weapons" / f"fewshot-{_task}.md").read_bytes()
+            _few_repo = (REPO / "prompts" / f"step05-{_task}-fewshot.md").read_bytes()
+            if _few_run != _few_repo:
+                fail(f"steps/05-weapons/fewshot-{_task}.md must equal repo FROZEN fewshot (逐字节, 重跑 05 即回填)", errors)
+        except Exception:
+            fail(f"steps/05-weapons/fewshot-{_task}.md 读失败 (缺运行快照, 重跑 05 即回填)", errors)
 
     # --- 01-sentences 新 schema ---
     if not isinstance(sentences, list) or not sentences:

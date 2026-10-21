@@ -50,34 +50,46 @@ def test_step05_loop_module_exists():
     assert p.exists(), "scripts/step05_loop.py must exist (#61 three-agent调度)"
 
 
-def test_fewshot_frozen_20shot_exists():
-    p = REPO / "prompts" / "step05-weapons-fewshot.md"
-    assert p.exists(), "prompts/step05-weapons-fewshot.md must exist (#61 frozen 20-shot)"
-    txt = p.read_text(encoding="utf-8")
-    assert "FROZEN" in txt
-    # 20-shot 只读: 发现段 + T1/T2 + note 示范须齐
-    for needle in ("TASK_DISCOVERY", "TASK_EVIDENCE", "TASK_RANKING",
-                   "Slingshot", "second minigun", "four screwdrivers", "horde wave"):
-        assert needle in txt, f"fewshot must contain {needle}"
+def test_fewshot_frozen_per_task_exists():
+    # v2: 按任务拆三本手册, 各贴各的 (例子全留、废话全砍)
+    specs = {
+        "discovery": ("TASK_DISCOVERY", "Slingshot", "claw tree", "禁数帽"),
+        "evidence": ("TASK_EVIDENCE", "T1/T2", "take a second minigun", "four screwdrivers"),
+        "ranking": ("TASK_RANKING", "Blunderbuss", "horde wave", "同句多引"),
+    }
+    for task, needles in specs.items():
+        p = REPO / "prompts" / f"step05-{task}-fewshot.md"
+        assert p.exists(), f"prompts/step05-{task}-fewshot.md must exist (#61 v2 三本手册)"
+        txt = p.read_text(encoding="utf-8")
+        assert "FROZEN" in txt
+        for needle in needles:
+            assert needle in txt, f"step05-{task}-fewshot must contain {needle}"
+    # 三本互不串任务: ranking 手册里不许有 discovery 契约
+    rtxt = (REPO / "prompts" / "step05-ranking-fewshot.md").read_text(encoding="utf-8")
+    assert "TASK_DISCOVERY" not in rtxt and "TASK_EVIDENCE" not in rtxt
+    dtxt = (REPO / "prompts" / "step05-discovery-fewshot.md").read_text(encoding="utf-8")
+    assert "TASK_RANKING" not in dtxt and "TASK_EVIDENCE" not in dtxt
 
 
 def test_prompt_build_contains_fewshot_sentences_only():
     m = _load("step05_loop", "scripts/step05_loop.py")
-    fewshot = (REPO / "prompts" / "step05-weapons-fewshot.md").read_text(encoding="utf-8")
+    fewshot_d = (REPO / "prompts" / "step05-discovery-fewshot.md").read_text(encoding="utf-8")
+    fewshot_e = (REPO / "prompts" / "step05-evidence-fewshot.md").read_text(encoding="utf-8")
+    fewshot_r = (REPO / "prompts" / "step05-ranking-fewshot.md").read_text(encoding="utf-8")
     sents = _sentences()
     vocab = _vocab()
-    disc = m.build_discovery_prompt(sents, vocab, fewshot)
+    disc = m.build_discovery_prompt(sents, vocab, fewshot_d)
     assert "Obviously, we'll take a second minigun" in disc
     assert "Minigun" in disc and "Screwdriver" in disc
     assert "TASK_DISCOVERY" in disc
-    ev = m.build_evidence_prompt("Minigun", sents, fewshot)
+    ev = m.build_evidence_prompt("Minigun", sents, fewshot_e)
     assert "TASK_WEAPON: Minigun" in ev
     assert "Obviously, we'll take a second minigun" in ev
     # 一次只判一把: 任务行只提这一把
     assert "TASK_EVIDENCE" in ev
     rank = m.build_ranking_prompt(sents, [
         {"name_en": "Minigun", "tier": "T1", "quotes": [sents[0]["text"]],
-         "analysis": "a", "note": "n"}], fewshot)
+         "analysis": "a", "note": "n"}], fewshot_r)
     assert "TASK_RANKING" in rank
     # 语义零进代码: 构建器不得注入退役规则
     import inspect
@@ -256,9 +268,10 @@ def test_run_loop_with_fake_agents_cyborg_shape(tmp_path):
     assert sorted(c["name_en"] for c in cands) == sorted(quotes_by.keys())
     for c in cands:
         assert c["count"] == len(c["quotes"])
-    # fewshot 运行快照: 与 repo FROZEN 文件逐字节一致 (审计离线可读即认此件)
-    snap = (workdir / "steps" / "05-weapons" / "fewshot.md").read_text(encoding="utf-8")
-    assert snap == (REPO / "prompts" / "step05-weapons-fewshot.md").read_text(encoding="utf-8")
+    # fewshot 运行快照: 三本与 repo FROZEN 文件逐字节一致 (审计离线可读即认此件)
+    for task in ("discovery", "evidence", "ranking"):
+        snap = (workdir / "steps" / "05-weapons" / f"fewshot-{task}.md").read_text(encoding="utf-8")
+        assert snap == (REPO / "prompts" / f"step05-{task}-fewshot.md").read_text(encoding="utf-8")
     # per_weapon 落盘 + ranking 终判落盘 (链: 名==candidates, check 验)
     for n in quotes_by:
         import re
@@ -305,7 +318,7 @@ def test_check_segment1_05_shape_only_no_anchors_numbers():
 
 def test_context_weapons_section_points_to_fewshot():
     txt = (REPO / "CONTEXT.md").read_text(encoding="utf-8")
-    assert "step05-weapons-fewshot" in txt, "CONTEXT weapons段须以fewshot文件为准 (#47/#50作废)"
+    assert "step05-discovery-fewshot" in txt, "CONTEXT weapons段须以fewshot文件为准 (#47/#50作废)"
     # 只查 weapons.json + candidates.json 段落 (07 priorities 的断层动态保留，不在此卡)
     lines = txt.splitlines()
     wsec = "\n".join([ln for ln in lines if ("weapons.json" in ln or "candidates.json" in ln or "05-weapons" in ln)])
@@ -331,5 +344,7 @@ def test_audit_05_shows_analysis_not_anchors():
                    'data-fileview="fewshot"', 'id="fileModal"', 'WEAPON_VOCAB_78'):
         assert marker in html, f"audit 05输入须可点击直达modal ({marker})"
     # fewshot 快照：审计只读工作区（file:///picker/?base= 全通），check 验逐字节一致
-    for marker in ('fewshot05', 'steps/05-weapons/fewshot.md'):
+    for marker in ('fewshot05', 'steps/05-weapons/fewshot-discovery.md',
+                   'steps/05-weapons/fewshot-evidence.md',
+                   'steps/05-weapons/fewshot-ranking.md'):
         assert marker in html, f"audit 须经工作区快照读fewshot ({marker})"

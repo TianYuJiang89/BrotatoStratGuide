@@ -98,23 +98,26 @@ def step06(workdir: Path, sentences: list[dict], agent_fn=None, force: bool = Fa
 
 def step07(workdir: Path, sentences: list[dict], ratings: list[dict],
            grouping: list[dict], phases: list[dict], agent_fn=None,
-           force: bool = False) -> dict:
-    """优先级 TopN (#62: frozen fewshot + priority-ranking 单 agent; #49/#50 码切码顺延已退役).
+           force: bool = False, timeout: float = 1800.0, model=None,
+           thinking: str = "medium") -> dict:
+    """07-priorities (#65: frozen fewshot + selection/wording 两段 agent; 双侧码切/动词表/verified 已退役).
 
-    调度 (loop, 语义零进代码): 通览 grouping + 04 ratings + 05 weapons + 06 phases +
-    全量整句 → upgrades/shop TopN + why/how_to_get (+analysis 全过程).
-    N 动态由 agent 定 (码只验非空, 不验切分); 可推翻 group 建议, 拿 quote 说话;
-    ban 件永不进 TopN. 退役: count 码切 (升级/商店双侧)、拒绝词表码顺延、
-    不收敛多收/保底码规则 (Top1 意图进 fewshot, 码只验非空).
-    缺件/编 quote/幻觉名/ban 进 TopN 即 fail loud, 不回落不补空.
+    调度 (loop, 语义零进代码): selection(串行, 选择 fewshot+04 ratings+05 weapons+03 grouping+06 phases+
+    全量整句→{upgrades[{name,quotes}],shop[{name,quotes}]}, N 动态, 保底意图, S/A 优先 B 可例外+须论证,
+    T1/ban 不进 shop 意图进 fewshot) → wording×N(并行, 每项独立单 agent→{why,how_to_get}, 数字不丢,
+    未提空出) → 合并 (code: quote_details 回填, shop∩T1=∅, shop∩ban=∅, 非空).
+    退役: count 双侧码切、拒绝动词表、verified 门、T1 码规则 (改意图+码验交集)、保底 Top1 码规则
+    (改意图+码验非空)、why 沿 reason 不重评、07 读 verbs. 07 读 04/05/06/03 新 schema (以落盘为准).
+    缺件/编 quote/编数字/幻觉名/ban 进 TopN/T1 进 shop 即 fail loud, 不回落不补空.
     """
-    from step0307_loop import run_step07_loop
+    from step07_loop import run_step07_loop
     try:
         weapons = json.loads((workdir / "steps" / "05-weapons" / "weapons.json").read_text(encoding="utf-8"))
     except Exception:
         weapons = {"t1": [], "t2": []}
     return run_step07_loop(workdir, sentences, grouping, ratings, weapons, phases,
-                           agent_fn=agent_fn, force=force)
+                           agent_fn=agent_fn, force=force, timeout=timeout,
+                           model=model, thinking=thinking)
 
 
 def step08(workdir: Path, sentences: list[dict], grouping: list[dict] | None = None, agent_fn=None, force: bool = False, timeout: float = 1800.0, model=None, thinking: str = "medium") -> list[dict]:
@@ -174,8 +177,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.rpc:
         print(f'cd "{workdir}" && "F:/Pi/CLI/pi.cmd" --mode rpc --no-session '
               f"--no-skills --no-extensions --no-context-files --tools read,bash,write --thinking off")
-        print("子 prompt 见 prompts/step06-phases-fewshot.md (FROZEN, segmentation/wording #63) / step07-priorities-fewshot.md "
-              "/ prompts/step08-pitfalls-fewshot.md (FROZEN, discovery/wording 两段 agent, #64) "
+        print("子 prompt 见 prompts/step06-phases-fewshot.md (FROZEN, segmentation/wording #63) / prompts/step07-priorities-fewshot.md "
+              "(FROZEN, selection/wording 两段 agent, #65) / prompts/step08-pitfalls-fewshot.md (FROZEN, discovery/wording 两段 agent, #64) "
               "/ step09-assemble.md")
         return 0
 

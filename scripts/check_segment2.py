@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Machine check for B-段2 (#64 + #63 + #62): 06-phases + 07-priorities + 08-pitfalls + 09-assemble.
+"""Machine check for B-段2 (#65 + #64 + #63): 06-phases + 07-priorities + 08-pitfalls + 09-assemble.
 
 沿 check_segment1.py (schema + 去重 + quote 对句 + sha + audit 一一对应), 加:
 - 06 (#63: frozen fewshot + segmentation/wording, N 不定, 运营波次自定义): buckets.json + wordings.json + per_phase/* + phases.json, 桶间不重叠, 桶内前缀须等于 buckets, 桶外补标 out_of_window, 小结≠原文
-- 07 (#62: frozen fewshot + priority-ranking 单 agent, shape only): upgrades/shop N 动态, ban 件禁入 TopN
+- 07 (#65: frozen fewshot + selection/wording 两段 agent, 双侧断层/动词表/verified 已退役): selection.json + per_item/* + priorities.json, shop∩T1=∅, shop∩ban=∅, N 动态非空, 短引+数字码保
 - 08 (#64: frozen fewshot + discovery/wording 两段 agent, 警告子串召回已退役): candidates[{title,seeds,extra}] + wordings[{title,severity,why,how_to_avoid,reason,seeds,extra}] + per_pitfall/* + pitfalls.json, 桶间不重叠, ban 反向 allowlist, severity 三档保留
 - 09: 双写一致 + 六节聚合一致 + sha 对上 manifest + source.vtt
 - 09: 双写一致 + 六节聚合一致 + sha 对上 manifest + source.vtt
@@ -46,6 +46,8 @@ def main(argv: list[str] | None = None) -> int:
         work / "steps" / "06-phases" / "fewshot.md",
         work / "steps" / "06-phases" / "phases.json",
         work / "outputs" / "phases.json",
+        work / "steps" / "07-priorities" / "selection.json",
+        work / "steps" / "07-priorities" / "fewshot.md",
         work / "steps" / "07-priorities" / "priorities.json",
         work / "outputs" / "priorities.json",
         work / "steps" / "08-pitfalls" / "pitfalls.json",
@@ -284,10 +286,120 @@ def main(argv: list[str] | None = None) -> int:
         fail(f"06审计节点缺wording log: 期望 {len(_buckets)} 个 agent-wording-*.log.jsonl, 实得 {len(_wlogs)}", errors)
 
 
-    # --- 07-priorities (#62: frozen fewshot + priority-ranking 单 agent, shape only) ---
-    # 新口径: {upgrades[N], shop[N]} 每项 {name,kind,why,how_to_get,quotes,analysis,quote_details}.
-    # N 动态由 agent 定 (码只验非空, 不验断层); shop ⊆ grouping candidates 且禁 ban 组;
-    # upgrades ⊆ ratings term_en; quotes 逐字; why 短引逐字; 退役断层/拒绝动词表码逻辑.
+    # --- 07-priorities (#65: frozen fewshot + selection/wording 两段 agent, 新口径) ---
+    # 新口径: selection.json {upgrades[{name,quotes}],shop[{name,quotes}]} (N 动态非空, 名在表, ban/T1 出局)
+    # + per_item/<NN>.json {name,why,how_to_get} (wording, N==selection, 短引+数字码保)
+    # + priorities.json {upgrades[],shop[]} 每项 {name,kind,why,how_to_get,quotes,quote_details} (code 合并, 无 analysis).
+    # N 动态由 agent 定 (码只验非空, 不验切分); shop ⊆ grouping candidates 且禁 ban 组且禁 T1; 
+    # upgrades ⊆ ratings term_en (S/A 优先 B 可例外, 码只验名在表); quotes 逐字; why 短引逐字; 数字不丢.
+    # 退役: count 双侧码切/拒绝动词表/verified 门/T1 码规则/保底 Top1 码规则/why 沿 reason/07 读 verbs.
+    try:
+        _sel07 = json.loads((work / "steps" / "07-priorities" / "selection.json").read_text(encoding="utf-8"))
+    except Exception:
+        fail("missing steps/07-priorities/selection.json (先跑 step07 selection, 缺节即 fail)", errors)
+        _sel07 = None
+    if not isinstance(_sel07, dict) or "upgrades" not in _sel07 or "shop" not in _sel07:
+        fail("selection must be {upgrades[N], shop[N]} (N动态由agent定, 码只验非空)", errors)
+        _sel_ups, _sel_shs = [], []
+    else:
+        _sel_ups, _sel_shs = _sel07["upgrades"], _sel07["shop"]
+    if not (isinstance(_sel_ups, list) and len(_sel_ups) >= 1):
+        fail(f"selection upgrades must be N>=1 (Top1意图由agent保), got {len(_sel_ups) if isinstance(_sel_ups, list) else type(_sel_ups)}", errors)
+    if not (isinstance(_sel_shs, list) and len(_sel_shs) >= 1):
+        fail(f"selection shop must be N>=1 (Top1意图由agent保), got {len(_sel_shs) if isinstance(_sel_shs, list) else type(_sel_shs)}", errors)
+    rating_names = {r.get("term_en") for r in ratings if isinstance(r, dict)}
+    cand_names07 = {g.get("name_en") for g in grouping if isinstance(g, dict)}
+    ban_names07 = {g.get("name_en") for g in grouping
+                   if isinstance(g, dict) and g.get("group") == "ban"}
+    t1_names07 = {w.get("name_en") for w in (weapons.get("t1", []) if isinstance(weapons, dict) else [])
+                  if isinstance(w, dict)}
+    import re as _re7
+    _short_re7 = _re7.compile(r'原话["“]([^"”]+)["”]')
+    _sel_names: list = []
+    for _arr, _key in ((_sel_ups, "upgrades"), (_sel_shs, "shop")):
+        if not isinstance(_arr, list):
+            continue
+        for _e in _arr:
+            if not isinstance(_e, dict):
+                fail(f"selection {_key} entry must be object", errors)
+                continue
+            for _k in ("name", "quotes"):
+                if _k not in _e:
+                    fail(f"selection {_key} missing {_k}: {_e.get('name')}", errors)
+            for _old in ("count", "why", "how_to_get", "analysis", "quote_details",
+                          "kind", "verified", "verb", "tier", "confidence", "inferred"):
+                if _old in _e:
+                    fail(f"selection retired field must be absent: {_old} ({_e.get('name')})", errors)
+            _nm = _e.get("name")
+            _sel_names.append(_nm)
+            if _key == "upgrades" and _nm not in rating_names:
+                fail(f"selection upgrades must be in ratings term_en (幻觉即 fail): {_nm}", errors)
+            if _key == "shop" and _nm not in cand_names07:
+                fail(f"selection shop must be in grouping candidates (幻觉即 fail): {_nm}", errors)
+            if _key == "shop" and _nm in ban_names07:
+                fail(f"selection shop ban 件禁入 TopN: {_nm}", errors)
+            if _key == "shop" and _nm in t1_names07:
+                fail(f"selection shop T1 武器禁入 shop (shop∩T1=∅): {_nm}", errors)
+            _qs = _e.get("quotes", [])
+            _check_quotes(f"selection {_key} {_nm}", _qs, [{"quote": q, "context": "x"} for q in _qs] if isinstance(_qs, list) else [])
+            # _check_quotes 需 quote_details 平行; selection 无 details, 此处只验逐字去重非空
+            if isinstance(_qs, list):
+                if not _qs:
+                    fail(f"selection {_key} quotes 须非空: {_nm}", errors)
+                if len(_qs) != len(set(_qs)):
+                    fail(f"selection {_key} quotes 须去重: {_nm}", errors)
+                for _q in _qs:
+                    if _q not in sent_texts:
+                        fail(f"selection {_key} quote 须逐字: {_nm} :: {str(_q)[:40]}", errors)
+                        break
+    if len(_sel_names) != len(set(_sel_names)):
+        fail("selection upgrades+shop 须去重", errors)
+    # per_item: N==selection, 每项 {name,why,how_to_get}, 短引+数字码保
+    _n_sel = (len(_sel_ups) if isinstance(_sel_ups, list) else 0) + (len(_sel_shs) if isinstance(_sel_shs, list) else 0)
+    for _i in range(_n_sel):
+        _pp = work / "steps" / "07-priorities" / "per_item" / f"{_i:02d}.json"
+        if not _pp.exists():
+            fail(f"steps/07-priorities/per_item/{_i:02d}.json 缺失 (wording原始, 缺节即 fail)", errors)
+            continue
+        try:
+            _pev07 = json.loads(_pp.read_text(encoding="utf-8"))
+        except Exception:
+            fail(f"per_item/{_i:02d}.json 非法 JSON", errors)
+            continue
+        if not isinstance(_pev07, dict):
+            fail(f"per_item/{_i:02d}.json 须为对象", errors)
+            continue
+        for _k in ("name", "why", "how_to_get"):
+            if _k not in _pev07:
+                fail(f"per_item/{_i:02d}.json 缺 {_k}", errors)
+        for _old in ("quotes", "analysis", "count", "quote_details", "verified", "verb"):
+            if _old in _pev07:
+                fail(f"per_item/{_i:02d}.json retired field must be absent: {_old}", errors)
+        _pn, _pw, _ph = _pev07.get("name"), str(_pev07.get("why", "")), str(_pev07.get("how_to_get", ""))
+        if _pn not in _sel_names:
+            fail(f"per_item/{_i:02d}.json name 须==selection: {_pn}", errors)
+        if len(_pw.strip()) < 8:
+            fail(f"per_item/{_i:02d}.json why 须>=8字: {_pn}", errors)
+        if len(_ph.strip()) < 2:
+            fail(f"per_item/{_i:02d}.json how_to_get 缺件: {_pn}", errors)
+        _shorts = [s.strip() for s in _short_re7.findall(_pw) if s.strip()]
+        if not _shorts:
+            fail(f"per_item/{_i:02d}.json why 缺短引标记 原话\"...\": {_pn}", errors)
+        # 短引须出自 selection 对应项 quotes; 数字 ≥2 位须出自 quotes (编数字即 fail)
+        _sel_qs: list = []
+        for _arr in ((_sel_ups if isinstance(_sel_ups, list) else []) + (_sel_shs if isinstance(_sel_shs, list) else [])):
+            if isinstance(_arr, dict) and _arr.get("name") == _pn:
+                _sel_qs = _arr.get("quotes", []) if isinstance(_arr.get("quotes"), list) else []
+                break
+        for _s in _shorts:
+            if not any(_s in _q for _q in _sel_qs if isinstance(_q, str)):
+                fail(f"per_item/{_i:02d}.json why 短引须逐字出自 selection quotes: {_pn}", errors)
+                break
+        for _m in _re7.finditer(r"\d+", _pw + " " + _ph):
+            _tok = _m.group(0)
+            if len(_tok) >= 2 and _tok not in " ".join(_sel_qs):
+                fail(f"per_item/{_i:02d}.json 编数字即 fail: {_tok} 不在 quotes 内 ({_pn})", errors)
+                break
     if not isinstance(priorities, dict) or "upgrades" not in priorities or "shop" not in priorities:
         fail("priorities must be {upgrades[N], shop[N]} (N动态由agent定, 码只验非空)", errors)
         ups, shs = [], []
@@ -297,24 +409,28 @@ def main(argv: list[str] | None = None) -> int:
         fail(f"priorities upgrades must be N>=1 (Top1意图由agent保), got {len(ups) if isinstance(ups, list) else type(ups)}", errors)
     if not (isinstance(shs, list) and len(shs) >= 1):
         fail(f"priorities shop must be N>=1 (Top1意图由agent保), got {len(shs) if isinstance(shs, list) else type(shs)}", errors)
-    rating_names = {r.get("term_en") for r in ratings if isinstance(r, dict)}
-    cand_names07 = {g.get("name_en") for g in grouping if isinstance(g, dict)}
-    ban_names07 = {g.get("name_en") for g in grouping
-                   if isinstance(g, dict) and g.get("group") == "ban"}
-    import re as _re7
-    _short_re7 = _re7.compile(r'原话["“]([^"”]+)["”]')
+    # priorities N==selection N, quotes==selection, why/how==per_item
+    if isinstance(_sel_ups, list) and isinstance(ups, list):
+        if [u.get("name") for u in ups if isinstance(u, dict)] != [u.get("name") for u in _sel_ups if isinstance(u, dict)]:
+            fail(f"priorities upgrades 须==selection 自洽: 期望 {[u.get('name') for u in _sel_ups if isinstance(u, dict)]}, 实得 {[u.get('name') for u in ups if isinstance(u, dict)]}", errors)
+    if isinstance(_sel_shs, list) and isinstance(shs, list):
+        if [s.get("name") for s in shs if isinstance(s, dict)] != [s.get("name") for s in _sel_shs if isinstance(s, dict)]:
+            fail(f"priorities shop 须==selection 自洽: 期望 {[s.get('name') for s in _sel_shs if isinstance(s, dict)]}, 实得 {[s.get('name') for s in shs if isinstance(s, dict)]}", errors)
     for u in (ups if isinstance(ups, list) else []):
-        for k in ("name", "kind", "why", "how_to_get", "quotes", "analysis"):
+        if not isinstance(u, dict):
+            continue
+        for k in ("name", "kind", "why", "how_to_get", "quotes", "quote_details"):
             if k not in u or (isinstance(u[k], str) and not u[k].strip()):
                 fail(f"priorities upgrades missing {k}: {u.get('name')}", errors)
+        for _old in ("count", "analysis", "verified", "verb"):
+            if _old in u:
+                fail(f"priorities upgrades retired field must be absent: {_old} ({u.get('name')})", errors)
         if u.get("kind") != "upgrade":
             fail(f"priorities upgrades kind must be upgrade: {u.get('name')}", errors)
         if u.get("name") not in rating_names:
             fail(f"priorities upgrades must be in ratings term_en (幻觉即 fail): {u.get('name')}", errors)
-        if len(str(u.get("why", ""))) < 8 or len(str(u.get("how_to_get", ""))) < 8:
+        if len(str(u.get("why", ""))) < 8 or len(str(u.get("how_to_get", ""))) < 2:
             fail(f"priorities upgrades why/how_to_get too short: {u.get('name')}", errors)
-        if len(str(u.get("analysis", "")).strip()) < 4:
-            fail(f"priorities upgrades analysis must be nonempty: {u.get('name')}", errors)
         _qs = u.get("quotes", [])
         _shorts = [s.strip() for s in _short_re7.findall(str(u.get("why", ""))) if s.strip()]
         if not _shorts:
@@ -325,19 +441,24 @@ def main(argv: list[str] | None = None) -> int:
                 break
         _check_quotes(f"priorities upgrade {u.get('name')}", _qs, u.get("quote_details", []))
     for s in (shs if isinstance(shs, list) else []):
-        for k in ("name", "kind", "why", "how_to_get", "quotes", "analysis"):
+        if not isinstance(s, dict):
+            continue
+        for k in ("name", "kind", "why", "how_to_get", "quotes", "quote_details"):
             if k not in s or (isinstance(s[k], str) and not s[k].strip()):
                 fail(f"priorities shop missing {k}: {s.get('name')}", errors)
+        for _old in ("count", "analysis", "verified", "verb"):
+            if _old in s:
+                fail(f"priorities shop retired field must be absent: {_old} ({s.get('name')})", errors)
         if s.get("kind") != "shop":
             fail(f"priorities shop kind must be shop: {s.get('name')}", errors)
         if s.get("name") not in cand_names07:
             fail(f"priorities shop must be in grouping candidates (幻觉即 fail): {s.get('name')}", errors)
         if s.get("name") in ban_names07:
             fail(f"priorities shop ban 件禁入 TopN: {s.get('name')}", errors)
-        if len(str(s.get("why", ""))) < 8 or len(str(s.get("how_to_get", ""))) < 8:
+        if s.get("name") in t1_names07:
+            fail(f"priorities shop T1 武器禁入 shop (shop∩T1=∅): {s.get('name')}", errors)
+        if len(str(s.get("why", ""))) < 8 or len(str(s.get("how_to_get", ""))) < 2:
             fail(f"priorities shop why/how_to_get too short: {s.get('name')}", errors)
-        if len(str(s.get("analysis", "")).strip()) < 4:
-            fail(f"priorities shop analysis must be nonempty: {s.get('name')}", errors)
         _qs = s.get("quotes", [])
         _shorts = [x.strip() for x in _re7.compile(r'原话["“]([^"”]+)["”]').findall(str(s.get("why", ""))) if x.strip()]
         if not _shorts:
@@ -349,7 +470,7 @@ def main(argv: list[str] | None = None) -> int:
         _check_quotes(f"priorities shop {s.get('name')}", _qs, s.get("quote_details", []))
     if priorities != priorities_out:
         fail("outputs/priorities.json must equal steps/07-priorities/priorities.json", errors)
-    # 07 运行快照 + 审计节点: fewshot 单本须与 repo FROZEN 逐字节一致, ranking 落盘, log 可查
+    # 07 运行快照 + 审计节点: fewshot 单本须与 repo FROZEN 逐字节一致, selection 落盘, log 可查
     try:
         _few07_run = (work / "steps" / "07-priorities" / "fewshot.md").read_bytes()
         _few07_repo = (REPO / "prompts" / "step07-priorities-fewshot.md").read_bytes()
@@ -357,11 +478,14 @@ def main(argv: list[str] | None = None) -> int:
             fail("steps/07-priorities/fewshot.md must equal repo FROZEN fewshot (逐字节, 重跑 07 即回填)", errors)
     except Exception:
         fail("steps/07-priorities/fewshot.md 读失败 (缺运行快照, 重跑 07 即回填)", errors)
-    if not (work / "steps" / "07-priorities" / "ranking.json").exists():
-        fail("steps/07-priorities/ranking.json 缺失 (终判, 缺节即 fail)", errors)
-    _log07 = work / "steps" / "07-priorities" / "agent-ranking.log.jsonl"
-    if not _log07.exists() or _log07.stat().st_size == 0:
-        fail("07审计节点缺log (入参不可查, 重跑07回填): agent-ranking.log.jsonl", errors)
+    if _sel07 is None:
+        fail("steps/07-priorities/selection.json 缺失 (终判, 缺节即 fail)", errors)
+    _log07s = work / "steps" / "07-priorities" / "agent-selection.log.jsonl"
+    if not _log07s.exists() or _log07s.stat().st_size == 0:
+        fail("07审计节点缺log (入参不可查, 重跑07回填): agent-selection.log.jsonl", errors)
+    _wlogs07 = list((work / "steps" / "07-priorities").glob("agent-wording-*.log.jsonl"))
+    if len(_wlogs07) != _n_sel:
+        fail(f"07审计节点缺wording log: 期望 {_n_sel} 个 agent-wording-*.log.jsonl, 实得 {len(_wlogs07)}", errors)
 
     # --- 08-pitfalls (#64: frozen fewshot + discovery/wording) ---
     try:

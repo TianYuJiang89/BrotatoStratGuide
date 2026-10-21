@@ -391,7 +391,7 @@ def test_run_segment2_step07_uses_loop_not_gaps():
     m = _load("run_segment2", "scripts/run_segment2.py")
     assert hasattr(m, "step07")
     src = inspect.getsource(m.step07)
-    assert "step0307_loop" in src or "priority" in src.lower()
+    assert "step0307_loop" in src or "step07_loop" in src or "priority" in src.lower() or "priorities" in src.lower()
     for banned in ("gaps=", "最大断层", "_REJECT", "通用顺延", "sa[:3]", "断层切分"):
         assert banned not in src, f"step07 must retire gap/refusal code rules ({banned})"
 

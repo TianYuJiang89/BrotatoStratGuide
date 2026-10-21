@@ -311,3 +311,6 @@ def test_audit_05_shows_analysis_not_anchors():
     assert "analysis" in html, "audit 05节须展示analysis全过程"
     assert "discovery" in html.lower() and "ranking" in html.lower()
     assert "weaponCandidates" in html or "candidates.json" in html
+    # discovery 结果必须有独立展示块（不止来源行），与 08 种子漏斗同级
+    assert "Discovery candidates" in html, "audit 05节须独立展示discovery candidates（completeness可验）"
+    assert "steps/05-weapons/candidates.json" in html

@@ -13,10 +13,10 @@
 输入：该角色全量整句（含 start/end/t，原样全量，不截断）。
 输出：`{"pits": [{"title": "<短标题，8字内，建议>", "seeds": ["逐字，去重，≥1"], "extra": ["逐字，去重，可空，真桶外"]}, ...]}`
 
-- 坑=具体可躲事件（站位/换伤/孔雀/经济），不是泛泛抱怨；每坑至少一句 seeds（≥1），无事件空数组诚实交（`{"pits": []}`），不硬凑。
+- 坑=具体可躲事件（站位/换伤/孔雀/经济为 cyborg 例，他例按实际具体事件，不硬套），不是泛泛抱怨；每坑至少一句 seeds（≥1），无事件空数组诚实交（`{"pits": []}`），不硬凑。
 - seeds/extra 须逐字等于全量整句某条 text，去重；extra 与 seeds 不交（交叠即 fail）；跨坑不重叠（一句只进一坑）。
 - 无警告词真坑也收（事件同一性归你判，不背警告标记表）；利好句/已拿句/泛泛抱怨一律丢。
-- take 系已拿不算坑：有明确拿取（buy/take/lock/get/roll for 原形/变形肯定式，无否定）即拿不是坑，不收为 seeds/extra（解法引用含 take 作证据允许，如 horde 波前合核弹，但不得以 take 本身为坑）。
+- take 系已拿不算坑：有明确拿取（buy/take/lock/get/roll for 原形/变形肯定式，无否定）即拿不是坑，不收为 seeds/extra（解法引用含 take 作证据允许，如 horde 波前合核弹，但不得以 take 本身为坑）。grouping ban 名不进坑（名单见输入 ban 组节，子串即 fail）。
 - N 不定（本例 4 坑仅演示，他例按实际，码不卡 N，粒度靠人抽）。
 
 ## 发现例（8 例，真坑收 + 路过丢 + 无警告词真坑收）
@@ -26,16 +26,16 @@ DIS-02 站位吃弹真坑收（含无警告词）：`I've also put myself in an 
 DIS-03 站位复盘跟走：`I walked into every single projectile there for no reason at all.` → 收进站位坑 extra（同属站位吃弹事件，复盘句，无警告词也收）。
 DIS-04 孔雀产怪真坑收（含诱饵）：`Use the the range damage portion of the waves to clear the hatchers and definitely do not want a bunch of enhanced flashers spawning.` / `I do not want to let a bunch of mini bosses spawn because this is a peacock wave, so enemies are doing 30% more damage than normal.` + extra `The peacock and bean teacher let us hit level 27 which was pretty awesome.` → 收（孔雀增伤+防刷怪同一事件；level 27 看着升级血赚是 trap 诱饵证据，进 extra 当看着赚示范）。
 DIS-05 海星经济真坑收：`It's pretty risky and I think I'm going to pass on it.` / `Um, just cuz 15% increased enemy damage is really hard to overcome.` / `the extra income takes a while to pay off and you end up uh just dying before you get there a lot of the time cuz it's more about finding defensive stats on nightmare mode than it is about uh having high economy frequently.` → 收（强但增伤难顶+回本慢先死同一事件）。
-DIS-06 tree 利好丢（44 剔除类）：`But now we also have some turrets cuz we have significantly increased tree spawns.` → 丢（tree 利好不是坑，纵在池也不收，剔除）。
+DIS-06 tree 利好丢（44 剔除类）：`But now we also have some turrets cuz we have significantly increased tree spawns.` → 丢（tree 利好不是坑，纵在整句也不收，剔除）。
 DIS-07 路过抱怨丢：`We're mostly trying to avoid.` → 丢（半截话泛泛抱怨，无具体事件，判不明的直接丢掉不收）。
-DIS-08 take 已拿丢：`We'll buy a screwdriver.` / `I will take a jelly and we'll lock a mutation and then I'll roll.` → 丢（已拿不是坑，take 系拿取不算坑；解法引用含 take 作证据允许，但不得以 take 本身为坑）。
+DIS-08 take 已拿丢：`We'll buy a screwdriver.` / `I will take a jelly and we'll lock a mutation and then I'll roll.` → 丢（已拿不是坑）。
 
 ## 分级契约（只读，fatal/risky/trap 绝对档）
 
 输入：发现 fewshot + 分级 fewshot + 全量整句 + 一条（title/seeds/extra）。
 输出：`{"title": "<短标题，8字内>", "severity": "fatal/risky/trap", "why": "人话一句：代价+短引", "how_to_avoid": "人话一句：动作+条件", "reason": "人话一句：为什么合成一条+扩展凭什么跟走", "seeds": ["逐字"], "extra": ["逐字"]}`
 
-- severity 绝对档，不排名：fatal=会崩盘（换伤/孔雀放怪），risky=会亏经济/走位（站位吃弹），trap=看似赚实则亏（须在 reason 论证看着赚在哪，不然一律按 risky）。
+- severity 绝对档，不排名（括号为 cyborg 例，他例按实际，不硬套）：fatal=会崩盘（换伤/孔雀放怪），risky=会亏经济/走位（站位吃弹），trap=看似赚实则亏（须在 reason 论证看着赚在哪，不然一律按 risky）；同坑兼有崩盘证据与诱饵判 fatal，诱饵进 extra 作对照。
 - why 人话一句：代价是什么 + 关键原句短引（短引须出自本条 seeds+extra 逐字）；how_to_avoid 人话一句：动作+条件（何波/何时/拿什么），只认视频口径，未提空出不脑补。
 - reason 人话一句：为什么这几句合成一条、扩展句凭什么跟走（trap 在此论证看着赚）；整句复制某条 quote 当 why 即 fail。
 - seeds 非空（≥1，逐字），extra 可空（逐字，真坑外）；trap 诱饵证据进 extra（如 level 27 看着升级血赚）。

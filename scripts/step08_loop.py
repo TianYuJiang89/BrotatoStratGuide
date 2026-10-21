@@ -569,6 +569,26 @@ def run_step08_loop(workdir, sentences, grouping=None, agent_fn=None,
     cand_path.write_text(json.dumps(candidates, ensure_ascii=False, indent=2) + "\n",
                          encoding="utf-8")
 
+    # 陈坑清扫：N 变小后超编的 per_pitfall/agent-wording 残留即 check fail 源（log 数须==N），直接清掉
+    _keep = len(pits_raw)
+    for _stale in sorted(per_dir.glob("*.json")):
+        try:
+            _idx = int(_stale.stem)
+        except ValueError:
+            continue
+        if _idx >= _keep:
+            try:
+                _stale.unlink()
+            except Exception:
+                pass
+    for _stale in sorted(outdir.glob("agent-wording-*.log*")):
+        _m = re.search(r"agent-wording-(\d+)\.log", _stale.name)
+        if _m and int(_m.group(1)) >= _keep:
+            try:
+                _stale.unlink()
+            except Exception:
+                pass
+
     # ---- wording×N (并行, 每条独立单 agent) ----
     def _do_one(pit: dict, idx: int):
         tag = f"{idx:02d}"

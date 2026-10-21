@@ -234,6 +234,38 @@ def test_run_loop_with_fake_agents_cyborg_shape(tmp_path):
     assert snap == (REPO / "prompts" / "step08-pitfalls-fewshot.md").read_text(encoding="utf-8")
 
 
+def test_loop_sweeps_stale_files_when_N_shrinks(tmp_path):
+    m = _load("step08_loop", "scripts/step08_loop.py")
+    sents = _sentences()
+    workdir = tmp_path / "cyborg" / "ultimate"
+    outdir = workdir / "steps" / "08-pitfalls"
+    (outdir / "per_pitfall").mkdir(parents=True, exist_ok=True)
+    (workdir / "outputs").mkdir(parents=True, exist_ok=True)
+    # 上一轮 N=5 的残留：第 04 号 per 文件 + wording log
+    (outdir / "per_pitfall" / "04.json").write_text("{}", encoding="utf-8")
+    (outdir / "agent-wording-04.log").write_text("x", encoding="utf-8")
+    (outdir / "agent-wording-04.log.jsonl").write_text("x", encoding="utf-8")
+    s1 = sents[0]["text"]
+
+    def fake_agent(kind, name, prompt):
+        if kind == "discovery":
+            return {"pits": [{"title": "站位吃弹", "seeds": [s1], "extra": []}]}
+        if kind == "wording":
+            return {"title": name, "severity": "risky",
+                    "why": "站错弹幕出生点白吃伤害，人话一句。",
+                    "how_to_avoid": "进工程相位往反侧站位，人话一句。",
+                    "reason": "单坑自成一条，无扩展跟走。",
+                    "seeds": [s1], "extra": []}
+        raise AssertionError(f"unknown kind {kind}")
+
+    pitfalls = m.run_step08_loop(workdir, sents, grouping=[], agent_fn=fake_agent, force=True)
+    assert len(pitfalls) == 1
+    assert (outdir / "per_pitfall" / "00.json").exists()
+    assert not (outdir / "per_pitfall" / "04.json").exists(), "超编 per_pitfall 残留须清掉"
+    assert not (outdir / "agent-wording-04.log").exists()
+    assert not (outdir / "agent-wording-04.log.jsonl").exists()
+
+
 def test_run_segment2_step08_uses_loop_not_markers():
     import inspect
     m = _load("run_segment2", "scripts/run_segment2.py")

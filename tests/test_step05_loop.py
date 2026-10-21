@@ -259,11 +259,15 @@ def test_run_loop_with_fake_agents_cyborg_shape(tmp_path):
     # fewshot 运行快照: 与 repo FROZEN 文件逐字节一致 (审计离线可读即认此件)
     snap = (workdir / "steps" / "05-weapons" / "fewshot.md").read_text(encoding="utf-8")
     assert snap == (REPO / "prompts" / "step05-weapons-fewshot.md").read_text(encoding="utf-8")
-    # per_weapon 落盘
+    # per_weapon 落盘 + ranking 终判落盘 (链: 名==candidates, check 验)
     for n in quotes_by:
         import re
         safe = re.sub(r"[^A-Za-z0-9]+", "_", n).strip("_")
         assert (workdir / "steps" / "05-weapons" / "per_weapon" / f"{safe}.json").exists()
+    ranking = json.loads((workdir / "steps" / "05-weapons" / "ranking.json")
+                         .read_text(encoding="utf-8"))
+    assert sorted(x["name_en"] for x in ranking["t1"]) == ["Minigun", "Screwdriver"]
+    assert sorted(x["name_en"] for x in ranking["t2"]) == ["Nuclear Launcher", "SMG"]
 
 
 def test_run_segment1_step05_uses_loop_not_anchors():
@@ -292,6 +296,8 @@ def test_check_segment1_05_shape_only_no_anchors_numbers():
     assert "candidates" in src, "check_05 must认candidates (T1+T2==candidates)"
     assert "quote_details" in src
     assert "analysis" in src
+    assert "ranking.json" in src, "check_05 must验ranking终判名==candidates"
+    assert "per_weapon" in src, "check_05 must验per_weapon evidence原始"
     for banned in ("拿取动词", "verified 拿取", "把数/波次", "数字词", "最大断层", "registry-slice",
                    "anchors 须", "confidence须", "kind须", "inferred须"):
         assert banned not in src, f"check_05 must retire anchor/number/slice checks ({banned})"
@@ -314,9 +320,9 @@ def test_audit_05_shows_analysis_not_anchors():
     assert "analysis" in html, "audit 05节须展示analysis全过程"
     assert "discovery" in html.lower() and "ranking" in html.lower()
     assert "weaponCandidates" in html or "candidates.json" in html
-    # discovery 结果必须有独立展示块（不止来源行），与 08 种子漏斗同级
-    assert "Discovery candidates" in html, "audit 05节须独立展示discovery candidates（completeness可验）"
-    assert "steps/05-weapons/candidates.json" in html
+    for marker in ("evidence05", "ranking05", "per_weapon", "终判", "维持"):
+        assert marker in html, f"audit 05节须立链条 D->E->R->终稿 ({marker})"
+    assert "ranking.json" in html and "candidates.json" in html
     # 05 输入直达：三项可点击 + modal 弹窗展示内容
     for marker in ('data-fileview="sentences"', 'data-fileview="vocab"',
                    'data-fileview="fewshot"', 'id="fileModal"', 'WEAPON_VOCAB_78'):

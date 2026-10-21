@@ -19,6 +19,7 @@ import argparse
 import hashlib
 import json
 import re
+import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -57,6 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         work / "outputs" / "ratings.json",
         work / "steps" / "05-weapons" / "candidates.json",
         work / "steps" / "05-weapons" / "fewshot.md",
+        work / "steps" / "05-weapons" / "ranking.json",
         work / "steps" / "05-weapons" / "weapons.json",
         work / "outputs" / "weapons.json",
     ]
@@ -298,6 +300,8 @@ def main(argv: list[str] | None = None) -> int:
 
     # --- 05-weapons (#61: frozen fewshot + discovery/evidence/ranking, shape only) ---
     # 新 schema: candidates.json [{name_en,count,quotes,quote_details}] + weapons.json {t1[],t2[]}
+    # + ranking.json {t1[{name_en,note}],t2[]} (终判, 可推翻) + per_weapon/<Safe>.json (evidence 原始)
+    # 链: ranking 名==candidates; per_weapon 每把存在+tier合法+名对上; 旧六件退役 (出现即 fail);
     # 每条 {name_en,count,tier,quotes,analysis,note,quote_details}; 旧六件退役 (出现即 fail);
     # count==len(quotes); note 只查非空 (意图保, 不保数字码检); T1>=1; T1+T2==candidates.
     if not isinstance(weapon_candidates, list) or not weapon_candidates:
@@ -391,6 +395,39 @@ def main(argv: list[str] | None = None) -> int:
             warns.append(f"WARN: weapons 疑计数泄漏: {w.get('name_en')}")
     if weapons != weapons_out:
         fail("outputs/weapons.json must equal steps/05-weapons/weapons.json", errors)
+    # 链: ranking 终判名==candidates (cut 自洽, 可推翻 tier 但名必须对上)
+    try:
+        ranking = json.loads((work / "steps" / "05-weapons" / "ranking.json").read_text(encoding="utf-8"))
+    except Exception:
+        ranking = None  # type: ignore
+        fail("ranking.json 缺失或非法 (ranking 终判, 缺节即 fail)", errors)
+    if isinstance(ranking, dict):
+        got_r = set()
+        for _t in ("t1", "t2"):
+            for _x in (ranking.get(_t) or []):
+                if isinstance(_x, dict):
+                    got_r.add(_x.get("name_en"))
+        if set(cand_names) and got_r != set(cand_names):
+            fail(f"ranking t1+t2 must equal candidates {sorted(cand_names)}, got {sorted(got_r)}", errors)
+    # 链: per_weapon 每把存在 (Safe 名) + tier 合法 + 名对上 + quotes 非空
+    for _n in cand_names:
+        _safe = re.sub(r"[^A-Za-z0-9]+", "_", str(_n)).strip("_")
+        _pp = work / "steps" / "05-weapons" / "per_weapon" / f"{_safe}.json"
+        if not _pp.exists():
+            fail(f"per_weapon missing (evidence 原始): {_n}", errors)
+            continue
+        try:
+            _ev = json.loads(_pp.read_text(encoding="utf-8"))
+        except Exception:
+            fail(f"per_weapon 非法 JSON: {_n}", errors)
+            continue
+        if not isinstance(_ev, dict) or _ev.get("name_en") != _n:
+            fail(f"per_weapon name_en 须对上: {_n}", errors)
+        if _ev.get("tier") not in ("T1", "T2"):
+            fail(f"per_weapon tier 须 T1/T2: {_n}", errors)
+        _eq = _ev.get("quotes", [])
+        if not isinstance(_eq, list) or not _eq:
+            fail(f"per_weapon quotes 须非空: {_n}", errors)
 
     # --- audit 常设对应节 (check 与审计节一一对应, 缺节即 fail) ---
     audit_html = (REPO / "templates" / "audit.html").read_text(encoding="utf-8")

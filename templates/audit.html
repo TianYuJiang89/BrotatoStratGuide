@@ -700,7 +700,7 @@ html { scroll-behavior: smooth; }
 
 <script>
 // App state (无mock，只读真实数据 ?base=/picker)
-let appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], fewshot05:'', phases:[], priorities:[]};
+let appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], fewshot05:'', ranking05:null, evidence05:{}, phases:[], priorities:[]};
 
 const state = {
   dataSource: 'empty',
@@ -915,28 +915,9 @@ function render() {
           <span class="badge badge-verified">check_05 对应节</span>
           <span class="badge" style="margin-left:4px;">DAG L1并行层</span>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">
-          三段 agent（#61，frozen fewshot）：discovery（fewshot发现段+全量整句→candidates，completeness归它）→ evidence×N（每把独立单agent→tier建议/quotes/analysis/note）→ ranking（通览全量整句+N份evidence→切t1/t2+note定稿，T1≥1由它保，可推翻evidence tier，切分拿quote说话禁数帽）；count=len(quotes)（码回填，agent不填）；无锚无断层（confidence/kind/inferred/anchors/score退役）；quotes去重；quote_details供 ?t= 跳链。
-        </p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code class="filelink" data-fileview="sentences" title="点击查看整句内容">steps/01-sentences/sentences.json</code>（全量整句） + <code class="filelink" data-fileview="vocab" title="点击查看78武器词汇表">武器词汇表</code>（78，全局唯一） + <code class="filelink" data-fileview="fewshot" title="点击查看FROZEN 20-shot全文">prompts/step05-weapons-fewshot.md</code>（FROZEN 20-shot，不读slice/verbs，禁读 <code>data/mentions</code>/<code>data/builds</code>）</p>
-        ${(()=>{ const wc=(appData.weaponCandidates||[]); if(!wc.length) return '<div style="color:#999;margin-bottom:8px;">待加载：请载入 steps/05-weapons/candidates.json（discovery completeness，缺节即 fail）。</div>'; const w0=appData.weapons||{t1:[],t2:[]}; const t1n=new Set((w0.t1||[]).map(x=>x.name_en)); const t2n=new Set((w0.t2||[]).map(x=>x.name_en)); const vurl0=(m.sources && m.sources[0] && m.sources[0].url)?m.sources[0].url:'#'; const rows=wc.map(c=>{ const q0=(c.quotes&&c.quotes[0])?c.quotes[0]:''; const d0=(c.quote_details&&c.quote_details[0])?c.quote_details[0]:null; const tlink=(d0&&d0.t!=null)?`<a href="${vurl0}${vurl0.includes('?')?'&':'?'}t=${d0.t}s" target="_blank">⏱${d0.start||('t='+d0.t)}</a>`:''; const tag=t1n.has(c.name_en)?'<span class="badge badge-verified">→T1</span>':(t2n.has(c.name_en)?'<span class="badge badge-candidate">→T2</span>':'<span class="badge">未切分</span>'); return `<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;border-bottom:1px dashed var(--line);font-size:12px;"><span style="font-weight:700;">${c.name_en}</span><span class="badge-count-pill">${c.count}条</span>${tag}<span style="flex:1;color:#555;">“${q0}” ${tlink}</span></div>`; }).join(''); return `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;margin-bottom:10px;"><div style="font-size:12px;font-weight:700;margin-bottom:6px;">Discovery candidates（completeness 归 discovery，scan 已退役） <span style="color:var(--muted);font-weight:normal;">${wc.length}把 → T1:${(w0.t1||[]).length} + T2:${(w0.t2||[]).length}</span></div>${rows}<details><summary style="font-size:12px;cursor:pointer;color:var(--accent);">展开每把全部 quotes（点⏱跳原文看 context）</summary><div style="margin-top:6px;">${wc.map(c=>`<div style="font-size:12px;margin:4px 0;"><b>${c.name_en}</b>（${c.count}条）：${(c.quotes||[]).map(q=>`“${q}”`).join(' / ')}</div>`).join('')}</div></details></div>`; })()}
-        ${(()=>{ const w = appData.weapons || {t1:[],t2:[]}; const all=[...(w.t1||[]),...(w.t2||[])]; if(!all.length) return '<div style="color:#999;">待加载：请载入 steps/05-weapons/weapons.json（+ candidates.json）。</div>'; const vurl=(m.sources && m.sources[0] && m.sources[0].url)?m.sources[0].url:'#'; const wc=(appData.weaponCandidates||[]); const wcNames=wc.map(c=>c.name_en).join('/'); return ['T1','T2'].map(tier=>{
-          const arr = (tier==='T1'? w.t1 : w.t2) || [];
-          return `<h4 style="font-size:13px;margin:8px 0;">${tier}（${arr.length}）</h4>` + arr.map(it=>{
-            const q0=(it.quotes&&it.quotes[0])?it.quotes[0]:''; const d0=(it.quote_details&&it.quote_details[0])?it.quote_details[0]:null;
-            const tlink=(d0&&d0.t!=null)?`<a href="${vurl}${vurl.includes('?')?'&':'?'}t=${d0.t}s" target="_blank">⏱${d0.start||('t='+d0.t)}</a>`:'';
-            const isT2=(it.tier==='T2'); const anch=((it.anchors||[]).length?`<span class="badge badge-verified">锚:${(it.anchors||[]).join('/')}</span> `:'');
-            const ana=(it.analysis?`<div style="font-size:11px;color:#555;margin-top:2px;">分析：${it.analysis}</div>`:'');
-            return `<div class="item-card ${isT2?'is-candidate':''}" data-weapon="${it.name_en}">"
-              <div class="item-card-top"><div class="item-card-name"><span>${it.name_en}</span></div><div><span class="badge badge-verified">${it.tier}</span> <span class="badge-count-pill">${it.count}次</span>${isT2?' <span class="badge badge-candidate">T2过渡</span>':''}</div></div>
-              <div style="font-size:11px;color:var(--muted);">来源：discovery candidates${wcNames?('（'+wcNames+'）'):''} + ranking切分；count=len(quotes)=${it.count} ${anch}</div>
-              <div class="item-card-reason">${it.note} ${tlink}</div>
-              ${ana}
-              ${q0?`<div class="item-card-quote">"${q0}"</div>`:''}
-              ${(d0&&d0.context)?`<div style="font-size:11px;color:#999;">上下文: ${d0.context}</div>`:''}
-            </div>`;
-          }).join('');
-        }).join(''); })()}
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">链：<code>steps/05-weapons/candidates.json</code>（discovery，completeness） → <code>steps/05-weapons/per_weapon/*.json</code>（evidence×N，建议+tier） → <code>steps/05-weapons/ranking.json</code>（ranking终判，可推翻） → <code>steps/05-weapons/weapons.json</code>（终稿）；count=len(quotes)，无锚无断层禁数帽。</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code class="filelink" data-fileview="sentences" title="点击查看整句内容">steps/01-sentences/sentences.json</code> · <code class="filelink" data-fileview="vocab" title="点击查看78武器词汇表">武器词汇表78</code> · <code class="filelink" data-fileview="fewshot" title="点击查看FROZEN 20-shot快照">steps/05-weapons/fewshot.md</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>/02-verbs）</p>
+        ${(()=>{ const wc=(appData.weaponCandidates||[]); if(!wc.length) return '<div style="color:#999;">待加载：请载入 steps/05-weapons/candidates.json（discovery completeness，缺节即 fail）。</div>'; const w=(appData.weapons||{t1:[],t2:[]}); const fin={}; [...(w.t1||[]),...(w.t2||[])].forEach(x=>{fin[x.name_en]=x;}); if(!Object.keys(fin).length) return '<div style="color:#999;">待加载：请载入 steps/05-weapons/weapons.json（ranking终判终稿，缺节即 fail）。</div>'; const rk=(appData.ranking05||null); const rkBy={}; if(rk){ (rk.t1||[]).forEach(x=>{rkBy[x.name_en]={tier:'T1',note:x.note};}); (rk.t2||[]).forEach(x=>{rkBy[x.name_en]={tier:'T2',note:x.note};}); } const evm=(appData.evidence05||{}); const vurl=(m.sources&&m.sources[0]&&m.sources[0].url)?m.sources[0].url:'#'; const tl=(d)=>(d&&d.t!=null)?` <a href="${vurl}${vurl.includes('?')?'&':'?'}t=${d.t}s" target="_blank">⏱${d.start||('t='+d.t)}</a>`:''; const sj=(q)=>{ try{ const id=sentenceIdForQuote(q); return (id==null||id==undefined)?'':` <a href="#sent-${id}" data-jump-sent="${id}">📍句#${id}</a>`; }catch(e){ return ''; } }; const ql=(qs,det)=>{ const by={}; (det||[]).forEach(d=>{ if(d&&d.quote&&!(d.quote in by)) by[d.quote]=d; }); return (qs||[]).map(q=>`<div style="padding:2px 0;border-bottom:1px dashed var(--line);">“${q}”${sj(q)}${tl(by[q])}</div>`).join(''); }; return wc.map(c=>{ const n=c.name_en; const f=fin[n]||null; const ev=evm[n]||null; const rkb=rkBy[n]||null; const ft=f?f.tier:'—'; const over=(ev&&f&&ev.tier!==f.tier); const nchg=(ev&&rkb&&ev.note!==rkb.note); const estrip=ev?(`E ${ev.tier}建议 · D${c.count}→E${(ev.quotes||[]).length}条`):'<span style="color:#c00;">E 缺per_weapon（老数据重跑05回填）</span>'; const rstrip=rkb?(`R ${ft}终判 · `+(over?'<span class="badge" style="background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;">推翻</span>':'<span class="badge">维持</span>')+(nchg?' · note改写':' · note未改')):(f?(`R ${ft}终判 · 缺ranking.json（老数据重跑05回填）`):'R —'); return `<div class="item-card" data-weapon="${n}" style="margin-bottom:8px;"><div class="item-card-top"><div class="item-card-name"><span>${n}</span></div><div><span class="badge badge-verified">${ft}</span> <span class="badge-count-pill">count=${f?f.count:c.count}</span></div></div><div style="font-size:12px;margin:4px 0;">D ${c.count}条 → ${estrip} → ${rstrip}</div><details><summary style="font-size:12px;cursor:pointer;color:var(--accent);">展开链证据（D quotes / E analysis+note草稿 / R note定稿 / 终稿 quotes）</summary><div style="margin-top:6px;"><div style="font-size:11px;color:var(--muted);font-weight:700;">D · discovery quotes（${c.count}条，全量整句逐字）</div>${ql(c.quotes,c.quote_details)}${ev?(`<div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:6px;">E · evidence（${ev.tier}建议）</div><div style="font-size:12px;">分析：${ev.analysis||'—'}</div>`+(nchg?`<div style="font-size:12px;">note草稿：${ev.note}</div>`:'<div style="font-size:12px;color:var(--muted);">note草稿同定稿（未改）</div>')):''}${rkb?`<div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:6px;">R · ranking终判（${ft}）</div><div style="font-size:12px;">note定稿：${rkb.note}</div>`:''}${f?`<div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:6px;">终稿 · weapons.json（${ft} · count=${f.count}=len）</div>${ql(f.quotes,f.quote_details)}`:`<div style="color:#c00;">${n} 未进终稿（T1+T2≠candidates，check 即 fail）</div>`}</div></details></div>`; }).join(''); })()}
       </div>
     </div>
 
@@ -1889,6 +1870,21 @@ async function readTextFile(dirHandle, ...path) {
     return await f.text();
   } catch (e) { console.warn("miss", path.join('/'), e); return null; }
 }
+async function readDirJsonFiles(dirHandle, ...path) {
+  try {
+    let h = dirHandle;
+    for (let i = 0; i < path.length; i++) h = await h.getDirectoryHandle(path[i]);
+    const out = {};
+    for await (const [fname, fh] of h) {
+      if (!fname.endsWith('.json')) continue;
+      try {
+        const d = JSON.parse(await (await fh.getFile()).text());
+        out[d.name_en || fname.replace(/\.json$/, '')] = d;
+      } catch (e) { console.warn('miss json', fname, e); }
+    }
+    return out;
+  } catch (e) { console.warn("miss dir", path.join('/'), e); return null; }
+}
 async function loadFromDirectoryHandle(dirHandle) {
   try {
     document.getElementById('sourceText').textContent = `正在读取本地目录: ${dirHandle.name}...`;
@@ -1909,6 +1905,10 @@ async function loadFromDirectoryHandle(dirHandle) {
       if (f05) appData.fewshot05 = f05;
       const wc05 = await readJsonFile(dirHandle, 'steps', '05-weapons', 'candidates.json');
       if (wc05) appData.weaponCandidates = wc05;
+      const rk05 = await readJsonFile(dirHandle, 'steps', '05-weapons', 'ranking.json');
+      if (rk05) appData.ranking05 = rk05;
+      const ev05 = await readDirJsonFiles(dirHandle, 'steps', '05-weapons', 'per_weapon');
+      if (ev05 && Object.keys(ev05).length) appData.evidence05 = ev05;
       const p6 = await readJsonFile(dirHandle, 'steps', '06-phases', 'phases.json');
       if (p6) appData.phases = p6;
       const p7 = await readJsonFile(dirHandle, 'steps', '07-priorities', 'priorities.json');
@@ -1970,6 +1970,16 @@ document.getElementById('fallbackDirInput').addEventListener('change', async (e)
   if (f05key) { try { appData.fewshot05 = await byPath[f05key].text(); } catch (err) { console.warn('fallback miss fewshot', err); } }
   const wc05 = await readBySuffix('steps/05-weapons/candidates.json');
   if (wc05) appData.weaponCandidates = wc05;
+  const rk05f = await readBySuffix('steps/05-weapons/ranking.json');
+  if (rk05f) appData.ranking05 = rk05f;
+  const evMapF = {};
+  for (const k of Object.keys(byPath)) {
+    const kn = k.replace(/\\/g, '/');
+    if (!/steps\/05-weapons\/per_weapon\/[^/]+\.json$/.test(kn)) continue;
+    try { const d = await byPath[k].json(); evMapF[d.name_en || kn.split('/').pop().replace(/\.json$/, '')] = d; }
+    catch (err) { console.warn('fallback miss per_weapon', k, err); }
+  }
+  if (Object.keys(evMapF).length) appData.evidence05 = evMapF;
   const p6 = await readBySuffix('steps/06-phases/phases.json');
   if (p6) appData.phases = p6;
   const p7 = await readBySuffix('steps/07-priorities/priorities.json');
@@ -2020,6 +2030,16 @@ async function loadFromHttpBase(base) {
       if (f05) appData.fewshot05 = f05;
       const wc05 = await fetchJson(`${base}/steps/05-weapons/candidates.json`);
       if (wc05) appData.weaponCandidates = wc05;
+      const rk05h = await fetchJson(`${base}/steps/05-weapons/ranking.json`);
+      if (rk05h) appData.ranking05 = rk05h;
+      const evMapH = {};
+      for (const c of (appData.weaponCandidates || [])) {
+        const safe = String(c.name_en || '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+        if (!safe) continue;
+        const d = await fetchJson(`${base}/steps/05-weapons/per_weapon/${encodeURIComponent(safe)}.json`);
+        if (d) evMapH[d.name_en || c.name_en] = d;
+      }
+      if (Object.keys(evMapH).length) appData.evidence05 = evMapH;
       const p6 = await fetchJson(`${base}/steps/06-phases/phases.json`);
       if (p6) appData.phases = p6;
       const p7 = await fetchJson(`${base}/steps/07-priorities/priorities.json`);
@@ -2091,7 +2111,7 @@ function setupFilterListeners() {
 
 function loadEmptyData() {
   // 无mock：清空为真实数据占位，须经 picker/?base= 载入 steps/*/*.json
-  appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], fewshot05:'', phases:[], priorities:{}, pitfalls:[], candidates08:[], wordings08:[], assemble:{}};
+  appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], fewshot05:'', ranking05:null, evidence05:{}, phases:[], priorities:{}, pitfalls:[], candidates08:[], wordings08:[], assemble:{}};
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -2104,7 +2124,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
   // 缺省不吃广告纸: 不自动载 mock, 只显示待加载; live 经 picker/?base 进来, mock 仅点按钮显式进
-  appData = {manifest: null, sentences: [], verbs: {verified: [], candidates: []}, items: [], ratings: [], weapons: {t1: [], t2: []}, weaponCandidates: [], fewshot05: '', phases: [], priorities: {}, pitfalls: [], candidates08: [], wordings08: [], assemble: {}};
+  appData = {manifest: null, sentences: [], verbs: {verified: [], candidates: []}, items: [], ratings: [], weapons: {t1: [], t2: []}, weaponCandidates: [], fewshot05: '', ranking05: null, evidence05: {}, phases: [], priorities: {}, pitfalls: [], candidates08: [], wordings08: [], assemble: {}};
   state.dataSource = 'empty';
   const params = new URLSearchParams(window.location.search);
   const baseParam = params.get('base');

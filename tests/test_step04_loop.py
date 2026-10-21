@@ -197,10 +197,12 @@ def test_context_ratings_section_points_to_fewshot():
         assert banned not in txt, f"CONTEXT must retire old anchor口径 ({banned})"
 
 
-def test_audit_04_shows_analysis_not_anchors():
+def test_audit_04_node_list_per_convention():
     html = (REPO / "templates" / "audit.html").read_text(encoding="utf-8")
     assert "audit-04-attributes" in html
-    assert "analysis" in html, "audit 04节须展示analysis全过程"
-    # 旧锚展示退役：不得再以锚为核心（允许注释提及退役，但不得渲染anchors badge为核心）
-    # 放宽：只要含analysis即过，anchors若仍出现须为退役说明而非核心渲染
-    assert "summary" in html.lower() or "Summary" in html
+    # 一调用一节点：39属性各三行 (入参/prompt/结果文件名)，无过程描述无拼串
+    assert "per_attr/" in html, "04节点结果须链per_attr单属性JSON"
+    assert ".log.jsonl" in html, "04节点prompt须链agent log (prompt全文在log内)"
+    assert "TERM=" in html, "04节点入参须标明单属性名"
+    assert "for-loop 单属性 agent" not in html, "04节过程描述屁话须删"
+    assert "/ 39 terms" not in html, "04节计数拼串须删"

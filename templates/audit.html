@@ -2055,13 +2055,17 @@ document.addEventListener('click', (e) => {
   e.preventDefault();
   const p = a.dataset.stepfile, k = a.dataset.kind, rk = a.dataset.rkey;
   if (k === 'result') {
-    let o = null;
-    if (rk === 'candidates') o = appData.weaponCandidates;
-    else if (rk === 'ranking') o = appData.ranking05;
-    else if (rk === 'weapons') o = appData.weapons;
-    else if (rk === 'sentences') o = appData.sentences;
-    else if (rk && rk.indexOf('ev:') === 0) o = (appData.evidence05 || {})[rk.slice(3)];
-    openFileModal(p + (o ? '' : '（缺件）'), o ? `<pre>${escHtml(JSON.stringify(o, null, 1))}</pre>` : '<div style="color:#999;">未载入：请先载入工作区（缺节即 fail）。</div>');
+    openFileModal(p, '<div style="color:#999;">读取中…</div>');
+    stepText(p).then(t => {
+      if (t != null) { document.getElementById('fileModalBody').innerHTML = `<pre>${escHtml(t)}</pre>`; return; }
+      let o = null;
+      if (rk === 'candidates') o = appData.weaponCandidates;
+      else if (rk === 'ranking') o = appData.ranking05;
+      else if (rk === 'weapons') o = appData.weapons;
+      else if (rk === 'sentences') o = appData.sentences;
+      else if (rk && rk.indexOf('ev:') === 0) o = (appData.evidence05 || {})[rk.slice(3)];
+      document.getElementById('fileModalBody').innerHTML = o ? `<pre>${escHtml(JSON.stringify(o, null, 1))}</pre>` : '<div style="color:#999;">读不到该文件（缺节即 fail）。</div>';
+    });
     return;
   }
   openFileModal(p + '（实际发出prompt）', '<div style="color:#999;">读取中…</div>');

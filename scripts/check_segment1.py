@@ -741,11 +741,10 @@ def main(argv: list[str] | None = None) -> int:
                    "data-jump-sent", "sentJumpLink"):
         if marker not in audit_html:
             fail(f"audit.html 缺 step1/2 行明细 (#42跟进): {marker}", errors)
-    # 06-09 审计 (卡片钩子 + 抽屉明细 + 07依赖穿透, 缺即 fail)
-    for marker in ("data-phase", "data-pitfall", "data-priority",
-                   "openPhaseDrawer", "openPitfallDrawer", "openPriorityDrawer",
-                   "依赖来源", "继承自",
-                   "recallPanelHtml", "recallEvidenceSectionHtml", "种子漏斗"):
+    # 06-09 审计 (卡片钩子 + 抽屉明细 + 07依赖穿透, 缺即 fail；08按节点公约无卡片/抽屉，只列D/W节点)
+    for marker in ("data-phase", "data-priority",
+                   "openPhaseDrawer", "openPriorityDrawer",
+                   "依赖来源", "继承自"):
         if marker not in audit_html:
             fail(f"audit.html 缺06-09审计 (#42): {marker}", errors)
     # 默认工作区 (picker 从 G:\brotato-work/上次目录开始: 固定 id + IndexedDB 存句柄)

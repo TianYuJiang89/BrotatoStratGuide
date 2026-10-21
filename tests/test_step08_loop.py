@@ -316,3 +316,6 @@ def test_audit_08_shows_nodes_not_markers():
     assert "discovery" in seg08.lower() and "wording" in seg08.lower()
     assert "警告标记" not in seg08, "audit 08节须清掉警告标记字样 (#64)"
     assert "N>=3" not in seg08 and ">=3" not in seg08, "audit 08节须清掉N>=3字样 (#64)"
+    # 审计节点公约：08节无过程描述、无加工视图（漏斗/卡片/成因摘要已删，只留D/W节点）
+    for banned in ("发现漏斗", "种子漏斗", "找坑漏斗", "成因", "pitfallsSectionHtml", "recallPanelHtml"):
+        assert banned not in seg08, f"audit 08节须无加工视图 ({banned})"

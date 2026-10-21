@@ -7,7 +7,7 @@
 
 ## 通用标准（无机制私货，无动词表，无计数，无数字帽）
 
-评级只看机制因果强度，不数拿了几次。每个判断必须写明来源（捡 / 转 / 自带 / 挂钩 / 缺席），来源不明即 fail。
+评级只看机制因果强度，不数拿了几次。每个判断必须写明来源（捡/转/自带/不买·无/缺席），来源不明即 fail；`-` 固定写作者未提及（即缺席写法）免单写。
 
 - **S=没它构筑不存在**：整条机制链的唯一入口。证据须是机制定义句、或升级二选一里赢的那个、
   或每局必找句。宁缺毋滥，不设数量。
@@ -54,7 +54,7 @@ book 半个直接 recycle——没有一句是捡的。
 ### CYB-C：Speed（路过）
 
 - `Um, I'll take some move speed just so my move speed is positive.`
-- 分析：一次补正，无战力后果。只描述，不升格。
+- 分析：一次补正（来源=捡），无战力后果。只描述，不升格。
 - 评级：C / summary：路过补正，不值得找。
 
 ### CYB-D：Melee Damage（冲突，注意区分身份与数值）
@@ -63,7 +63,7 @@ book 半个直接 recycle——没有一句是捡的。
 只有 1 句是数值冲突。身份不是 D，数值才是。
 
 - `You can't get melee damage, so you can't scale your screwdrivers with it.`
-- 分析：`can't` + 挂钩解释（screwdrivers）。与身份句无关，勿混。
+- 分析：`can't`（来源=无）+ 挂钩解释（screwdrivers）。与身份句无关，勿混。
 - 评级：D / summary：别碰，和螺丝刀互斥。
 
 ### CYB--：% Materials Healing（未提及）
@@ -103,7 +103,7 @@ book 半个直接 recycle——没有一句是捡的。
 ### ENG-C：Luck（路过）
 
 - `I'll take the the luck here.`
-- 分析：顺手一拿，无后果解释（同局 cyber ball 没幸运不碰、lucky charm 随缘）。
+- 分析：顺手一拿（来源=捡），无后果解释（同局 cyber ball 没幸运不碰、lucky charm 随缘）。
 - 评级：C / summary：路过，有用但不找。
 
 ### ENG-D：Elemental Damage（半价体系冲突）
@@ -189,7 +189,7 @@ book 半个直接 recycle——没有一句是捡的。
 
 - `We could grab harvesting as well but the doctor gets double attack speed with medical weapons.`
 - `You have minus 100% attack speed but plus 200% with medical weapons.`
-- 分析：自带体系 + 全程继续买。来源=自带。同属性别家可不同级，只抄推理法。
+- 分析：自带体系 + 全程继续买。来源=自带。
 - 评级：A / summary：自带还不够，见了继续拿。
 
 ### DOC-B：Harvesting（经济顺手）
@@ -204,7 +204,7 @@ book 半个直接 recycle——没有一句是捡的。
 ### DOC-C：Speed（路过）
 
 - `And I take the nine speed just to fix my movement speed here.`
-- 分析：补正（fix），中期有用、14 波后不想。无战力后果。
+- 分析：补正（来源=捡，fix），中期有用、14 波后不想。无战力后果。
 - 评级：C / summary：路过补正。
 
 ### DOC-D：Consumable Heal（体系拒收）
@@ -253,7 +253,7 @@ book 半个直接 recycle——没有一句是捡的。
 ### ARM-C：Luck（存疑顺手）
 
 - `I'm going to recycle the strange book here, recycle the toolbox, and then I could take 10 luck to go with my baby elephant.`
-- 分析：条件句（could）+ 挂钩弱（配 elephant）。拿了也诚实标存疑。
+- 分析：条件句（could）+ 挂钩弱（来源=捡，配 elephant）。拿了也诚实标存疑。
 - 评级：C / summary：路过，有 elephant 才拿。
 
 ### ARM-D：Life Steal（平时判死，minigun 翻转）
@@ -262,7 +262,7 @@ book 半个直接 recycle——没有一句是捡的。
 
 - `So you get way fewer attacks than a normal character and can't really use life steal.`
 - `Cuz uh even with only the one minigun, the level 4 minigun attacks so fast that life steal is going to be a very relevant healing option.`
-- 分析：判死（can't really use）+ 翻转条件（level4 高速）。两句必须同看，单看一句会误判。
+- 分析：判死（来源=无，can't really use）+ 翻转条件（level4 高速）。两句必须同看，单看一句会误判。
 - 评级：D / summary：平时别碰，转 minigun 高速才买（ritual 到 3% 也香）。
 
 ### ARM--：% Burning Speed（未提及）
@@ -277,7 +277,7 @@ book 半个直接 recycle——没有一句是捡的。
 输入：本 fewshot + 该角色全量整句（含 `start/end/t/context`）+ 这一个属性名（`terms.csv` 39 中之一）。
 输出：`{term_en, rating, quotes, analysis, summary, quote_details}`。
 
-- `analysis` 必写：来源（捡/转/自带/挂钩/缺席）→ 机制效果 → 评级。不许数字（几次、排第几）。
+- `analysis` 必写：来源（捡/转/自带/不买·无/缺席）→ 机制效果 → 评级。不许计数排名数字（几次、第几），原话机制阈值可写。
 - `quotes` 逐字，去重；`quote_details` 等长平行带 `t`；`summary` ≤120 字 + 短引（出自 quotes）。
 - 犹豫/tradeoff/未知一律写进 analysis（如 small fish 是否吃双倍未知就标未知），不藏。
 - 缺句/编 quote 即 fail loud。`count` 只活审计字段，prompt 里不许出现。

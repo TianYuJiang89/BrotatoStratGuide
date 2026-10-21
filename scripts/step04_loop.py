@@ -122,7 +122,7 @@ def build_attribute_prompt(term_en: str, sentences: list[dict], fewshot_text: st
         + "## 输出契约（只输出一件 JSON 对象，不输出其它文字）\n\n"
         + '{"term_en": "<与 TASK_ATTR 一字不差>", "rating": "S/A/B/C/D/-", '
         + '"quotes": ["逐字出自上表 text，去重"], '
-        + '"analysis": "来源（捡/转/自带/挂钩/缺席）→机制效果→评级", '
+        + '"analysis": "来源（捡/转/自带/不买·无/缺席）→机制效果→评级", '
         + '"summary": "≤120字中文人话"}\n\n'
         + "- term_en 须与 TASK_ATTR 一字不差；你不输出 count。\n"
         + "- quotes 须逐字等于上表某条 text，去重；编 quote 即 fail。\n"

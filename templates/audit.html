@@ -1695,26 +1695,27 @@ function closeFileModal() {
 }
 document.getElementById('fileModalBackdrop').addEventListener('click', closeFileModal);
 document.getElementById('fileModalCloseBtn').addEventListener('click', closeFileModal);
-function fileModalSentences() {
+async function fileModalSentences() {
+  openFileModal(`steps/01-sentences/sentences.json（全量整句，${(appData.sentences || []).length}句）`, '<div style="color:#999;">读取中…</div>');
+  const t = await stepText('steps/01-sentences/sentences.json');
+  if (t != null) { document.getElementById('fileModalBody').innerHTML = `<pre>${escHtml(t)}</pre>`; return; }
   const ss = appData.sentences || [];
-  if (!ss.length) return '<div style="color:#999;">未载入：请先经 picker/?base= 载入 steps/01-sentences/sentences.json。</div>';
-  const t0 = ss[0] || {};
-  const t1 = ss[ss.length - 1] || {};
-  const sample = ss.slice(0, 10).map(s => {
-    const jump = (s.id != null) ? ` <a href="#sent-${s.id}" data-jump-sent="${s.id}" title="跳到01节看 context">📍句#${s.id}</a>` : '';
-    return `<div style="padding:3px 0;border-bottom:1px dashed var(--line);">#${s.id} [${escHtml(s.start || '')}→${escHtml(s.end || '')}] ${escHtml(s.text)}${jump}</div>`;
-  }).join('');
-  return `<div style="margin-bottom:8px;">共 <b>${ss.length}</b> 句整句（discovery 全量输入，不截断） · 起 ${escHtml(t0.start || '')} / 止 ${escHtml(t1.end || '')} · <a href="#audit-01-sentences">跳到01节看全文</a></div>`
-    + `<div style="background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;">${sample}<div style="color:var(--muted);margin-top:4px;">… 仅展示前 10 句，全量见 01 节或 candidates.json 逐条 quote。</div></div>`
-    + `<details><summary style="cursor:pointer;color:var(--accent);">展开全部 ${ss.length} 句 JSON</summary><pre>${escHtml(JSON.stringify(ss, null, 1))}</pre></details>`;
+  document.getElementById('fileModalBody').innerHTML = ss.length ? `<pre>${escHtml(JSON.stringify(ss, null, 1))}</pre>` : '<div style="color:#999;">未载入：请先经 picker/?base= 载入 steps/01-sentences/sentences.json。</div>';
 }
-function fileModalVocab() {
-  const picked = new Set((appData.weaponCandidates || []).map(c => c.name_en));
-  const rows = WEAPON_VOCAB_78.map(n => {
-    const hit = picked.has(n) ? ' <span class="badge badge-verified" title="被 discovery 收录">收</span>' : ' <span style="color:#ccc;">路过</span>';
-    return `<span style="display:inline-block;margin:2px 4px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;">${escHtml(n)}${hit}</span>`;
-  }).join('');
-  return `<div style="margin-bottom:8px;">武器词汇表 <b>78</b>（全局唯一，discovery 名在表即验此表；<span class="badge badge-verified">收</span>=本变体 candidates 收录，灰色=本变体路过丢弃）</div><div>${rows}</div>`;
+async function fileModalVocab() {
+  openFileModal('data/wiki-cache.json → weapons（78，全局唯一）', '<div style="color:#999;">读取中…</div>');
+  for (const u of ['../data/wiki-cache.json', 'data/wiki-cache.json']) {
+    try {
+      const r = await fetch(u);
+      if (r.ok) {
+        const d = await r.json();
+        const keys = Object.keys((d && d.weapons) || {}).sort();
+        document.getElementById('fileModalBody').innerHTML = `<pre>${escHtml(JSON.stringify(keys, null, 1))}</pre>`;
+        return;
+      }
+    } catch (e) { /* 试下一个路径 */ }
+  }
+  document.getElementById('fileModalBody').innerHTML = `<div style="margin-bottom:8px;color:var(--muted);">够不到 repo 文件，内嵌表（与 wiki-cache.json weapons 键一致）</div><pre>${escHtml(JSON.stringify(WEAPON_VOCAB_78, null, 1))}</pre>`;
 }
 async function fileModalFewshot() {
   const snap = appData.fewshot05;
@@ -1741,8 +1742,8 @@ document.addEventListener('click', (e) => {
   if (!link) return;
   e.preventDefault();
   const kind = link.dataset.fileview;
-  if (kind === 'sentences') openFileModal(`steps/01-sentences/sentences.json（全量整句，${(appData.sentences || []).length}句）`, fileModalSentences());
-  else if (kind === 'vocab') openFileModal('武器词汇表（78，全局唯一）', fileModalVocab());
+  if (kind === 'sentences') fileModalSentences();
+  else if (kind === 'vocab') fileModalVocab();
   else if (kind === 'fewshot') fileModalFewshot();
 });
 

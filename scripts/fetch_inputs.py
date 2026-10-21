@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Step00 取证 (#44): video URL -> G work inputs/ 四件 (固定代码, 无 agent 判断).
+"""Step00 取证 (#44, #61 slice 退役): video URL -> G work inputs/ 三件 (固定代码, 无 agent 判断).
 
 输入 (人/agent 只给这两样 + 必要时 cookies):
   video URL + --slug/--variant [+ --cookies youtube.com cookies.txt]
@@ -7,7 +7,7 @@
 固定动作 (yt-dlp, 确定性):
   --dump-json 抓 title/duration/upload_date/description/chapters
   有人工字幕用人工, 否则自动 (--write-subs / --write-auto-subs, --sub-langs en)
-  直写 G work inputs/ 四件: source.vtt/meta.json/registry-slice.json/manifest.json
+  直写 G work inputs/ 三件: source.vtt/meta.json/manifest.json
   记 subs_source=auto/manual + sha1 + URL.
 
 fail loud (禁静默):
@@ -38,12 +38,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "scripts"))
 
 from build_mentions import (  # noqa: E402
-    build_pattern_map,
     detect_subs_source,
-    load_registry_names,
-    load_terms,
-    parse_vtt,
-    scan_cues,
 )
 
 
@@ -164,16 +159,7 @@ def build_manifest(slug: str, variant: str, covers: list[str],
     }
 
 
-def build_registry_slice(vtt_text: str) -> dict:
-    """registry-slice 动态推导 (全局 terms + wiki-cache + runtime VTT)."""
-    terms = load_terms(REPO / "data")
-    wall, iall = load_registry_names(REPO / "data")
-    pmap = build_pattern_map(terms, wall, iall)
-    cues = parse_vtt(vtt_text)
-    sc = scan_cues(cues, pmap)
-    weapons_pos = sorted([w for w in wall if sc.get(f"weapon:{w}", (0, []))[0] > 0])
-    items_pos = sorted([it for it in iall if sc.get(f"item:{it}", (0, []))[0] > 0])
-    return {"weapons": weapons_pos, "items": items_pos}
+# #61 退役: build_registry_slice 已删 (scan 子串 scope 作废, completeness 归 discovery agent).
 
 
 def _sop_version() -> str:
@@ -307,7 +293,6 @@ def main(argv: list[str] | None = None) -> int:
     subs_source = detect_subs_source(vtt_text)
     sha1 = hashlib.sha1(raw).hexdigest()
     meta = build_meta(dump, difficulty, subs_source)
-    reg_slice = build_registry_slice(vtt_text)
     manifest = build_manifest(slug, variant, covers, meta,
                               sha1, _sop_version(), args.issue)
 
@@ -317,11 +302,16 @@ def main(argv: list[str] | None = None) -> int:
     (inputs / "source.vtt").write_bytes(raw)
     (inputs / "meta.json").write_text(
         json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (inputs / "registry-slice.json").write_text(
-        json.dumps(reg_slice, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    # #61 退役: 旧 registry-slice.json 若残留即删 (fetch 停产)
+    _stale = inputs / "registry-slice.json"
+    if _stale.exists():
+        try:
+            _stale.unlink()
+        except Exception:
+            pass
     (inputs / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"OK: step00 inputs 四件 -> {inputs} "
+    print(f"OK: step00 inputs 三件 -> {inputs} "
           f"(subs_source={subs_source} sha={sha1[:8]} issue={args.issue})")
     return 0
 

@@ -94,16 +94,15 @@ def test_build_meta_and_manifest_shape(tmp_path: Path) -> None:
     assert mf["sources"][0]["vtt"] == "inputs/source.vtt"
 
 
-def test_registry_slice_dynamic_matches_segment1(tmp_path: Path) -> None:
-    """registry-slice 与 run_segment1 同口径 (全局 + runtime VTT, 禁读旧链)."""
+def test_registry_slice_retired_no_dynamic(tmp_path: Path) -> None:
+    """#61 slice 退役: fetch 不再产 slice，scan 子串口径作废，completeness 归 discovery。"""
     m = _load_fetch()
-    vtt = (REPO / "data" / "subs" / "cyborg__ultimate.en-orig.vtt").read_text(encoding="utf-8")
-    sl = m.build_registry_slice(vtt)
-    assert set(sl.keys()) == {"weapons", "items"}
-    # 与现 G inputs 对拍: 同 VTT 同全局 -> 同 slice
-    cur = json.loads((Path("G:/brotato-work/cyborg/ultimate/inputs/registry-slice.json")
-                      .read_text(encoding="utf-8")))
-    assert sl == cur
+    assert not hasattr(m, "build_registry_slice"), \
+        "fetch_inputs.build_registry_slice must be retired (#61)"
+    src = (REPO / "scripts" / "fetch_inputs.py").read_text(encoding="utf-8")
+    assert "registry-slice.json" in src, "退役说明须提及旧文件删 (fetch 停产+旧文件删)"
+    # 实现不得再动态推导 slice (scan_cues 口径作废)
+    assert "scan_cues" not in src, "fetch_inputs must not scan_cues (子串 scope 作废)"
 
 
 def test_fail_loud_no_whisper_no_mock() -> None:
@@ -151,13 +150,20 @@ def test_end_to_end_with_mocked_ytdlp(tmp_path: Path, monkeypatch) -> None:
         return sp.CompletedProcess(cmd, 0, stdout="", stderr="")
 
     monkeypatch.setattr("subprocess.run", fake_run)
+    # 预置旧 slice，验 fetch 停产+旧文件删
+    _pre = tmp_path / "cyborg" / "ultimate" / "inputs"
+    _pre.mkdir(parents=True, exist_ok=True)
+    (_pre / "registry-slice.json").write_text('{"weapons": [], "items": []}', encoding="utf-8")
     rc = m.main(["--url", "https://www.youtube.com/watch?v=yEY-RoLWjfM",
                  "--slug", "cyborg", "--variant", "ultimate",
                  "--work-root", str(tmp_path)])
     assert rc == 0
     inputs = tmp_path / "cyborg" / "ultimate" / "inputs"
-    for f in ("source.vtt", "meta.json", "registry-slice.json", "manifest.json"):
+    for f in ("source.vtt", "meta.json", "manifest.json"):
         assert (inputs / f).exists(), f"missing {f}"
+    # #61 退役: 不再产 slice，旧文件若有须删
+    assert not (inputs / "registry-slice.json").exists(), \
+        "fetch_inputs must not produce registry-slice.json (#61)"
     assert (inputs / "source.vtt").read_text(encoding="utf-8") == vtt_text
     sha = hashlib.sha1((inputs / "source.vtt").read_bytes()).hexdigest()
     mf = json.loads((inputs / "manifest.json").read_text(encoding="utf-8"))

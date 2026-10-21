@@ -78,12 +78,12 @@ def sha1_of(path: Path) -> str:
 
 
 def ensure_inputs(slug: str, vid: str, workdir: Path) -> dict:
-    """inputs 校验 + slice 刷新 (#44: Step00 后只认 inputs, 不读旧链).
+    """inputs 校验 + slice 退役 (#61: Step00 后只认 inputs, 不读旧链).
 
     四件须已由 scripts/fetch_inputs.py 产出. 本步只做存在性 + sha 校验 +
     registry-slice 动态刷新 (全局 + runtime VTT). meta/manifest 不覆写."""
     inputs = workdir / "inputs"
-    for _f in ("source.vtt", "meta.json", "registry-slice.json", "manifest.json"):
+    for _f in ("source.vtt", "meta.json", "manifest.json"):
         if not (inputs / _f).exists():
             raise SystemExit(
                 f"missing inputs/{_f} for {slug}/{vid}: "
@@ -114,19 +114,13 @@ def ensure_inputs(slug: str, vid: str, workdir: Path) -> dict:
         raise SystemExit(
             f"sha mismatch for {slug}/{vid}: manifest {str(expect_sha)[:8]} "
             f"vs actual {actual_sha[:8]} (重跑 Step00 取证)")
-    # registry-slice 动态刷新 (全局 wiki-cache + terms + runtime source.vtt)
-    from build_mentions import scan_cues as _scan_cues
-    _terms = load_terms(REPO / "data")
-    _wall, _iall = load_registry_names(REPO / "data")
-    _pmap = build_pattern_map(_terms, _wall, _iall)
-    _cues = parse_vtt((inputs / "source.vtt").read_text(encoding="utf-8"))
-    _sc = _scan_cues(_cues, _pmap)
-    weapons_pos = sorted([w for w in _wall if _sc.get(f"weapon:{w}", (0, []))[0] > 0])
-    items_pos = sorted([it for it in _iall if _sc.get(f"item:{it}", (0, []))[0] > 0])
-    reg_slice = {"weapons": weapons_pos, "items": items_pos}
-    (inputs / "registry-slice.json").write_text(
-        json.dumps(reg_slice, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    # #61 退役: 旧 registry-slice.json 若残留即删 (不读, 不刷新)
+    _stale = inputs / "registry-slice.json"
+    if _stale.exists():
+        try:
+            _stale.unlink()
+        except Exception:
+            pass
     return manifest
 
 
@@ -168,8 +162,9 @@ def _alias_pat(name: str) -> re.Pattern:
 
 
 def step02(workdir: Path, sentences: list[dict]) -> dict:
-    reg = json.loads((workdir / "inputs" / "registry-slice.json").read_text(encoding="utf-8"))
-    names: list[str] = list(reg.get("weapons", [])) + list(reg.get("items", []))
+    # #61 registry-slice 已退役: 全量注册表直读, 不读 slice.
+    _wall, _iall = load_registry_names(REPO / "data")
+    names: list[str] = list(_wall) + list(_iall)
     exact_res = {n: _word_pat(n) for n in names}
     alias_res = {n: _alias_pat(n) for n in names}
 

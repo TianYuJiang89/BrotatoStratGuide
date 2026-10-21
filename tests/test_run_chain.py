@@ -133,7 +133,7 @@ def test_chain_deterministic_idempotent(tmp_path: Path) -> None:
         raise AssertionError("G work cyborg/ultimate inputs missing (先备后跑前置)")
     workdir = tmp_path / "cyborg" / "ultimate"
     (workdir / "inputs").mkdir(parents=True)
-    for f in ("source.vtt", "meta.json", "registry-slice.json", "manifest.json"):
+    for f in ("source.vtt", "meta.json", "manifest.json"):
         shutil.copy2(src_real.parent / f, workdir / "inputs" / f)
     s1 = m1.step01(workdir)
     b1 = (workdir / "steps" / "01-sentences" / "sentences.json").read_bytes()

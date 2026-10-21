@@ -40,11 +40,10 @@ def main(argv: list[str] | None = None) -> int:
     errors: list[str] = []
     warns: list[str] = []
 
-    # --- 文件存在 ---
+    # --- 文件存在 (#61 slice 已退役: inputs 三件) ---
     need = [
         work / "inputs" / "source.vtt",
         work / "inputs" / "meta.json",
-        work / "inputs" / "registry-slice.json",
         work / "inputs" / "manifest.json",
         work / "steps" / "01-sentences" / "sentences.json",
         work / "steps" / "02-verbs" / "verbs.json",
@@ -103,13 +102,13 @@ def main(argv: list[str] | None = None) -> int:
         if not isinstance(c.get("inferred"), bool):
             fail(f"candidates inferred must be bool: {c.get('normalized_to')}", errors)
 
-    # --- verified 全部分组 (道具试点: 只查 items, 武器 verified 属武器表不在本组) ---
+    # --- verified 全部分组 (道具试点: 只查 items, 武器 verified 属武器表不在本组, #61 slice 已退役走 wiki-cache) ---
     if isinstance(grouping, list):
         grouped_names = {g.get("name_en") for g in grouping if isinstance(g, dict)}
-        # registry-slice items 集 (道具子集), 武器不查分组
+        # wiki-cache items 集 (道具子集), 武器不查分组
         try:
-            reg_slice = json.loads((work / "inputs" / "registry-slice.json").read_text(encoding="utf-8"))
-            item_set = set(reg_slice.get("items", []))
+            _wiki = json.loads((REPO / "data" / "wiki-cache.json").read_text(encoding="utf-8"))
+            item_set = set((_wiki.get("items", {}) or {}).keys())
         except Exception:
             item_set = grouped_names
         for r in verified:

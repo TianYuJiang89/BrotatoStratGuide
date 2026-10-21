@@ -164,20 +164,35 @@ def _reuse_ok_ratings(path: Path) -> bool:
 
 
 def _reuse_ok_weapons(path: Path) -> bool:
+    # #61: 新 schema {name_en,count,tier,quotes,analysis,note,quote_details}, 旧六件退役
     d = _load_json(path)
-    return isinstance(d, dict) and isinstance(d.get("t1"), list) and isinstance(d.get("t2"), list)
+    if not (isinstance(d, dict) and isinstance(d.get("t1"), list) and isinstance(d.get("t2"), list)):
+        return False
+    try:
+        for w in (d.get("t1", []) + d.get("t2", [])):
+            if not isinstance(w, dict):
+                return False
+            for k in ("name_en", "count", "tier", "quotes", "analysis", "note", "quote_details"):
+                if k not in w:
+                    return False
+            for _old in ("anchors", "confidence", "kind", "inferred", "score", "reason"):
+                if _old in w:
+                    return False
+        return True
+    except Exception:
+        return False
 
 
 def ensure_step00(slug: str, vid: str, workdir: Path, url: str = "", cookies: str = "") -> dict:
     """Step00 取证 (固定代码): 只吃 URL+slug+variant, 来源写 manifest. 缺件即 fail loud.
 
-    - inputs 四件已在 -> 直接校验 (沿 run_segment1.ensure_inputs: sha 对上 + chapters timed).
+    - inputs 三件已在 -> 直接校验 (沿 run_segment1.ensure_inputs: sha 对上 + chapters timed, #61 slice 已退役).
     - inputs 缺件 + --url 已给 -> 调 fetch_inputs 取证后校验.
     - inputs 缺件 + 无 --url -> fail loud (指引先给 URL 取证, 不猜测不回落).
     """
     from run_segment1 import ensure_inputs as _ensure
     inputs = workdir / "inputs"
-    need = ["source.vtt", "meta.json", "registry-slice.json", "manifest.json"]
+    need = ["source.vtt", "meta.json", "manifest.json"]
     missing = [f for f in need if not (inputs / f).exists()]
     if missing and (url or "").strip():
         from fetch_inputs import main as _fetch_main

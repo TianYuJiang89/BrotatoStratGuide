@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Machine check for B-段1 (#40): 01-03 新 schema + 04-attributes + 05-weapons.
+"""Machine check for B-段1 (#40, #61): 01-03 新 schema + 04-attributes + 05-weapons.
 
 沿试点 check_pilot.py (schema + 全收录 + 低频一句话 + sha), 加:
 - 01 新 schema: {id,text[,start,end]} (B-04 起统一加, ?t= 跳链用)
 - 02/03 新字段: start/end/context 只读 (不进机检锚点, 但须存在)
 - 03 quotes 去重 (count 口径不动)
 - 04: 39 全量 (主 17 + 次级 22), 提过即算口径 (count>0 必 S-D, count==0 必 -)
-- 05: T1+T2 == registry-slice 子集, T1>=1, 把数/波次数字在 note (不机检数字, 只查非空)
+- 05 (#61): T1+T2 == candidates (discovery 自洽), T1>=1, note 只查非空 (意图保, 不保数字码检)
 
 Usage:
   python scripts/check_segment1.py --slug cyborg --variant ultimate
@@ -48,7 +48,6 @@ def main(argv: list[str] | None = None) -> int:
     need = [
         work / "inputs" / "source.vtt",
         work / "inputs" / "meta.json",
-        work / "inputs" / "registry-slice.json",
         work / "inputs" / "manifest.json",
         work / "steps" / "01-sentences" / "sentences.json",
         work / "steps" / "02-verbs" / "verbs.json",
@@ -56,6 +55,7 @@ def main(argv: list[str] | None = None) -> int:
         work / "outputs" / "groups.json",
         work / "steps" / "04-attributes" / "ratings.json",
         work / "outputs" / "ratings.json",
+        work / "steps" / "05-weapons" / "candidates.json",
         work / "steps" / "05-weapons" / "weapons.json",
         work / "outputs" / "weapons.json",
     ]
@@ -74,6 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     ratings_out = json.loads((work / "outputs" / "ratings.json").read_text(encoding="utf-8"))
     weapons = json.loads((work / "steps" / "05-weapons" / "weapons.json").read_text(encoding="utf-8"))
     weapons_out = json.loads((work / "outputs" / "weapons.json").read_text(encoding="utf-8"))
+    weapon_candidates = json.loads((work / "steps" / "05-weapons" / "candidates.json").read_text(encoding="utf-8"))
 
     # --- 01-sentences 新 schema ---
     if not isinstance(sentences, list) or not sentences:
@@ -141,8 +142,10 @@ def main(argv: list[str] | None = None) -> int:
     if isinstance(grouping, list):
         grouped_names = {g.get("name_en") for g in grouping if isinstance(g, dict)}
         try:
-            reg_slice = json.loads((work / "inputs" / "registry-slice.json").read_text(encoding="utf-8"))
-            item_set = set(reg_slice.get("items", []))
+            # #61 slice 已退役: 道具全集走 wiki-cache (不读 slice)
+            import json as _js
+            _wiki = _js.loads((REPO / "data" / "wiki-cache.json").read_text(encoding="utf-8"))
+            item_set = set((_wiki.get("items", {}) or {}).keys())
         except Exception:
             item_set = grouped_names
         for r in verified:
@@ -284,88 +287,96 @@ def main(argv: list[str] | None = None) -> int:
     if ratings != ratings_out:
         fail("outputs ratings must equal steps ratings", errors)
 
-    # --- 05-weapons ---
+    # --- 05-weapons (#61: frozen fewshot + discovery/evidence/ranking, shape only) ---
+    # 新 schema: candidates.json [{name_en,count,quotes,quote_details}] + weapons.json {t1[],t2[]}
+    # 每条 {name_en,count,tier,quotes,analysis,note,quote_details}; 旧六件退役 (出现即 fail);
+    # count==len(quotes); note 只查非空 (意图保, 不保数字码检); T1>=1; T1+T2==candidates.
+    if not isinstance(weapon_candidates, list) or not weapon_candidates:
+        fail("candidates must be non-empty array (discovery completeness)", errors)
+        cand_names = []
+    else:
+        cand_names = []
+        for c in weapon_candidates:
+            if not isinstance(c, dict):
+                fail("candidates must be objects", errors)
+                continue
+            for k in ("name_en", "count", "quotes", "quote_details"):
+                if k not in c:
+                    fail(f"candidates missing {k}: {c.get('name_en')}", errors)
+            for _old in ("anchors", "confidence", "kind", "inferred", "score", "reason"):
+                if _old in c:
+                    fail(f"candidates retired field must be absent: {_old}", errors)
+            cand_names.append(c.get("name_en"))
+            qs = c.get("quotes", [])
+            if not isinstance(qs, list) or not qs:
+                fail(f"candidates must have quotes: {c.get('name_en')}", errors)
+                qs = []
+            if isinstance(qs, list) and len(qs) != len(set(qs)):
+                fail(f"candidates quotes must be deduped: {c.get('name_en')}", errors)
+            if c.get("count") != len(qs):
+                fail(f"candidates count must == len(quotes): {c.get('name_en')}", errors)
+            for q in qs:
+                if q not in {s.get("text") for s in sentences if isinstance(s, dict)}:
+                    fail(f"candidates quotes must be verbatim: {c.get('name_en')}", errors)
+                    break
+            qd = c.get("quote_details", [])
+            if not isinstance(qd, list) or len(qd) != len(qs):
+                fail(f"candidates quote_details must parallel quotes: {c.get('name_en')}", errors)
+        if len(cand_names) != len(set(cand_names)):
+            fail("candidates must be deduped by name_en", errors)
     if not isinstance(weapons, dict) or "t1" not in weapons or "t2" not in weapons:
         fail("weapons must be {t1[], t2[]}", errors)
         t1, t2 = [], []
     else:
         t1, t2 = weapons["t1"], weapons["t2"]
-    try:
-        reg_slice = json.loads((work / "inputs" / "registry-slice.json").read_text(encoding="utf-8"))
-        wset = set(reg_slice.get("weapons", []))
-    except Exception:
-        wset = set()
     got_w = {w.get("name_en") for w in (t1 + t2) if isinstance(w, dict)}
-    if wset and got_w != wset:
-        fail(f"weapons t1+t2 must equal registry-slice weapons {sorted(wset)}, got {sorted(got_w)}", errors)
+    if set(cand_names) and got_w != set(cand_names):
+        fail(f"weapons t1+t2 must equal candidates {sorted(cand_names)}, got {sorted(got_w)}", errors)
     if len(t1) < 1:
-        fail("weapons T1>=1 (验收线)", errors)
-    # #47 排名制 #50 归一: registry 子集内按 count 降序 + verified 同分置顶 (不做 verified+5 加分), 不卡绝对数;
-    # T1 须为 top 断层 (最小 T1 count > 最大 T2 count, 或同分时 T1 全 verified 置顶; 简单断言 count 不倒挂, tie 由实现 tie-break 保证)
-    try:
-        _count = {}
-        _ver = {}
-        for w in (t1 + t2):
-            if isinstance(w, dict) and isinstance(w.get("name_en"), str):
-                _count[w["name_en"]] = int(w.get("count", 0) or 0)
-                _ver[w["name_en"]] = (w.get("confidence") == "verified")
-        if t1 and t2:
-            _min_t1 = min(_count.get(w.get("name_en"), 0) for w in t1 if isinstance(w, dict))
-            _max_t2 = max(_count.get(w.get("name_en"), 0) for w in t2 if isinstance(w, dict))
-            if _min_t1 < _max_t2:
-                fail(f"weapons T1须为排名制top (最小T1 count {_min_t1} < 最大T2 count {_max_t2}, 不卡绝对数)", errors)
-    except Exception:
-        pass
+        fail("weapons T1>=1 (验收线, 由 ranking 保)", errors)
+    sent_texts = {s.get("text") for s in sentences if isinstance(s, dict)}
     for w in (t1 + t2):
-        for k in ("name_en", "count", "tier", "note", "quotes", "kind", "inferred", "anchors"):
+        for k in ("name_en", "count", "tier", "note", "quotes", "analysis", "quote_details"):
             if k not in w:
                 fail(f"weapons missing {k}: {w.get('name_en')}", errors)
-        if not isinstance(w.get("anchors"), list) or any(not isinstance(a, str) for a in w.get("anchors", [])):
-            fail(f"weapons anchors must be string array: {w.get('name_en')}", errors)
-        if not isinstance(w.get("inferred"), bool):
-            fail(f"weapons inferred must be bool: {w.get('name_en')}", errors)
-        if w.get("kind") not in ("anchor", "discretion"):
-            fail(f"weapons kind must be anchor/discretion: {w.get('name_en')}", errors)
-        want_kind = "anchor" if w.get("tier") == "T1" else "discretion"
-        if w.get("kind") != want_kind:
-            fail(f"weapons kind须与tier一致 (T1 anchor/T2 discretion): {w.get('name_en')}", errors)
-        if want_kind == "anchor" and w.get("inferred") is not False:
-            fail(f"weapons T1 inferred须false: {w.get('name_en')}", errors)
-        if want_kind == "discretion" and w.get("inferred") is not True:
-            fail(f"weapons T2 inferred须true (审计标黄): {w.get('name_en')}", errors)
-        if want_kind == "anchor" and not w.get("anchors"):
-            fail(f"weapons T1 anchors须非空 (verified拿取动词+把数/波次逐字): {w.get('name_en')}", errors)
-        if want_kind == "discretion" and w.get("anchors"):
-            fail(f"weapons T2 anchors须空 (裁量无锚): {w.get('name_en')}", errors)
-        if want_kind == "anchor":
-            qall = " ".join(w.get("quotes", []) if isinstance(w.get("quotes"), list) else []).lower()
-            for a in (w.get("anchors") or []):
-                if not a or str(a).lower() not in qall:
-                    fail(f"weapons T1 anchor须出自本把quotes逐字: {w.get('name_en')}={a}", errors)
-                    break
-            # T1 锚: verified 拿取动词 (confidence verified) + 把数/波次原话不丢 (note 含 quotes 内数字词逐字)
-            if w.get("confidence") != "verified":
-                fail(f"weapons T1 confidence须verified (拿取动词锚): {w.get('name_en')}", errors)
-            import re as _re_num
-            _num_words = ["one", "two", "three", "four", "five", "second", "level", "wave", "1", "2", "3", "4", "5"]
-            note_low = str(w.get("note", "")).lower()
-            if not any(nw in note_low for nw in _num_words):
-                fail(f"weapons T1 note须含把数/波次原话数字 (不丢): {w.get('name_en')}", errors)
-            else:
-                # 数字须逐字出自 quotes (原话不丢, 机检只认逐字)
-                qall2 = " ".join(w.get("quotes", []) if isinstance(w.get("quotes"), list) else []).lower()
-                if not any((nw in note_low and nw in qall2) for nw in _num_words):
-                    fail(f"weapons T1 note数字须逐字出自quotes: {w.get('name_en')}", errors)
-        if not w.get("note") or len(str(w.get("note")).strip()) < 8:
-            fail(f"weapons note too short (把数/波次不丢): {w.get('name_en')}", errors)
-        if not w.get("quotes"):
-            fail(f"weapons must have quotes: {w.get('name_en')}", errors)
+        for _old in ("anchors", "confidence", "kind", "inferred", "score", "reason"):
+            if _old in w:
+                fail(f"weapons retired field must be absent: {_old} ({w.get('name_en')})", errors)
+        if w.get("tier") not in ("T1", "T2"):
+            fail(f"weapons tier must be T1/T2: {w.get('name_en')}", errors)
         qs = w.get("quotes", [])
+        if not isinstance(qs, list) or not qs:
+            fail(f"weapons must have quotes (空证据即 fail): {w.get('name_en')}", errors)
+            qs = []
         if isinstance(qs, list) and len(qs) != len(set(qs)):
             fail(f"weapons quotes must be deduped: {w.get('name_en')}", errors)
+        if isinstance(w.get("count"), int) and w.get("count") != len(qs):
+            fail(f"weapons count must == len(quotes): {w.get('name_en')}", errors)
+        for q in qs:
+            if q not in sent_texts:
+                fail(f"weapons quotes must be verbatim: {w.get('name_en')}", errors)
+                break
+        _ana = str(w.get("analysis", ""))
+        if len(_ana.strip()) < 4:
+            fail(f"weapons analysis must be nonempty: {w.get('name_en')}", errors)
+        if not w.get("note") or len(str(w.get("note")).strip()) < 2:
+            fail(f"weapons note too short (意图保, 码只查非空): {w.get('name_en')}", errors)
+        if len(str(w.get("note", ""))) > 120:
+            fail(f"weapons note must be <=120: {w.get('name_en')}", errors)
         qd = w.get("quote_details", [])
         if not isinstance(qd, list) or len(qd) != len(qs):
             fail(f"weapons quote_details must parallel quotes: {w.get('name_en')}", errors)
+        else:
+            for d in qd:
+                if not isinstance(d, dict) or "quote" not in d or "t" not in d:
+                    fail(f"weapons quote_details must have quote and t: {w.get('name_en')}", errors)
+                    break
+                if d.get("quote") not in qs:
+                    fail(f"weapons quote_details quote must be in quotes: {w.get('name_en')}", errors)
+                    break
+                if d.get("start") is not None and not isinstance(d.get("t"), int):
+                    fail(f"weapons quote_details start must have int t: {w.get('name_en')}", errors)
+                    break
         rs = str(w.get("note", ""))
         if "字幕" in rs and "次" in rs and "原话" not in rs:
             warns.append(f"WARN: weapons 疑计数泄漏: {w.get('name_en')}")
@@ -423,10 +434,10 @@ def main(argv: list[str] | None = None) -> int:
     for marker in ("startIn", "brotato-work-root"):
         if marker not in audit_html:
             fail(f"audit.html 缺默认工作区 (#42跟进): {marker}", errors)
-    # ratings/weapons mock 常设 (离线可读, live 经 picker/?base= 全量)
-    for marker in ("MOCK_RATINGS", "MOCK_WEAPONS"):
-        if marker not in audit_html:
-            fail(f"audit.html 缺 mock 常设: {marker}", errors)
+    # ratings/weapons mock 已删 (#60 只读真实，不回落 mock): 禁残留 MOCK 常量与自动载入
+    for marker in ("MOCK_RATINGS", "MOCK_WEAPONS", "MOCK_DATA", "loadMockData"):
+        if marker in audit_html:
+            fail(f"audit.html 须无 mock 残留 (#60 只读真实): {marker}", errors)
     # 禁静默回 mock: 启动不许自动载 mock (麦当劳不给广告纸); live 失败必须亮红灯不回落
     import re as _re2
     _m = _re2.search(r"window\.addEventListener\('DOMContentLoaded'.*?", audit_html, _re2.DOTALL)
@@ -434,7 +445,7 @@ def main(argv: list[str] | None = None) -> int:
     _dom = audit_html[audit_html.find("window.addEventListener('DOMContentLoaded'"):audit_html.find("window.addEventListener('DOMContentLoaded'")+2000]
     if "loadMockData()" in _dom:
         fail("audit.html 禁静默回 mock: DOMContentLoaded 不许自动 loadMockData()", errors)
-    for marker in ("不回落 mock", "不可作为验收依据"):
+    for marker in ("不回落 mock",):
         if marker not in audit_html:
             fail(f"audit.html 缺 live 硬保证文案: {marker}", errors)
     # live 硬保证: 顶栏来源可验 (live 蓝点才算验收) + 失败红灯不回落 + 备用上传不伪造 live

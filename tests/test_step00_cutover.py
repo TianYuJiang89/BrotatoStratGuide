@@ -35,11 +35,18 @@ def test_pilot_ensure_inputs_no_old_chain() -> None:
 
 
 def _copy_inputs_to(tmp: Path) -> Path:
+    # #61 slice 已退役: 只拷三件; 若 G 盘残留旧 slice，一并拷入以验 ensure 删除
     src = Path("G:/brotato-work/cyborg/ultimate/inputs")
     dst = tmp / "cyborg" / "ultimate" / "inputs"
     dst.mkdir(parents=True, exist_ok=True)
-    for f in ("source.vtt", "meta.json", "registry-slice.json", "manifest.json"):
+    for f in ("source.vtt", "meta.json", "manifest.json"):
         shutil.copy2(src / f, dst / f)
+    _stale = src / "registry-slice.json"
+    if _stale.exists():
+        try:
+            shutil.copy2(_stale, dst / "registry-slice.json")
+        except Exception:
+            pass
     return tmp / "cyborg" / "ultimate"
 
 
@@ -57,8 +64,9 @@ def test_segment1_ensure_inputs_ok_with_step00_inputs(tmp_path: Path) -> None:
     workdir = _copy_inputs_to(tmp_path)
     mf = m.ensure_inputs("cyborg", "ultimate", workdir)
     assert mf["slug"] == "cyborg"
-    cur = json.loads((workdir / "inputs" / "registry-slice.json").read_text(encoding="utf-8"))
-    assert set(cur.keys()) == {"weapons", "items"} and len(cur["items"]) == 68
+    # #61 退役: 旧 slice 若残留须被删 (不读不刷新)
+    assert not (workdir / "inputs" / "registry-slice.json").exists(), \
+        "ensure_inputs must delete stale registry-slice.json (#61)"
 
 
 def test_pilot_ensure_inputs_ok_with_step00_inputs(tmp_path: Path) -> None:

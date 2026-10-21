@@ -14,7 +14,7 @@
   python scripts/run_segment1.py --slug cyborg --variant ultimate --rpc
 
 输入 (cwd 锁定 G:/brotato-work/<slug>/<variant>/, 只拷必要文件):
-  inputs/ 四件 (source.vtt + meta.json + registry-slice.json + manifest.json)
+  inputs/ 三件 (source.vtt + meta.json + manifest.json)
 全局 (repo 侧只读, 非 runtime):
   data/terms.csv (主 17 + 次级 22) + data/wiki-cache.json (注册表唯一 URL 源)
 中间产物 (G work 动态产生, 不读 repo runtime):
@@ -149,7 +149,7 @@ def sha1_of(path: Path) -> str:
 
 
 def ensure_inputs(slug: str, vid: str, workdir: Path) -> dict:
-    """inputs 校验 + slice 刷新 (#44: Step00 后新链只认 inputs, 不读旧链).
+    """inputs 校验 + slice 退役 (#61: Step00 后新链只认 inputs, 不读旧链).
 
     四件须已由 scripts/fetch_inputs.py 产出. 本步只做:
     - 四件存在性校验 (缺件即报错, 指引先跑 fetch_inputs 取证)
@@ -158,12 +158,19 @@ def ensure_inputs(slug: str, vid: str, workdir: Path) -> dict:
     meta/manifest 为 Step00 取证产物, 本步不覆写 (provenance 只认取证).
     """
     inputs = workdir / "inputs"
-    for _f in ("source.vtt", "meta.json", "registry-slice.json", "manifest.json"):
+    for _f in ("source.vtt", "meta.json", "manifest.json"):
         if not (inputs / _f).exists():
             raise SystemExit(
                 f"missing inputs/{_f} for {slug}/{vid}: "
                 f"先跑 scripts/fetch_inputs.py --url <youtube-url> "
                 f"--slug {slug} --variant {vid} 取证")
+    # #61 退役: 旧 registry-slice.json 若残留即删 (不读, 不刷新)
+    _stale = inputs / "registry-slice.json"
+    if _stale.exists():
+        try:
+            _stale.unlink()
+        except Exception:
+            pass
     manifest = json.loads((inputs / "manifest.json").read_text(encoding="utf-8"))
     # #45: chapters timed 校验 (老格式纯字符串数组视为缺取证, 指引重跑 Step00)
     try:
@@ -189,18 +196,6 @@ def ensure_inputs(slug: str, vid: str, workdir: Path) -> dict:
         raise SystemExit(
             f"sha mismatch for {slug}/{vid}: manifest {str(expect_sha)[:8]} "
             f"vs actual {actual_sha[:8]} (重跑 Step00 取证)")
-    # registry-slice 动态刷新 (全局 wiki-cache + terms + runtime source.vtt, 幂等)
-    from build_mentions import load_registry_names as _load_reg, load_terms as _load_terms, build_pattern_map as _build_pmap, parse_vtt as _parse_vtt, scan_cues as _scan_cues
-    _terms = _load_terms(REPO / "data")
-    _wall, _iall = _load_reg(REPO / "data")
-    _pmap = _build_pmap(_terms, _wall, _iall)
-    _cues = _parse_vtt((inputs / "source.vtt").read_text(encoding="utf-8"))
-    _sc = _scan_cues(_cues, _pmap)
-    weapons_pos = sorted([w for w in _wall if _sc.get(f"weapon:{w}", (0, []))[0] > 0])
-    items_pos = sorted([it for it in _iall if _sc.get(f"item:{it}", (0, []))[0] > 0])
-    reg_slice = {"weapons": weapons_pos, "items": items_pos}
-    (inputs / "registry-slice.json").write_text(
-        json.dumps(reg_slice, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return manifest
 
 
@@ -248,8 +243,11 @@ def _alias_pat(name: str) -> re.Pattern:
 
 
 def step02(workdir: Path, sentences: list[dict]) -> dict:
-    reg = json.loads((workdir / "inputs" / "registry-slice.json").read_text(encoding="utf-8"))
-    names: list[str] = list(reg.get("weapons", [])) + list(reg.get("items", []))
+    # #61 registry-slice 已退役: 全量注册表 (wiki-cache weapons+items) 直读, 不读 slice.
+    # slice 曾为 count>0 子集; 全量只多不少, verb 匹配无损 (空命中自然无 verified/candidates).
+    from build_mentions import load_registry_names as _load_reg
+    _wall, _iall = _load_reg(REPO / "data")
+    names: list[str] = list(_wall) + list(_iall)
     exact_res = {n: _word_pat(n) for n in names}
     alias_res = {n: _alias_pat(n) for n in names}
     by_id = {s["id"]: s for s in sentences}
@@ -534,176 +532,18 @@ def step04(workdir: Path, sentences: list[dict], agent_fn=None, force: bool = Fa
     from step04_loop import run_step04_loop
     return run_step04_loop(workdir, sentences, agent_fn=agent_fn, force=force)
 
-def step05(workdir: Path, sentences: list[dict]) -> dict:
-    """武器分档 T1/T2 (#47: 锚+裁量+排名制, 删 is_core_gun/绝对阈值/按名模板; 禁读 builds/mentions).
+def step05(workdir: Path, sentences: list[dict], agent_fn=None, force: bool = False) -> dict:
+    """武器分档 T1/T2 (#61: frozen fewshot + discovery/evidence/ranking 三段 agent; #47/#50 锚+裁量已退役).
 
-    T1 锚 (闭集强约束, 机检只认逐字): verified 拿取动词 (02-verbs 精确名+闭集动词+整句 quote)
-    + 把数/波次原话不丢 (note 须含 quotes 内数字词逐字: one/two/three/four/five/second/2/3/4/1/5/level/wave).
-    T1 判定改排名制 (#50 归一): registry 子集内按 count 降序 + verified 同分置顶 (不做 verified+5 加分), 最大断层切分, 不卡绝对数; T1>=1 验收线保留.
-    裁量 (只查格式, 审计标黄): T2 过渡/备选位, kind discretion/inferred true, 每条 note+quotes.
+    调度 (loop, 语义零进代码): discovery(串行, fewshot 发现段+全量整句→candidates, completeness 归它)
+    → evidence×N(并行, 每把独立单 agent, fewshot+全量整句+一名→tier建议/quotes/analysis/note)
+    → ranking(串行, 通览全量整句+N份evidence→切t1/t2+note定稿, T1>=1由它保, 可推翻 evidence tier).
+    退役: confidence/kind/inferred/anchors/score+5/断层/数字词表/verified加分/T1-note-必含数字码检、
+    inputs/registry-slice.json (fetch 停产+旧文件删)、05 读 02-verbs。
+    note 保意图不保码检 (码只查非空)。缺件/编 quote/幻觉名即 fail loud, 不回落不补空。
     """
-    import re as _re
-    reg = json.loads((workdir / "inputs" / "registry-slice.json").read_text(encoding="utf-8"))
-    wnames: list[str] = list(reg.get("weapons", []))
-    _, _, _, _, weapons_counts, _ = _dynamic_scan(sentences)
-    qlookup = _quote_lookup(sentences)
-    try:
-        verbs = json.loads((workdir / "steps" / "02-verbs" / "verbs.json").read_text(encoding="utf-8"))
-        ver_list = verbs.get("verified", []) if isinstance(verbs, dict) else []
-        ver_names = {r["object_norm"] for r in ver_list if isinstance(r, dict)}
-        ver_by_name: dict[str, list[dict]] = {}
-        for r in ver_list:
-            if isinstance(r, dict) and isinstance(r.get("object_norm"), str):
-                ver_by_name.setdefault(r["object_norm"], []).append(r)
-    except Exception:
-        ver_names = set()
-        ver_by_name = {}
-    _NUM_TOKENS = ["one", "two", "three", "four", "five", "second", "level", "wave",
-                   " 1 ", " 2 ", " 3 ", " 4 ", " 5 ", "1", "2", "3", "4", "5"]
-    # #50 口径: 数字词表为本视频口径 (英文数词 + level/wave + 1-5; 单字数字靠空格词界, 换视频出现 six/ten/20波等须增补, 值不动).
-    def _best_number_quote(name: str, seen_q: list[str]) -> tuple[str, str]:
-        """把数/波次原话: 武器名附近数字词最近句 (通用, 不按名, 未提空出不脑补). 返回 (nq_short, num_token)."""
-        lname = name.lower()
-        best = None
-        best_d = 1000000
-        best_tok = ""
-        for s in sentences:
-            tx = s["text"]
-            lx = tx.lower()
-            pos = lx.find(lname)
-            if pos < 0:
-                base = lname.rstrip("s")
-                pos = lx.find(base)
-                if pos < 0:
-                    continue
-            padded = " " + lx + " "
-            for nw in _NUM_TOKENS:
-                # 数字词逐字 (大小写不敏感, 单字数字需词界已由空格保证)
-                q = padded.find(nw.strip().lower() if nw.strip() in ("1", "2", "3", "4", "5") else nw)
-                # 简化: 直接子串找 (含 level/wave/英文数词), 距离取最近
-                if q >= 0:
-                    d = abs(q - pos)
-                    if d < best_d:
-                        best_d = d
-                        best = tx[:80]
-                        best_tok = nw.strip()
-                    break
-        if best:
-            return best, best_tok
-        return (seen_q[0][:80] if seen_q else ""), ""
-    def one(name: str) -> dict:
-        cnt, raw = weapons_counts.get(name, (0, []))
-        count = int(cnt)
-        seen_q: list[str] = []
-        for q in list(raw):
-            if q not in seen_q:
-                seen_q.append(q)
-        details = []
-        for q in seen_q:
-            hits = qlookup.get(q, [])
-            if not hits:
-                for s in sentences:
-                    if q[:40] in s["text"] or s["text"][:40] in q:
-                        hits = [{"start": s.get("start"), "end": s.get("end"),
-                                 "t": int(s["start_s"]) if s.get("start_s") is not None else None,
-                                 "context": build_context(sentences, s["id"] - 1)}]
-                        break
-            h = hits[0] if hits else {"start": None, "end": None, "t": None, "context": q[:300]}
-            details.append({"quote": q, "start": h["start"], "end": h["end"], "t": h["t"], "context": h["context"]})
-        verified = name in ver_names
-        # #50 归一: 排名内 verified 同分置顶, 不做 +5 加分 (换视频 count 分布变须重看断层, 口径不动).
-        score = count  # 归一分 = count 本身 (verified 仅同分置顶, 见 ws_sorted tie-break, 不加分)
-        nq, num_tok = _best_number_quote(name, seen_q)
-        nq_short = (nq[:60] if nq else (seen_q[0][:60] if seen_q else name))
-        return {"name_en": name, "count": count, "score": score, "verified": verified,
-                "confidence": "verified" if verified else "candidate",
-                "_nq": nq, "_num_tok": num_tok, "_nq_short": nq_short,
-                "quotes": seen_q, "quote_details": details}
-    ws = [one(n) for n in wnames]
-    # 排名制 (#50 归一: count 降序, verified 同分置顶, 不加分; 最大断层切分不卡绝对数; 保底 T1>=1)
-    ws_sorted = sorted(ws, key=lambda x: (-x["count"], 0 if x["verified"] else 1, x["name_en"]))
-    cut = 0
-    if len(ws_sorted) >= 2:
-        gaps = [ws_sorted[i]["count"] - ws_sorted[i + 1]["count"] for i in range(len(ws_sorted) - 1)]
-        cut = int(max(range(len(gaps)), key=lambda i: (gaps[i], -i)))
-    elif ws_sorted:
-        cut = 0
-    t1_names = {w["name_en"] for w in ws_sorted[:cut + 1]} if ws_sorted else set()
-    if not t1_names and ws_sorted:
-        t1_names = {ws_sorted[0]["name_en"]}
-    out_ws: list[dict] = []
-    for w in ws:
-        is_t1 = w["name_en"] in t1_names
-        nq_short = w["_nq_short"]
-        if is_t1:
-            # 通用 T1 note (无按名模板): 拿取动词 + 把数/波次原话不丢 + 人话 (动词取首个逐字出自 quotes 的 verified 动词, 保机检绿)
-            vbs = ver_by_name.get(w["name_en"], [])
-            qall0 = " ".join(w["quotes"]).lower()
-            verb = ""
-            for _vb in vbs:
-                _vv = str((_vb.get("verb") if isinstance(_vb, dict) else "") or "")
-                if _vv and _vv.lower() in qall0:
-                    verb = _vv
-                    break
-            if not verb:
-                verb = str((vbs[0].get("verb") if vbs else "take"))
-            note = f"核心体系件:verified拿取({verb})+把数/波次见原话;原话\"{nq_short}...\""
-            # 锚: 拿取动词 + 数字词 (须逐字出自 quotes, 机检只认这个)
-            anchors: list[str] = []
-            qall = " ".join(w["quotes"]).lower()
-            if verb.lower() in qall:
-                anchors.append(verb)
-            num = w["_num_tok"].strip().lower() if w["_num_tok"] else ""
-            if num and num in qall:
-                anchors.append(w["_num_tok"].strip())
-            if not anchors:
-                # 兜底保绿: 首 quote 内首个数字词/动词 (必逐字, 非编造)
-                q0low = (w["quotes"][0].lower() if w["quotes"] else "")
-                for tok in ["four", "second", "two", "one", "three", "five", "level", "wave", "take", "buy", "roll for", "upgrade", "lock", "get"]:
-                    if tok in q0low:
-                        anchors.append(tok)
-                        break
-            if not anchors:
-                raise SystemExit(f"step05 {w['name_en']} T1 锚逐字失败 (verified动词+数字须出自 quotes): 保绿失败")
-            out_ws.append({"name_en": w["name_en"], "count": w["count"], "tier": "T1",
-                           "confidence": "verified" if w["verified"] else "candidate",
-                           "kind": "anchor", "inferred": False, "anchors": anchors,
-                           "note": note, "quotes": w["quotes"], "quote_details": w["quote_details"]})
-        else:
-            note = f"过渡/备选位:前中期过渡,有T1即换不升满;原话\"{nq_short}...\""
-            out_ws.append({"name_en": w["name_en"], "count": w["count"], "tier": "T2",
-                           "confidence": "verified" if w["verified"] else "candidate",
-                           "kind": "discretion", "inferred": True, "anchors": [],
-                           "note": note, "quotes": w["quotes"], "quote_details": w["quote_details"]})
-    # T1>=1 验收线保留 + T1 须 verified (锚要求 verified 拿取动词; 若排名首位非 verified 则保底失效交人看)
-    t1 = [w for w in out_ws if w["tier"] == "T1"]
-    t2 = [w for w in out_ws if w["tier"] != "T1"]
-    for w in t2:
-        w["tier"] = "T2"
-    if not t1 and out_ws:
-        # 保底 Top1 (排名制不断层也保 1, cyborg 不触发)
-        count_of = {s["name_en"]: s["count"] for s in ws_sorted}
-        ver_of = {s["name_en"]: s["verified"] for s in ws_sorted}
-        cand = sorted(out_ws, key=lambda x: (-count_of.get(x["name_en"], x["count"]),
-                                             0 if ver_of.get(x["name_en"]) else 1))[0]
-        cand["tier"] = "T1"
-        # 保底转 T1 须补锚 (通用, 同上兜底)
-        if not cand.get("anchors"):
-            q0low = (cand["quotes"][0].lower() if cand.get("quotes") else "")
-            for tok in ["take", "buy", "roll for", "upgrade", "lock", "get", "four", "second", "two"]:
-                if tok in q0low:
-                    cand["anchors"] = [tok]
-                    break
-        t1 = [cand]
-        t2 = [w for w in out_ws if w["tier"] != "T1"]
-    weapons = {"t1": [w for w in out_ws if w["tier"] == "T1"],
-               "t2": [w for w in out_ws if w["tier"] == "T2"]}
-    outdir = workdir / "steps" / "05-weapons"
-    outdir.mkdir(parents=True, exist_ok=True)
-    (outdir / "weapons.json").write_text(json.dumps(weapons, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (workdir / "outputs").mkdir(parents=True, exist_ok=True)
-    ((workdir / "outputs") / "weapons.json").write_text(json.dumps(weapons, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return weapons
+    from step05_loop import run_step05_loop
+    return run_step05_loop(workdir, sentences, agent_fn=agent_fn, force=force)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -720,13 +560,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f'cd "{workdir}" && "F:/Pi/CLI/pi.cmd" --mode rpc --no-session '
               f"--no-skills --no-extensions --no-context-files --tools read,bash,write --thinking off")
         print("子 prompt 见 prompts/step01-sentences.md / step02-verbs.md / step03-grouping.md "
-              "/ prompts/step04-ratings-fewshot.md (FROZEN, for-loop x39) / step05-weapons.md "
-              "(#60: step04-attributes.md 锚规则已退役)")
+              "/ prompts/step04-ratings-fewshot.md (FROZEN, for-loop x39) / prompts/step05-weapons-fewshot.md "
+              "(FROZEN, discovery/evidence/ranking 三段 agent, #61)")
         return 0
 
     print(f"[segment1] workdir={workdir} (cwd 锁定, 只读写相对路径)")
     ensure_inputs(slug, vid, workdir)
-    print("[segment1] inputs 四件校验通过 (Step00 取证, 只认 inputs)")
+    print("[segment1] inputs 三件校验通过 (Step00 取证, 只认 inputs, #61 slice 已退役)")
     sentences = step01(workdir)
     print(f"[segment1] 01-sentences: {len(sentences)} 句 (start/end 新 schema) -> steps/01-sentences/sentences.json")
     verbs = step02(workdir, sentences)

@@ -1,11 +1,18 @@
-# TASK_DISCOVERY（FROZEN 2026-10-21 v2：只输出候选武器名单，completeness 归你）
+# TASK_DISCOVERY（FROZEN 2026-10-21 v3：只判本批，逐个打勾收/丢）
 
-输出一件 JSON，不输出其它文字：
-{"candidates": [{"name_en": "<词汇表一字不差>", "quotes": ["逐字，去重，≥1"]}]}
+> v3 变更（例子一个字没动，只改发现段输出形状）：discovery 从自由回忆改逐个打勾——武器表动态分片（40/批），每批名单逐个判收/丢，收+丢==本批（机检：缺件/重叠/陌生名即 fail）。沉默遗漏不再可能，判对判错仍归 agent、心抽复核。
 
-收：有买/锁/升/留/转 build 意图链（buy/lock/upgrade/use，卖了再买回也算），一句逐字 quote 即收。
-丢：开局 trick 即卖 / 类别口头 / 子串误触（claw tree≠Claw，laser guns≠Laser Gun）/ cursed 犹豫没买 / 只提一次无后文。只描述，不收录。
-幻觉名（不在词汇表）/ 编 quote / 空名单即 fail。你不填 count。
+输出一件 JSON，不输出其它文字。
+
+## 发现段 打勾契约（checklist，不是回忆）
+
+你只判随附的本批名单（动态分片之一，不判其它）。输出：
+`{"收": [{"name_en": "<本批一字不差>", "quotes": ["逐字，去重，≥1"]}], "丢": ["<本批一字不差>", ...]}`
+
+收：有买/锁/升/留/转 build 意图链（buy/lock/upgrade/use，卖了再买回也算），一句逐字 quote 即收（判据见下收例）。
+丢：开局 trick 即卖 / 类别口头 / 子串误触（claw tree≠Claw，laser guns≠Laser Gun）/ cursed 犹豫没买 / 只提一次无后文（判据见下丢例）。
+本批每件必须出现在收或丢中恰好一次；空收可以（如本批全路过），但漏判一件即 fail。
+幻觉名（不在本批）/ 编 quote / 收空 quotes 即 fail。你不填 count。
 
 ## 收（6 例）
 

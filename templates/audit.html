@@ -701,7 +701,7 @@ html { scroll-behavior: smooth; }
 
 <script>
 // App state (无mock，只读真实数据 ?base=/picker)
-let appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], fewshot05:{}, ranking05:null, evidence05:{}, itemCandidates:[], discovery03:null, fewshot03:'', ranking03:null, evidence03:{}, fewshot07:'', ranking07:null, phases:[], priorities:[]};
+let appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], discovery05:null, fewshot05:{}, ranking05:null, evidence05:{}, itemCandidates:[], discovery03:null, fewshot03:'', ranking03:null, evidence03:{}, fewshot07:'', ranking07:null, phases:[], priorities:[]};
 
 const state = {
   dataSource: 'empty',
@@ -898,7 +898,7 @@ function render() {
           <span class="badge badge-verified">check_05 对应节</span>
           <span class="badge" style="margin-left:4px;">DAG L1并行层</span>
         </div>
-        ${(()=>{ const wc=(appData.weaponCandidates||[]); if(!wc.length) return '<div style="color:#999;">待加载：请载入 steps/05-weapons/candidates.json（缺节即 fail）。</div>'; const ns=(appData.sentences||[]).length; const evm=(appData.evidence05||{}); const rk=(appData.ranking05||null); const lp=(f)=>`<a href="#" data-stepfile="${f}" data-kind="prompt">${f.split('/').pop()}</a>`; const lr=(f,k)=>`<a href="#" data-stepfile="${f}" data-kind="result" data-rkey="${k}">${f.split('/').pop()}</a>`; const sl=`<a href="#" data-fileview="sentences">sentences.json</a>`; const vl=`<a href="#" data-fileview="vocab">wiki-cache.json</a>`; const fl_d=`<a href="#" data-fileview="fewshot" data-t="discovery">steps/05-weapons/fewshot-discovery.md</a>`; const fl_e=`<a href="#" data-fileview="fewshot" data-t="evidence">steps/05-weapons/fewshot-evidence.md</a>`; const fl_r=`<a href="#" data-fileview="fewshot" data-t="ranking">steps/05-weapons/fewshot-ranking.md</a>`; const blk=(t,a,b,c)=>`<div style="padding:6px 0;border-bottom:1px dashed var(--line);font-size:12px;"><div><span class="dyn">${t}</span></div><div style="margin-left:12px;">入参：${a}</div><div style="margin-left:12px;">prompt：${b}</div><div style="margin-left:12px;">结果：${c}</div></div>`; const rows=[blk('D discovery', `${sl} + ${vl} + ${fl_d}`, lp('steps/05-weapons/agent-discovery.log.jsonl'), lr('steps/05-weapons/candidates.json','candidates'))]; wc.forEach(c=>{ const s=safeName(c.name_en); rows.push(blk('E evidence/'+c.name_en, `${sl} + ${fl_e} + TASK_WEAPON=${c.name_en}`, lp('steps/05-weapons/agent-evidence-'+s+'.log.jsonl'), lr('steps/05-weapons/per_weapon/'+s+'.json','ev:'+c.name_en))); }); rows.push(blk('R ranking', `${sl} + ${fl_r} + ${wc.length}份evidence`, lp('steps/05-weapons/agent-ranking.log.jsonl'), `${lr('steps/05-weapons/ranking.json','ranking')} → ${lr('steps/05-weapons/weapons.json','weapons')}（终稿）`)); return `<div style="margin-bottom:10px;">${rows.join('')}</div>`; })()}
+        ${(()=>{ const wc=(appData.weaponCandidates||[]); if(!wc.length) return '<div style="color:#999;">待加载：请载入 steps/05-weapons/candidates.json（缺节即 fail）。</div>'; const ns=(appData.sentences||[]).length; const evm=(appData.evidence05||{}); const rk=(appData.ranking05||null); const lp=(f)=>`<a href="#" data-stepfile="${f}" data-kind="prompt">${f.split('/').pop()}</a>`; const lr=(f,k)=>`<a href="#" data-stepfile="${f}" data-kind="result" data-rkey="${k}">${f.split('/').pop()}</a>`; const sl=`<a href="#" data-fileview="sentences">sentences.json</a>`; const vl=`<a href="#" data-fileview="vocab">wiki-cache.json</a>`; const fl_d=`<a href="#" data-fileview="fewshot" data-t="discovery">steps/05-weapons/fewshot-discovery.md</a>`; const fl_e=`<a href="#" data-fileview="fewshot" data-t="evidence">steps/05-weapons/fewshot-evidence.md</a>`; const fl_r=`<a href="#" data-fileview="fewshot" data-t="ranking">steps/05-weapons/fewshot-ranking.md</a>`; const blk=(t,a,b,c)=>`<div style="padding:6px 0;border-bottom:1px dashed var(--line);font-size:12px;"><div><span class="dyn">${t}</span></div><div style="margin-left:12px;">入参：${a}</div><div style="margin-left:12px;">prompt：${b}</div><div style="margin-left:12px;">结果：${c}</div></div>`; const chs5=(((appData.discovery05||{}).chunks)||[]); const rows=[]; chs5.forEach((ch,i)=>{ rows.push(blk('D'+(i+1)+'/'+chs5.length+' discovery 打勾', `${sl} + ${vl} + 本批${(ch||[]).length}件 + ${fl_d}`, lp('steps/05-weapons/agent-discovery-chunk-'+i+'.log.jsonl'), lr('steps/05-weapons/discovery-chunk-'+i+'.json'))); }); if(!rows.length) rows.push(blk('D discovery', `${sl} + ${vl} + ${fl_d}`, lp('steps/05-weapons/agent-discovery.log.jsonl'), lr('steps/05-weapons/candidates.json','candidates'))); wc.forEach(c=>{ const s=safeName(c.name_en); rows.push(blk('E evidence/'+c.name_en, `${sl} + ${fl_e} + TASK_WEAPON=${c.name_en}`, lp('steps/05-weapons/agent-evidence-'+s+'.log.jsonl'), lr('steps/05-weapons/per_weapon/'+s+'.json','ev:'+c.name_en))); }); rows.push(blk('R ranking', `${sl} + ${fl_r} + ${wc.length}份evidence`, lp('steps/05-weapons/agent-ranking.log.jsonl'), `${lr('steps/05-weapons/ranking.json','ranking')} → ${lr('steps/05-weapons/weapons.json','weapons')}（终稿）`)); return `<div style="margin-bottom:10px;">${rows.join('')}</div>`; })()}
       </div>
     </div>
 
@@ -1868,6 +1868,8 @@ async function loadFromDirectoryHandle(dirHandle) {
       if (Object.keys(f05).length) appData.fewshot05 = f05;
       const wc05 = await readJsonFile(dirHandle, 'steps', '05-weapons', 'candidates.json');
       if (wc05) appData.weaponCandidates = wc05;
+      const dc05 = await readJsonFile(dirHandle, 'steps', '05-weapons', 'discovery.json');
+      if (dc05) appData.discovery05 = dc05;
       const rk05 = await readJsonFile(dirHandle, 'steps', '05-weapons', 'ranking.json');
       if (rk05) appData.ranking05 = rk05;
       const ev05 = await readDirJsonFiles(dirHandle, 'steps', '05-weapons', 'per_weapon');
@@ -1954,6 +1956,8 @@ document.getElementById('fallbackDirInput').addEventListener('change', async (e)
   }
   const wc05 = await readBySuffix('steps/05-weapons/candidates.json');
   if (wc05) appData.weaponCandidates = wc05;
+  const dc05f = await readBySuffix('steps/05-weapons/discovery.json');
+  if (dc05f) appData.discovery05 = dc05f;
   const rk05f = await readBySuffix('steps/05-weapons/ranking.json');
   if (rk05f) appData.ranking05 = rk05f;
   const evMapF = {};
@@ -2106,6 +2110,8 @@ async function loadFromHttpBase(base) {
       }
       const wc05 = await fetchJson(`${base}/steps/05-weapons/candidates.json`);
       if (wc05) appData.weaponCandidates = wc05;
+      const dc05h = await fetchJson(`${base}/steps/05-weapons/discovery.json`);
+      if (dc05h) appData.discovery05 = dc05h;
       const rk05h = await fetchJson(`${base}/steps/05-weapons/ranking.json`);
       if (rk05h) appData.ranking05 = rk05h;
       const evMapH = {};
@@ -2191,7 +2197,7 @@ function setupFilterListeners() {
 
 function loadEmptyData() {
   // 无mock：清空为真实数据占位，须经 picker/?base= 载入 steps/*/*.json
-  appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], fewshot05:{}, ranking05:null, evidence05:{}, itemCandidates:[], discovery03:null, fewshot03:'', ranking03:null, evidence03:{}, fewshot07:'', ranking07:null, phases:[], priorities:{}, pitfalls:[], candidates08:[], wordings08:[], assemble:{}};
+  appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], discovery05:null, fewshot05:{}, ranking05:null, evidence05:{}, itemCandidates:[], discovery03:null, fewshot03:'', ranking03:null, evidence03:{}, fewshot07:'', ranking07:null, phases:[], priorities:{}, pitfalls:[], candidates08:[], wordings08:[], assemble:{}};
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -2204,7 +2210,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
   // 缺省不吃广告纸: 不自动载 mock, 只显示待加载; live 经 picker/?base 进来, mock 仅点按钮显式进
-  appData = {manifest: null, sentences: [], verbs: {verified: [], candidates: []}, items: [], ratings: [], weapons: {t1: [], t2: []}, weaponCandidates: [], fewshot05: {}, ranking05: null, evidence05: {}, itemCandidates: [], discovery03: null, fewshot03: '', ranking03: null, evidence03: {}, fewshot07: '', ranking07: null, phases: [], priorities: {}, pitfalls: [], candidates08: [], wordings08: [], assemble: {}};
+  appData = {manifest: null, sentences: [], verbs: {verified: [], candidates: []}, items: [], ratings: [], weapons: {t1: [], t2: []}, weaponCandidates: [], discovery05: null, fewshot05: {}, ranking05: null, evidence05: {}, itemCandidates: [], discovery03: null, fewshot03: '', ranking03: null, evidence03: {}, fewshot07: '', ranking07: null, phases: [], priorities: {}, pitfalls: [], candidates08: [], wordings08: [], assemble: {}};
   state.dataSource = 'empty';
   const params = new URLSearchParams(window.location.search);
   const baseParam = params.get('base');

@@ -61,6 +61,7 @@ def main(argv: list[str] | None = None) -> int:
         work / "steps" / "04-attributes" / "ratings.json",
         work / "outputs" / "ratings.json",
         work / "steps" / "05-weapons" / "candidates.json",
+        work / "steps" / "05-weapons" / "discovery.json",
         work / "steps" / "05-weapons" / "fewshot-discovery.md",
         work / "steps" / "05-weapons" / "fewshot-evidence.md",
         work / "steps" / "05-weapons" / "fewshot-ranking.md",
@@ -84,6 +85,7 @@ def main(argv: list[str] | None = None) -> int:
     weapons = json.loads((work / "steps" / "05-weapons" / "weapons.json").read_text(encoding="utf-8"))
     weapons_out = json.loads((work / "outputs" / "weapons.json").read_text(encoding="utf-8"))
     weapon_candidates = json.loads((work / "steps" / "05-weapons" / "candidates.json").read_text(encoding="utf-8"))
+    discovery05_info = json.loads((work / "steps" / "05-weapons" / "discovery.json").read_text(encoding="utf-8"))
     item_candidates = json.loads((work / "steps" / "03-grouping" / "candidates.json").read_text(encoding="utf-8"))
     discovery_info = json.loads((work / "steps" / "03-grouping" / "discovery.json").read_text(encoding="utf-8"))
     # 打勾覆盖机检 (#62 v2: 收+丢==全表, 缺件即 fail; 分片动态, 不写死片数)
@@ -453,7 +455,7 @@ def main(argv: list[str] | None = None) -> int:
     if ratings != ratings_out:
         fail("outputs ratings must equal steps ratings", errors)
 
-    # --- 05-weapons (#61: frozen fewshot + discovery/evidence/ranking, shape only) ---
+    # --- 05-weapons (#61: frozen fewshot + discovery/evidence/ranking, shape only; #62 v2 打勾) ---
     # 新 schema: candidates.json [{name_en,count,quotes,quote_details}] + weapons.json {t1[],t2[]}
     # + ranking.json {t1[{name_en,note}],t2[]} (终判, 可推翻) + per_weapon/<Safe>.json (evidence 原始)
     # 链: ranking 名==candidates; per_weapon 每把存在+tier合法+名对上; 旧六件退役 (出现即 fail);
@@ -494,6 +496,42 @@ def main(argv: list[str] | None = None) -> int:
                 fail(f"candidates quote_details must parallel quotes: {c.get('name_en')}", errors)
         if len(cand_names) != len(set(cand_names)):
             fail("candidates must be deduped by name_en", errors)
+    # 打勾覆盖机检 (#62 v2: 收+丢==武器全表, 缺件即 fail; 分片动态, 不写死武器数)
+    _d5_chunks = discovery05_info.get("chunks") if isinstance(discovery05_info, dict) else None
+    if not isinstance(_d5_chunks, list) or not _d5_chunks:
+        fail("steps/05-weapons/discovery.json chunks 非法 (须为非空分片表)", errors)
+    else:
+        try:
+            _wiki_weapons = sorted((json.loads((REPO / "data" / "wiki-cache.json").read_text(encoding="utf-8")).get("weapons", {}) or {}).keys())
+        except Exception:
+            _wiki_weapons = []
+            fail("data/wiki-cache.json weapons 读失败 (打勾覆盖无全表可比)", errors)
+        if sorted(sum([list(c) for c in _d5_chunks], [])) != sorted(_wiki_weapons):
+            fail("discovery.json 分片须覆盖武器全表 (动态分片, 缺件即 fail)", errors)
+        _d5_got: list = []
+        _d5_drop: list = []
+        for _i, _ch in enumerate(_d5_chunks):
+            _cp = work / "steps" / "05-weapons" / f"discovery-chunk-{_i}.json"
+            if not _cp.exists():
+                fail(f"steps/05-weapons/discovery-chunk-{_i}.json 缺失 (分片 verdict, 缺节即 fail)", errors)
+                continue
+            try:
+                _cd = json.loads(_cp.read_text(encoding="utf-8"))
+            except Exception:
+                fail(f"discovery-chunk-{_i}.json 非法 JSON", errors)
+                continue
+            if not isinstance(_cd, dict) or not isinstance(_cd.get("收"), list) or not isinstance(_cd.get("丢"), list):
+                fail(f"discovery-chunk-{_i}.json 须为 {{收[], 丢[]}}", errors)
+                continue
+            _names = [x.get("name_en") for x in _cd["收"] if isinstance(x, dict)] + [x for x in _cd["丢"] if isinstance(x, str)]
+            if sorted(_names) != sorted(_ch):
+                fail(f"discovery-chunk-{_i}.json 收+丢须==本片 (缺件/串片即 fail)", errors)
+            _d5_got += [x.get("name_en") for x in _cd["收"] if isinstance(x, dict)]
+            _d5_drop += [x for x in _cd["丢"] if isinstance(x, str)]
+        if sorted(_d5_got + _d5_drop) != sorted(_wiki_weapons):
+            fail("discovery 全片收+丢须==武器全表 (沉默遗漏即 fail)", errors)
+        if sorted(_d5_got) != sorted(cand_names):
+            fail("discovery 收须==candidates (合并一致)", errors)
     if not isinstance(weapons, dict) or "t1" not in weapons or "t2" not in weapons:
         fail("weapons must be {t1[], t2[]}", errors)
         t1, t2 = [], []
@@ -653,8 +691,9 @@ def main(argv: list[str] | None = None) -> int:
             elif not any(_ecq.strip() in _q for _q in _eq if isinstance(_q, str)):
                 fail(f"per_weapon copies_quote 须逐字出自 quotes: {_n}", errors)
     # 审计节点三元组: 每次 LLM 调用须留 log (入参 prompt 可查), 缺 log 即 fail
-    _logs = [work / "steps" / "05-weapons" / "agent-discovery.log.jsonl",
-             work / "steps" / "05-weapons" / "agent-ranking.log.jsonl"]
+    _logs = [work / "steps" / "05-weapons" / "agent-ranking.log.jsonl"]
+    for _i in range(len(_d5_chunks) if isinstance(_d5_chunks, list) else 0):
+        _logs.append(work / "steps" / "05-weapons" / f"agent-discovery-chunk-{_i}.log.jsonl")
     for _n in cand_names:
         _safe = re.sub(r"[^A-Za-z0-9]+", "_", str(_n)).strip("_")
         _logs.append(work / "steps" / "05-weapons" / f"agent-evidence-{_safe}.log.jsonl")

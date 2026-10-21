@@ -53,7 +53,7 @@ def test_step05_loop_module_exists():
 def test_fewshot_frozen_per_task_exists():
     # v2: 按任务拆三本手册, 各贴各的 (例子全留、废话全砍)
     specs = {
-        "discovery": ("TASK_DISCOVERY", "Slingshot", "claw tree", "禁数帽"),
+        "discovery": ("TASK_DISCOVERY", "Slingshot", "claw tree", "禁数帽", "打勾"),
         "evidence": ("TASK_EVIDENCE", "T1/T2", "take a second minigun", "four screwdrivers", "copies", "未提及"),
         "ranking": ("TASK_RANKING", "Blunderbuss", "horde wave", "同句多引", "copies", "终定"),
     }
@@ -78,10 +78,14 @@ def test_prompt_build_contains_fewshot_sentences_only():
     fewshot_r = (REPO / "prompts" / "step05-ranking-fewshot.md").read_text(encoding="utf-8")
     sents = _sentences()
     vocab = _vocab()
-    disc = m.build_discovery_prompt(sents, vocab, fewshot_d)
+    disc = m.build_discovery_prompt(sents, vocab[:2], 0, 2, fewshot_d)
     assert "Obviously, we'll take a second minigun" in disc
     assert "Minigun" in disc and "Screwdriver" in disc
+    sec = disc.split("## 本批名单")[1].split("---")[0]
+    assert "Minigun" in sec and "Screwdriver" in sec
+    assert "SMG" not in sec, "discovery 只判本批 (动态分片, 不判其它)"
     assert "TASK_DISCOVERY" in disc
+    assert "打勾" in disc
     ev = m.build_evidence_prompt("Minigun", sents, fewshot_e)
     assert "TASK_WEAPON: Minigun" in ev
     assert "Obviously, we'll take a second minigun" in ev
@@ -99,40 +103,63 @@ def test_prompt_build_contains_fewshot_sentences_only():
             assert banned not in src, f"{fn_name} must not encode retired anchor rules ({banned})"
 
 
-def test_validate_discovery_ok_and_fail_loud():
+def test_chunk_vocab_partition_covers_all():
+    m = _load("step05_loop", "scripts/step05_loop.py")
+    assert m.DISCOVERY_CHUNK_SIZE == 40
+    vocab = [f"Weapon{i:03d}" for i in range(85)]
+    chunks = m.chunk_vocab(vocab)
+    assert [len(c) for c in chunks] == [40, 40, 5]
+    assert sorted(sum([list(c) for c in chunks], [])) == sorted(vocab)
+    # 动态分片: 片数=ceil(n/40), 不写死武器数
+    assert len(m.chunk_vocab([f"W{i}" for i in range(78)])) == 2
+
+
+def test_validate_discovery_chunk_ok_and_fail_loud():
     m = _load("step05_loop", "scripts/step05_loop.py")
     sents = _sentences()
-    vocab = _vocab()
-    good = {"candidates": [
-        {"name_en": "Minigun", "quotes": [sents[0]["text"]]},
-        {"name_en": "Screwdriver", "quotes": [sents[1]["text"]]},
-    ]}
-    out = m.validate_discovery(good, sents, vocab)
-    assert [c["name_en"] for c in out] == ["Minigun", "Screwdriver"]
+    chunk = ["Minigun", "Screwdriver", "SMG"]
+    good = {"收": [{"name_en": "Minigun", "quotes": [sents[0]["text"]]}],
+            "丢": ["Screwdriver", "SMG"]}
+    out = m.validate_discovery_chunk(good, chunk, sents)
+    assert [c["name_en"] for c in out["收"]] == ["Minigun"]
+    # 缺一件即fail (沉默遗漏不再可能)
+    bad = {"收": [{"name_en": "Minigun", "quotes": [sents[0]["text"]]}],
+           "丢": ["Screwdriver"]}
+    with pytest.raises(SystemExit):
+        m.validate_discovery_chunk(bad, chunk, sents)
     # 幻觉名即fail
-    bad = {"candidates": [{"name_en": "幻觉枪", "quotes": [sents[0]["text"]]}]}
     with pytest.raises(SystemExit):
-        m.validate_discovery(bad, sents, vocab)
-    # 编quote即fail
-    bad2 = {"candidates": [{"name_en": "Minigun", "quotes": ["我编的一句根本不在字幕里"]}]}
+        m.validate_discovery_chunk({"收": [{"name_en": "幻觉枪", "quotes": [sents[0]["text"]]}],
+                                    "丢": chunk}, chunk, sents)
+    # 收编quote即fail
     with pytest.raises(SystemExit):
-        m.validate_discovery(bad2, sents, vocab)
-    # 空证据/空名单即fail
+        m.validate_discovery_chunk({"收": [{"name_en": "Minigun", "quotes": ["我编的一句"]}],
+                                    "丢": ["Screwdriver", "SMG"]}, chunk, sents)
+    # 收空quotes即fail
     with pytest.raises(SystemExit):
-        m.validate_discovery({"candidates": []}, sents, vocab)
+        m.validate_discovery_chunk({"收": [{"name_en": "Minigun", "quotes": []}],
+                                    "丢": ["Screwdriver", "SMG"]}, chunk, sents)
+    # 空收可以 (本批全路过), 但缺收键即fail
+    out = m.validate_discovery_chunk({"收": [], "丢": chunk}, chunk, sents)
+    assert out == {"收": [], "丢": sorted(chunk)}
     with pytest.raises(SystemExit):
-        m.validate_discovery({"candidates": [{"name_en": "Minigun", "quotes": []}]},
-                              sents, vocab)
+        m.validate_discovery_chunk({"丢": chunk}, chunk, sents)
+    # 串片/重叠/陌生即fail
+    with pytest.raises(SystemExit):
+        m.validate_discovery_chunk({"收": [{"name_en": "Minigun", "quotes": [sents[0]["text"]]}],
+                                    "丢": ["Minigun", "SMG"]}, chunk, sents)
     # agent填count即fail
-    bad3 = {"candidates": [], "count": 5}
+    bad = {"收": [{"name_en": "Minigun", "quotes": [sents[0]["text"]]}],
+           "丢": ["Screwdriver", "SMG"], "count": 5}
     with pytest.raises(SystemExit):
-        m.validate_discovery(bad3, sents, vocab)
+        m.validate_discovery_chunk(bad, chunk, sents)
     # 退役字段出现即fail
-    for old in ("anchors", "confidence", "kind", "inferred", "score", "reason"):
-        bad = {"candidates": [{"name_en": "Minigun", "quotes": [sents[0]["text"]]}],
-               old: "x"}
+    for old in ("anchors", "confidence", "kind", "inferred", "score", "reason",
+                "candidates"):
+        bad = {"收": [{"name_en": "Minigun", "quotes": [sents[0]["text"]]}],
+               "丢": ["Screwdriver", "SMG"], old: "x"}
         with pytest.raises(SystemExit):
-            m.validate_discovery(bad, sents, vocab)
+            m.validate_discovery_chunk(bad, chunk, sents)
 
 
 def test_validate_evidence_ok_and_fail_loud():
@@ -244,7 +271,7 @@ def test_validate_ranking_ok_and_fail_loud():
 
 
 def test_run_loop_with_fake_agents_cyborg_shape(tmp_path):
-    """Fake三段: discovery 4把 → evidence各一把 → ranking切2/2, 自洽落盘."""
+    """Fake三段: discovery 打勾 (收2/丢2, 缺件即fail) → evidence各一把 → ranking切2/2, 自洽落盘."""
     m = _load("step05_loop", "scripts/step05_loop.py")
     sents = _sentences()
     workdir = tmp_path / "cyborg" / "ultimate"
@@ -257,12 +284,19 @@ def test_run_loop_with_fake_agents_cyborg_shape(tmp_path):
         "SMG": [sents[2]["text"]],
         "Nuclear Launcher": [sents[3]["text"]],
     }
+    收set = {"Minigun", "Screwdriver"}
 
     def fake_agent(kind, name_en, prompt):
         assert "FROZEN" in prompt or "fewshot" in prompt.lower() or len(prompt) > 100
         if kind == "discovery":
-            return {"candidates": [{"name_en": k, "quotes": v}
-                                   for k, v in quotes_by.items()]}
+            # name_en == chunk id; 本批逐个打勾, 收+丢==本批
+            chunks = m.chunk_vocab(sorted(quotes_by.keys()))
+            ch = chunks[name_en]
+            assert "打勾" in prompt
+            for n in ch:
+                assert n in prompt, f"本批名单须进 prompt: {n}"
+            return {"收": [{"name_en": n, "quotes": quotes_by[n]} for n in ch if n in 收set],
+                    "丢": [n for n in ch if n not in 收set]}
         if kind == "evidence":
             assert name_en in quotes_by
             tier = "T1" if name_en in ("Minigun", "Screwdriver") else "T2"
@@ -275,8 +309,7 @@ def test_run_loop_with_fake_agents_cyborg_shape(tmp_path):
         if kind == "ranking":
             return {"t1": [{"name_en": "Minigun", "note": f"主力原话\"{quotes_by['Minigun'][0][:12]}\"。", "copies": "2把起", "copies_quote": quotes_by['Minigun'][0][:12]},
                            {"name_en": "Screwdriver", "note": f"体系原话\"{quotes_by['Screwdriver'][0][:12]}\"。", "copies": "4把成型", "copies_quote": quotes_by['Screwdriver'][0][:12]}],
-                    "t2": [{"name_en": "SMG", "note": f"过渡原话\"{quotes_by['SMG'][0][:12]}\"。", "copies": "1把过渡", "copies_quote": quotes_by['SMG'][0][:12]},
-                           {"name_en": "Nuclear Launcher", "note": f"horde位原话\"{quotes_by['Nuclear Launcher'][0][:12]}\"。", "copies": "1把horde", "copies_quote": quotes_by['Nuclear Launcher'][0][:12]}]}
+                    "t2": []}
         raise AssertionError(f"unknown kind {kind}")
 
     # 用小词汇表 monkeypatch load_weapon_vocab
@@ -287,7 +320,16 @@ def test_run_loop_with_fake_agents_cyborg_shape(tmp_path):
     finally:
         m.load_weapon_vocab = orig_vocab
     assert sorted([w["name_en"] for w in weapons["t1"]]) == ["Minigun", "Screwdriver"]
-    assert sorted([w["name_en"] for w in weapons["t2"]]) == ["Nuclear Launcher", "SMG"]
+    assert weapons["t2"] == []
+    # 打勾合并: 收==candidates, 丢不进下游; 全表覆盖机检
+    disc = json.loads((workdir / "steps" / "05-weapons" / "discovery.json")
+                      .read_text(encoding="utf-8"))
+    assert sorted(disc["收"]) == ["Minigun", "Screwdriver"]
+    assert sorted(disc["丢"]) == ["Nuclear Launcher", "SMG"]
+    assert sorted(disc["收"] + disc["丢"]) == sorted(quotes_by.keys())
+    ch0 = json.loads((workdir / "steps" / "05-weapons" / "discovery-chunk-0.json")
+                     .read_text(encoding="utf-8"))
+    assert sorted([c["name_en"] for c in ch0["收"]] + ch0["丢"]) == sorted(quotes_by.keys())
     # count==len(quotes, 现场回填)
     for w in weapons["t1"] + weapons["t2"]:
         assert w["count"] == len(w["quotes"]) == 1
@@ -299,22 +341,22 @@ def test_run_loop_with_fake_agents_cyborg_shape(tmp_path):
     # candidates.json 自洽
     cands = json.loads((workdir / "steps" / "05-weapons" / "candidates.json")
                        .read_text(encoding="utf-8"))
-    assert sorted(c["name_en"] for c in cands) == sorted(quotes_by.keys())
+    assert sorted(c["name_en"] for c in cands) == sorted(收set)
     for c in cands:
         assert c["count"] == len(c["quotes"])
     # fewshot 运行快照: 三本与 repo FROZEN 文件逐字节一致 (审计离线可读即认此件)
     for task in ("discovery", "evidence", "ranking"):
         snap = (workdir / "steps" / "05-weapons" / f"fewshot-{task}.md").read_text(encoding="utf-8")
         assert snap == (REPO / "prompts" / f"step05-{task}-fewshot.md").read_text(encoding="utf-8")
-    # per_weapon 落盘 + ranking 终判落盘 (链: 名==candidates, check 验)
-    for n in quotes_by:
+    # per_weapon 落盘 + ranking 终判落盘 (链: 名==candidates, check 验; 丢不进下游)
+    for n in 收set:
         import re
         safe = re.sub(r"[^A-Za-z0-9]+", "_", n).strip("_")
         assert (workdir / "steps" / "05-weapons" / "per_weapon" / f"{safe}.json").exists()
     ranking = json.loads((workdir / "steps" / "05-weapons" / "ranking.json")
                          .read_text(encoding="utf-8"))
     assert sorted(x["name_en"] for x in ranking["t1"]) == ["Minigun", "Screwdriver"]
-    assert sorted(x["name_en"] for x in ranking["t2"]) == ["Nuclear Launcher", "SMG"]
+    assert ranking["t2"] == []
 
 
 def test_run_segment1_step05_uses_loop_not_anchors():
@@ -341,6 +383,7 @@ def test_check_segment1_05_shape_only_no_anchors_numbers():
     assert s > 0, "check_segment1 must have 05 section"
     src = full[s:s + 12000]
     assert "candidates" in src, "check_05 must认candidates (T1+T2==candidates)"
+    assert "discovery.json" in src, "check_05 must验打勾覆盖 (分片+全表)"
     assert "quote_details" in src
     assert "analysis" in src
     assert "ranking.json" in src, "check_05 must验ranking终判名==candidates"

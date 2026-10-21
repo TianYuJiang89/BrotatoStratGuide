@@ -6,7 +6,7 @@ Deterministic-first:
   count 回填 (=len(quotes), agent 不填) / quote_details 重建 (sentences lookup, 不信 agent) /
   名在表 (武器词汇表78, 幻觉即 fail) / 去重 / T1+T2==candidates 自洽 / 落盘
   (candidates.json + weapons.json + per_weapon/* + 日志).
-- agent judgment 只做: discovery 补全 (completeness 归它, scan 子串已退役) /
+- agent judgment 只做: discovery 打勾 (逐个判收/丢, 收+丢==全表机检, 沉默遗漏不再可能) /
   evidence 单把判断 (tier建议+quotes+analysis+note+copies配比建议) / ranking 切分 (t1/t2+note定稿+copies终定, T1>=1由它保,
   可推翻 evidence tier, 切分拿 quote 说话禁数帽).
 - 缺件/编 quote/幻觉名即 fail loud, 不回落不补空.
@@ -44,6 +44,9 @@ FEWSHOT_DISCOVERY_REL = "prompts/step05-discovery-fewshot.md"
 FEWSHOT_EVIDENCE_REL = "prompts/step05-evidence-fewshot.md"
 FEWSHOT_RANKING_REL = "prompts/step05-ranking-fewshot.md"
 VALID_TIERS = {"T1", "T2"}
+# discovery 打勾分片: 武器词汇表动态分片 (40/批, 片数=ceil(n/40), 78→2片);
+# 每片独立 agent 逐个打勾收/丢; 合并验全表覆盖 (收+丢==vocab). 只片数常量写死, 不写死武器数.
+DISCOVERY_CHUNK_SIZE = 40
 RETIRED_FIELDS = ("anchors", "confidence", "kind", "inferred", "score", "reason")
 NOTE_MAX_LEN = 120
 # note 短引标记: 原话"..."(直引号) 或 原话“...”(弯引号), 两种都认, 内容须逐字出自 quotes
@@ -94,6 +97,13 @@ def load_weapon_vocab() -> list[str]:
     return names
 
 
+def chunk_vocab(vocab: list[str], size: int = DISCOVERY_CHUNK_SIZE) -> list[list[str]]:
+    if not vocab:
+        _fail("武器词汇表为空 (缺件即 fail)")
+    names = sorted(set(vocab))
+    return [names[i:i + size] for i in range(0, len(names), size)]
+
+
 def build_context(sentences: list[dict], idx: int) -> str:
     parts: list[str] = []
     if idx > 0:
@@ -127,27 +137,30 @@ def _sentences_blob(sentences: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def build_discovery_prompt(sentences: list[dict], vocab: list[str], fewshot_text: str) -> str:
+def build_discovery_prompt(sentences: list[dict], chunk: list[str],
+                           chunk_id: int, chunk_total: int,
+                           fewshot_text: str) -> str:
     if not isinstance(sentences, list) or not sentences:
         _fail("sentences 为空 (缺件即 fail)")
-    if not vocab:
-        _fail("武器词汇表为空 (缺件即 fail)")
+    if not chunk:
+        _fail("discovery 本批名单为空 (缺件即 fail)")
     blob = _sentences_blob(sentences)
-    vocab_line = ", ".join(vocab)
+    chunk_line = ", ".join(chunk)
     prompt = (
         fewshot_text
         + "\n\n## 该角色全量整句（含 start/end/t，原样全量，不截断）\n\n"
         + "```json\n" + blob + "\n```\n\n"
-        + "## 武器词汇表（78，全局唯一，只认此表，一字不差）\n\n"
-        + vocab_line + "\n\n"
-        + "---\n\n# TASK_DISCOVERY（只输出候选武器名单，completeness 归你）\n\n"
+        + f"## 本批名单（第 {chunk_id + 1}/{chunk_total} 批，共 {len(chunk)} 件，只判这些，一字不差）\n\n"
+        + chunk_line + "\n\n"
+        + "---\n\n# TASK_DISCOVERY（打勾：逐个判收/丢，缺件即 fail）\n\n"
         + "## 输出契约（只输出一件 JSON 对象，不输出其它文字）\n\n"
-        + '{"candidates": [{"name_en": "<词汇表一字不差>", "quotes": ["逐字出自上表，去重，≥1"]}]}\n\n'
-        + "- 只收有买/锁/升/留/转 build 意图的真武器；路过名词（开局 trick 即卖/类别口头/子串误触/cursed 犹豫没买/只提一次无后文）一律丢。\n"
-        + "- name_en 须与词汇表一字不差；幻觉名即 fail。\n"
+        + '{"收": [{"name_en": "<本批一字不差>", "quotes": ["逐字，去重，≥1"]}], "丢": ["<本批一字不差>", ...]}\n\n'
+        + "- 只收有买/锁/升/留/转 build 意图的真武器；开局 trick 即卖/类别口头/子串误触/cursed 犹豫没买/只提一次无后文一律丢。\n"
+        + "- 本批每件必须出现在收或丢中恰好一次；空收可以（如本批全路过），但漏判一件即 fail。\n"
+        + "- name_en 须与本批一字不差；陌生名即 fail。\n"
         + "- quotes 须逐字等于上表某条 text，去重，每把 ≥1。编 quote 即 fail。\n"
-        + "- 你不输出 count。\n"
-        + "- 缺件/空名单即 fail，不回落不补空。\n"
+        + "- 收空 quotes 即 fail；你不输出 count。\n"
+        + "- 缺件/空收+空丢即 fail，不回落不补空。\n"
     )
     return prompt
 
@@ -212,45 +225,60 @@ def build_ranking_prompt(sentences: list[dict], evidences: list[dict], fewshot_t
     return prompt
 
 
-def validate_discovery(data: dict, sentences: list[dict], vocab: list[str]) -> list[dict]:
+def validate_discovery_chunk(data: dict, chunk_items: list[str],
+                             sentences: list[dict]) -> dict:
     if not isinstance(data, dict):
         _fail(f"discovery 输出须为 JSON 对象, got {type(data)}")
     for f in RETIRED_FIELDS:
         if f in data:
             _fail(f"discovery 字段 {f} 已退役 (#61, 出现即 fail)")
+    if "candidates" in data:
+        _fail("discovery 须为打勾形状 {收[], 丢[]} (candidates 自由回忆已退役)")
     if "count" in data:
         _fail("discovery 不许填 count (只活代码)")
-    if "candidates" not in data:
-        _fail("discovery 缺 candidates (缺件即 fail, 不补空)")
-    cands = data["candidates"]
-    if not isinstance(cands, list) or not cands:
-        _fail("discovery candidates 须为非空数组 (空即 fail, completeness 归你)")
-    vocab_set = set(vocab)
+    for k in ("收", "丢"):
+        if k not in data:
+            _fail(f"discovery 缺 {k} (缺件即 fail, 不补空)")
+    got = data["收"]
+    dropped = data["丢"]
+    if not isinstance(got, list) or not isinstance(dropped, list):
+        _fail("discovery 收/丢须为数组")
+    if any(not isinstance(x, str) for x in dropped):
+        _fail("discovery 丢须为字符串数组")
+    chunk_set = set(chunk_items)
     sent_texts = {s.get("text") for s in sentences if isinstance(s, dict)}
-    seen_names: set[str] = set()
-    out: list[dict] = []
-    for c in cands:
+    seen: set[str] = set()
+    out_got: list[dict] = []
+    for c in got:
         if not isinstance(c, dict):
-            _fail("discovery candidate 须为对象")
+            _fail("discovery 收条目须为对象")
         for k in ("name_en", "quotes"):
             if k not in c:
-                _fail(f"discovery candidate 缺 {k} (缺件即 fail)")
+                _fail(f"discovery 收条目缺 {k} (缺件即 fail)")
         name = c.get("name_en")
-        if not isinstance(name, str) or name not in vocab_set:
-            _fail(f"discovery 幻觉名即 fail: {name!r} 不在武器词汇表 (逐字)")
-        if name in seen_names:
-            _fail(f"discovery candidates 须去重: {name!r}")
-        seen_names.add(name)
+        if not isinstance(name, str) or name not in chunk_set:
+            _fail(f"discovery 幻觉名/串片即 fail: {name!r} 不在本批 (逐字)")
+        if name in seen:
+            _fail(f"discovery 收/丢须去重 (本批内重复): {name!r}")
+        seen.add(name)
         qs = c.get("quotes")
         if not isinstance(qs, list) or not qs or any(not isinstance(q, str) for q in qs):
-            _fail(f"discovery {name} quotes 须为非空字符串数组 (空证据即 fail)")
+            _fail(f"discovery {name} quotes 须为非空字符串数组 (收空 quotes 即 fail)")
         if len(qs) != len(set(qs)):
             _fail(f"discovery {name} quotes 须去重")
         for q in qs:
             if q not in sent_texts:
                 _fail(f"discovery {name} 编 quote 即 fail: {q[:60]!r} 不在整句内 (逐字)")
-        out.append({"name_en": name, "quotes": list(qs)})
-    return out
+        out_got.append({"name_en": name, "quotes": list(qs)})
+    for n in dropped:
+        if n not in chunk_set:
+            _fail(f"discovery 丢须为本批名单: {n!r} 陌生名即 fail")
+        if n in seen:
+            _fail(f"discovery 收/丢须去重 (本批内重复): {n!r}")
+        seen.add(n)
+    if seen != chunk_set:
+        _fail(f"discovery 收+丢须==本批 (缺件即 fail): 缺 {sorted(chunk_set - seen)}")
+    return {"收": out_got, "丢": sorted(dropped)}
 
 
 def _check_copies(who: str, cop, cq, quotes: list[str]) -> tuple[str, str]:
@@ -564,7 +592,7 @@ def _run_single_with_retry(workdir: Path, prompt: str, output_rel: str,
 def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
                     force: bool = False, max_workers: int = 4, stagger: float = 5.0,
                     model=None, thinking: str = "medium"):
-    """三段调度: discovery(串行) → evidence×N(并行) → ranking(串行).
+    """三段调度: discovery 打勾(分片并行) → evidence×N(并行) → ranking(串行).
 
     agent_fn: 测试注入. 为 None 时走真 RPC spawn.
       - discovery: agent_fn("discovery", None, prompt) -> dict
@@ -591,62 +619,86 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
     if _legacy.exists():
         _legacy.unlink()  # v1 单本快照已退役, 删 stale 防混淆
 
-    # ---- discovery (串行) ----
+    # ---- discovery 打勾 (分片并行, 逐个 verdict, 缺件即 fail) ----
+    # 词汇表动态分片 (40/批, 片数=ceil(n/40), 78→2片); 每片独立 agent 逐个打勾收/丢;
+    # 合并验全表覆盖 (收+丢==vocab). evidence 只对收跑.
     disc_path = outdir / "candidates.json"
-    disc_prompt = build_discovery_prompt(sentences, vocab, fewshot_d)
-    disc_log = outdir / "agent-discovery.log"
-    disc_rel = "steps/05-weapons/candidates.json"
+    chunks = chunk_vocab(vocab)
 
-    def _parse_disc(d):
-        return validate_discovery(d, sentences, vocab)
+    def _do_disc(i: int, ch: list[str]):
+        safe_i = f"chunk-{i}"
+        per_path = outdir / f"discovery-{safe_i}.json"
+        prompt = build_discovery_prompt(sentences, ch, i, len(chunks), fewshot_d)
 
-    if disc_path.exists() and not force:
-        try:
-            raw = json.loads(disc_path.read_text(encoding="utf-8"))
-            # candidates.json 落盘形态为数组 (code 回填后); agent 原始为 {candidates: []}.
-            # 复用时兼容两种: 若为数组, 视为已回填, 逐条验形状.
-            if isinstance(raw, list):
-                # 轻验: 每条须有 name_en/quotes, quotes 逐字.
-                sent_texts = {s.get("text") for s in sentences if isinstance(s, dict)}
-                tmp = {"candidates": [{"name_en": r.get("name_en"),
-                                       "quotes": r.get("quotes")} for r in raw]}
-                validated = validate_discovery(tmp, sentences, vocab)
-                # 用 validated 重建回填 (幂等)
-                disc_validated = validated
-            elif isinstance(raw, dict):
-                disc_validated = _parse_disc(raw)
-            else:
-                disc_validated = None  # type: ignore
-                _fail("candidates.json 非法 (须为数组或 discovery 对象)")
-        except SystemExit:
-            raise
-        except Exception:
-            disc_validated = None  # type: ignore
-    else:
-        disc_validated = None  # type: ignore
+        def _parse(d):
+            return validate_discovery_chunk(d, ch, sentences)
 
-    if disc_validated is None:
-        full_disc_prompt = (disc_prompt
-                            + f"\n\n只写相对路径 `{disc_rel}`，禁 `..` 与绝对盘符。\n")
+        if per_path.exists() and not force:
+            try:
+                return _parse(json.loads(per_path.read_text(encoding="utf-8")))
+            except SystemExit:
+                raise
+            except Exception:
+                pass
+        full_prompt = (prompt
+                       + f"\n\n只写相对路径 `steps/05-weapons/discovery-{safe_i}.json`，"
+                         f"禁 `..` 与绝对盘符。\n")
         if agent_fn is not None:
             try:
-                raw_d = agent_fn("discovery", None, disc_prompt)
+                raw_d = agent_fn("discovery", i, prompt)
             except TypeError:
-                _fail("agent_fn 须为三参 (kind, name_en, prompt): discovery/evidence/ranking")
+                _fail("agent_fn 须为三参 (kind, name_en, prompt)")
             except SystemExit:
                 raise
             except Exception as e:
-                _fail(f"discovery agent_fn fail: {e!r}")
-            disc_validated = _parse_disc(raw_d)
-        else:
-            if disc_path.exists() and force:
-                try:
-                    disc_path.unlink()
-                except Exception:
-                    pass
-            disc_validated = _run_single_with_retry(
-                workdir, full_disc_prompt, disc_rel, disc_log,
-                _parse_disc, timeout, model, thinking, disc_path)
+                _fail(f"discovery chunk{i} agent_fn fail: {e!r}")
+            parsed = _parse(raw_d)
+            per_path.write_text(json.dumps(parsed, ensure_ascii=False, indent=2) + "\n",
+                                encoding="utf-8")
+            return parsed
+        log_path = outdir / f"agent-discovery-{safe_i}.log"
+        out_rel = f"steps/05-weapons/discovery-{safe_i}.json"
+        if per_path.exists() and force:
+            try:
+                per_path.unlink()
+            except Exception:
+                pass
+        return _run_single_with_retry(workdir, full_prompt, out_rel, log_path,
+                                      _parse, timeout, model, thinking, per_path)
+
+    disc_chunks: list[dict] = []
+    if agent_fn is not None:
+        for _i, _ch in enumerate(chunks):
+            disc_chunks.append(_do_disc(_i, _ch))
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
+            dfuts = {ex.submit(_do_disc, _i, _ch): _i for _i, _ch in enumerate(chunks)}
+            by_i: dict[int, dict] = {}
+            for dfut in concurrent.futures.as_completed(dfuts):
+                by_i[dfuts[dfut]] = dfut.result()
+            disc_chunks = [by_i[_i] for _i in range(len(chunks))]
+            time.sleep(0)
+
+    # 合并: 收 union → candidates; 全表覆盖机检 (收+丢==vocab, 缺件即 fail)
+    seen_got: dict[str, list[str]] = {}
+    seen_drop: set[str] = set()
+    for dc in disc_chunks:
+        for c in dc.get("收", []):
+            if c["name_en"] in seen_got:
+                _fail(f"discovery 跨片重复: {c['name_en']!r}")
+            seen_got[c["name_en"]] = list(c["quotes"])
+        for n in dc.get("丢", []):
+            if n in seen_got or n in seen_drop:
+                _fail(f"discovery 跨片重复: {n!r}")
+            seen_drop.add(n)
+    if set(seen_got) | seen_drop != set(vocab):
+        _fail(f"discovery 收+丢须==全表 (缺件即 fail): 缺 {sorted(set(vocab) - set(seen_got) - seen_drop)}")
+    disc_validated = [{"name_en": n, "quotes": seen_got[n]} for n in sorted(seen_got)]
+    (outdir / "discovery.json").write_text(
+        json.dumps({"chunk_size": DISCOVERY_CHUNK_SIZE,
+                    "chunks": [list(ch) for ch in chunks],
+                    "收": sorted(seen_got), "丢": sorted(seen_drop)},
+                   ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     # discovery 回填 candidates.json (code: count=len(quotes) + quote_details)
     qlookup = _quote_lookup(sentences)

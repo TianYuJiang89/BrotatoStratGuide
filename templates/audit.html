@@ -701,7 +701,7 @@ html { scroll-behavior: smooth; }
 
 <script>
 // App state (无mock，只读真实数据 ?base=/picker)
-let appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], fewshot05:{}, ranking05:null, evidence05:{}, phases:[], priorities:[]};
+let appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], fewshot05:{}, ranking05:null, evidence05:{}, itemCandidates:[], discovery03:null, fewshot03:'', ranking03:null, evidence03:{}, fewshot07:'', ranking07:null, phases:[], priorities:[]};
 
 const state = {
   dataSource: 'empty',
@@ -736,10 +736,10 @@ function getFilteredItems() {
     // 4. Search text
     if (state.filters.search) {
       const q = state.filters.search.toLowerCase();
-      const matchNameEn = it.name_en.toLowerCase().includes(q);
-      const matchNameZh = it.name_zh.includes(q);
-      const matchReason = it.reason.toLowerCase().includes(q);
-      const matchQuotes = it.quotes.some(quote => quote.toLowerCase().includes(q));
+      const matchNameEn = (it.name_en || '').toLowerCase().includes(q);
+      const matchNameZh = (it.name_zh || it.name_en || '').includes(q);
+      const matchReason = ((it.reason || it.note) || '').toLowerCase().includes(q);
+      const matchQuotes = (it.quotes || []).some(quote => quote.toLowerCase().includes(q));
       if (!matchNameEn && !matchNameZh && !matchReason && !matchQuotes) return false;
     }
 
@@ -863,18 +863,12 @@ function render() {
       <div class="card">
         <div class="card-header">
           <div class="card-title">
-            <span>📊 steps/03-grouping/ & outputs/ · 最终分组与人话理由 (全68项收录)</span>
+            <span>📊 steps/03-grouping/ & outputs/ · 最终分组与人话理由 (discovery candidates + ranking)</span>
           </div>
           <span class="badge badge-count-pill">当前展示 ${filtered.length} 项</span>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/02-verbs/verbs.json</code> + <code>steps/01-sentences/sentences.json</code>（现场扫 count/quotes + quote_details 回查，禁读旧链 <code>data/mentions</code>/<code>data/builds</code>；锚+裁量：ban 系原话→ban、拿取+高频动态→must_take、低频路过照旧、拿不准 candidates 位标黄；无阈值无按名；68 全收录）</p>
+        ${(()=>{ const wc=(appData.itemCandidates||[]); if(!wc.length) return '<div style="color:#999;">待加载：请载入 steps/03-grouping/candidates.json（缺节即 fail）。</div>'; const evm=(appData.evidence03||{}); const rk=(appData.ranking03||null); const lp=(f)=>`<a href="#" data-stepfile="${f}" data-kind="prompt">${f.split('/').pop()}</a>`; const lr=(f,k)=>`<a href="#" data-stepfile="${f}" data-kind="result" data-rkey="${k}">${f.split('/').pop()}</a>`; const sl=`<a href="#" data-fileview="sentences">sentences.json</a>`; const fl=`<a href="#" data-stepfile="steps/03-grouping/fewshot.md" data-kind="result" data-rkey="fewshot03">steps/03-grouping/fewshot.md</a>`; const blk=(t,a,b,c)=>`<div style="padding:6px 0;border-bottom:1px dashed var(--line);font-size:12px;"><div><span class="dyn">${t}</span></div><div style="margin-left:12px;">入参：${a}</div><div style="margin-left:12px;">prompt：${b}</div><div style="margin-left:12px;">结果：${c}</div></div>`; const chs=(((appData.discovery03||{}).chunks)||[]); const rows=[]; chs.forEach((ch,i)=>{ rows.push(blk('D'+(i+1)+'/'+chs.length+' discovery 打勾', `${sl} + 本批${(ch||[]).length}件 + ${fl}`, lp('steps/03-grouping/agent-discovery-chunk-'+i+'.log.jsonl'), lr('steps/03-grouping/discovery-chunk-'+i+'.json'))); }); if(!rows.length) rows.push(blk('D discovery', `${sl} + items词汇表 + ${fl}`, lp('steps/03-grouping/agent-discovery.log.jsonl'), lr('steps/03-grouping/candidates.json','candidates03'))); wc.forEach(c=>{ const s=safeName(c.name_en); rows.push(blk('E evidence/'+c.name_en, `${sl} + ${fl} + TASK_ITEM=${c.name_en}`, lp('steps/03-grouping/agent-evidence-'+s+'.log.jsonl'), lr('steps/03-grouping/per_item/'+s+'.json','ev03:'+c.name_en))); }); rows.push(blk('R grouping-ranking', `${sl} + ${fl} + ${wc.length}份evidence`, lp('steps/03-grouping/agent-ranking.log.jsonl'), `${lr('steps/03-grouping/ranking.json','ranking03')} → ${lr('steps/03-grouping/grouping.json','grouping')}（终稿）`)); return `<div style="margin-bottom:10px;">${rows.join('')}</div>`; })()}
 
-        ${renderGroupAccordion("【必拿·核心 (Must Take - Core)】", filtered.filter(x => x.group === 'must_take' && x.tier === 'core'))}
-        ${renderGroupAccordion("【必拿·顺手 (Must Take - Convenient)】", filtered.filter(x => x.group === 'must_take' && x.tier === 'convenient'))}
-        ${renderGroupAccordion("【必拿·妥协 (Must Take - Compromise)】", filtered.filter(x => x.group === 'must_take' && x.tier === 'compromise'))}
-        ${renderGroupAccordion("【提过未拿 (Mentioned but Skipped)】", filtered.filter(x => x.group === 'mentioned_not_taken'))}
-        ${renderGroupAccordion("【明确 Ban (Banned)】", filtered.filter(x => x.group === 'ban'))}
-        ${renderGroupAccordion("【路过提及 (Casual Mentions 1-3次)】", filtered.filter(x => x.group === 'casual_mention'))}
       </div>
     </div>
 
@@ -947,12 +941,12 @@ function render() {
       <div class="card">
         <div class="card-header">
           <div class="card-title">
-            <span>🛒 steps/07-priorities/ · 升级 TopN 断层动态 + 商店 TopN 动态 + 怎么拿</span>
+            <span>🛒 steps/07-priorities/ · 升级 TopN + 商店 TopN + 怎么拿（agent 定）</span>
           </div>
           <span class="badge badge-verified">check_07 对应节</span>
         </div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step07-priorities.md + <code>steps/07-priorities/priorities.json</code>；07 须段1绿后才开。</p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/04-attributes/ratings.json</code> + <code>steps/05-weapons/weapons.json</code> + <code>steps/06-phases/phases.json</code> + <code>steps/03-grouping/grouping.json</code>（读新分组：锚+裁量动态 cutoff，68 全收录） + 商店 quotes → <code>steps/07-priorities/priorities.json</code>（禁读 <code>data/mentions</code>/<code>data/builds</code>；升级 TopN 断层动态 S/A 排名（#50 与商店侧同一刀法：count 降序 + 最大断层即止，不断层多收，保底 Top1），商店 TopN 断层动态：count 不断层多收、断层即止、保底 Top1，任一候选有拒绝动词原话即顺延不点名）</p>
+        ${(()=>{ const rk7=(appData.ranking07||null); if(!rk7) return ''; const lp=(f)=>`<a href="#" data-stepfile="${f}" data-kind="prompt">${f.split('/').pop()}</a>`; const lr=(f,k)=>`<a href="#" data-stepfile="${f}" data-kind="result" data-rkey="${k}">${f.split('/').pop()}</a>`; const sl=`<a href="#" data-fileview="sentences">sentences.json</a>`; const fl7=`<a href="#" data-stepfile="steps/07-priorities/fewshot.md" data-kind="result" data-rkey="fewshot07">steps/07-priorities/fewshot.md</a>`; const blk=(t,a,b,c)=>`<div style="padding:6px 0;border-bottom:1px dashed var(--line);font-size:12px;"><div><span class="dyn">${t}</span></div><div style="margin-left:12px;">入参：${a}</div><div style="margin-left:12px;">prompt：${b}</div><div style="margin-left:12px;">结果：${c}</div></div>`; return `<div style="margin-bottom:10px;">${blk('R priority-ranking', `${sl} + grouping + ratings + weapons + phases + ${fl7}`, lp('steps/07-priorities/agent-ranking.log.jsonl'), `${lr('steps/07-priorities/ranking.json','ranking07')} → ${lr('steps/07-priorities/priorities.json','priorities')}（终稿）`)}</div>`; })()}
         ${prioritiesSectionHtml()}
       </div>
     </div>
@@ -1030,44 +1024,6 @@ function setupScrollSpy() {
   });
 }
 
-function renderGroupAccordion(title, items) {
-  if (items.length === 0) return '';
-  return `
-    <div class="group-accordion">
-      <div class="group-acc-head">
-        <span>${title}</span>
-        <span class="badge-count-pill">${items.length} 件</span>
-      </div>
-      <div class="group-acc-body">
-        ${items.map(it => renderItemCard(it)).join('')}
-      </div>
-    </div>
-  `;
-}
-
-function renderItemCard(it) {
-  const isCandidate = it.confidence === 'candidate';
-  const isInferred = it.inferred;
-  return `
-    <div class="item-card ${isCandidate ? 'is-candidate' : ''} ${isInferred ? 'is-inferred' : ''}" data-name="${it.name_en}">
-      <div class="item-card-top">
-        <div class="item-card-name">
-          <span>${it.name_en}</span>
-          <span class="item-card-zh">${it.name_zh}</span>
-        </div>
-        <div>
-          ${it.confidence === 'verified' ? '<span class="badge badge-verified">verified</span>' : ''}
-          ${isCandidate ? '<span class="badge badge-candidate">candidate</span>' : ''}
-          ${isInferred ? '<span class="badge badge-inferred">inferred:true</span>' : ''}
-          <span class="badge-count-pill" title="出现频次">${it.count}次</span>
-        </div>
-      </div>
-      <div class="item-card-reason">${it.reason}</div>
-      ${it.quotes && it.quotes.length ? `<div class="item-card-quote">“${it.quotes[0]}”</div>` : ''}
-    </div>
-  `;
-}
-
 function manifestUrl() {
   return (appData.manifest && appData.manifest.sources && appData.manifest.sources[0]) ? appData.manifest.sources[0].url : '#';
 }
@@ -1121,13 +1077,13 @@ function recallPanelHtml() {
   const expanded = quotedTotal - used;
   const sigCount = {};
   cs.forEach(c => ((c.signals || []).forEach(s => { sigCount[s] = (sigCount[s] || 0) + 1; })));
-  const top = Object.entries(sigCount).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  const top = Object.entries(sigCount).sort((a, b) => b[1] - a[1]);
   const wcount = (appData.wordings08 || []).length;
   const rows = cs.map(c => {
     const owners = quoted.get(c.quote) || [];
     const sid = sentenceIdForQuote(c.quote);
     const short = c.quote.length > 110 ? c.quote.slice(0, 110) + '…' : c.quote;
-    const sigs = ((c.signals || []).slice(0, 5)).join(' / ');
+    const sigs = ((c.signals || [])).join(' / ');
     const badge = owners.length
       ? '<span class="badge badge-verified" title="被 pits 引用">引</span>'
       : '<span class="badge" title="召回命中但 agent 未采用">弃</span>';
@@ -1183,13 +1139,14 @@ function prioritiesSectionHtml() {
         </div>
         <div class="item-card-reason"><strong>为什么拿:</strong> ${u.why || ''}</div>
         <div style="font-size:12px;margin-top:2px;"><strong>怎么拿:</strong> ${u.how_to_get || ''}</div>
+        ${(u.analysis) ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;"><strong>分析:</strong> ${u.analysis}</div>` : ''}
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">${inheritLineHtml(kind, u.name)}</div>
         ${(u.quotes && u.quotes.length) ? `<div class="item-card-quote">“${u.quotes[0]}”</div>` : ''}
       </div>`;
   return `
-    <div style="font-size:12px;font-weight:700;margin:6px 0 4px;">⬆️ 升级 TopN 断层动态（依赖 04 S/A 排名 + 05/06，#50 与商店侧同一刀法）</div>
+    <div style="font-size:12px;font-weight:700;margin:6px 0 4px;">⬆️ 升级 TopN（agent 定，依赖 04 ratings + 05/06）</div>
     <div style="display:flex;flex-direction:column;gap:8px;">${ups.map((u, i) => card(u, i, 'upgrades')).join('')}</div>
-    <div style="font-size:12px;font-weight:700;margin:8px 0 4px;">🛒 商店 TopN 断层动态（依赖新 03 must_take verified + 通用顺延 + 断层切分）</div>
+    <div style="font-size:12px;font-weight:700;margin:8px 0 4px;">🛒 商店 TopN（agent 定，来源 03 candidates + ranking，ban 永不出局）</div>
     <div style="display:flex;flex-direction:column;gap:8px;">${shs.map((u, i) => card(u, i, 'shop')).join('')}</div>`;
 }
 
@@ -1232,11 +1189,11 @@ function assembleSectionHtml() {
 function inheritLineHtml(kind, name) {
   const key = (name || '').toLowerCase();
   if (kind === 'shop') {
-    const cands = (appData.items || []).filter(x => x.group === 'must_take' && x.confidence === 'verified').sort((a, b) => b.count - a.count);
+    const cands = (appData.items || []).filter(x => x.group === 'must_take').sort((a, b) => b.count - a.count);
     const i = cands.findIndex(x => (x.name_en || '').toLowerCase() === key);
     const g = i >= 0 ? cands[i] : (appData.items || []).find(x => (x.name_en || '').toLowerCase() === key);
     if (!g) return '';
-    return `继承自 03 · must_take${i >= 0 ? ' #' + (i + 1) : ''} · ${g.confidence || ''} · ${g.count}次`;
+    return `继承自 03 · must_take${i >= 0 ? ' #' + (i + 1) : ''} · ${g.count}次`;
   }
   const r = (appData.ratings || []).find(x => (x.term_en || '').toLowerCase() === key);
   if (!r) return '';
@@ -1267,7 +1224,9 @@ function bindItemCardClicks() {
     el.addEventListener('click', () => {
       const name = el.dataset.name;
       const item = (appData.items||[]).find(x => x.name_en === name);
-      if (item) openDrawer(item);
+      if (item) openDrawer({...item, name_zh: item.name_zh || item.name_en,
+        reason: item.reason || item.note || '',
+        discretion_reason: item.discretion_reason || (item.analysis ? ('来源：discovery candidates + ranking（#62）' + '；分析：' + item.analysis) : undefined)});
     });
   });
   document.querySelectorAll('[data-rating]').forEach(el => {
@@ -1358,7 +1317,7 @@ function openDrawer(item) {
       <h3>1. 属性与置信信号</h3>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
         <span class="badge-count-pill">频次: ${item.count}</span>
-        ${item.confidence === 'verified' ? '<span class="badge badge-verified">Verified (机检锚点)</span>' : '<span class="badge badge-candidate">Candidates (自由裁量·标黄)</span>'}
+        ${item.confidence === 'verified' ? '<span class="badge badge-verified">Verified (机检锚点)</span>' : (item.analysis ? '<span class="badge badge-verified">agent 判断（#62）</span>' : '<span class="badge badge-candidate">Candidates (自由裁量·标黄)</span>')}
         ${item.inferred ? '<span class="badge badge-inferred">Inferred:true (无动词意图)</span>' : ''}
         ${item.tier ? `<span class="badge badge-${item.tier}">${item.tier}</span>` : ''}
       </div>
@@ -1377,7 +1336,7 @@ function openDrawer(item) {
 
     <div class="drawer-section">
       <h3>3. 分组输出理由 (outputs/groups.json)</h3>
-      <div style="font-weight:600;margin-bottom:4px;color:var(--ink);">${item.reason}</div>
+      <div style="font-weight:600;margin-bottom:4px;color:var(--ink);">${item.reason || item.note || ''}</div>
     </div>
 
     <div class="drawer-section">
@@ -1887,6 +1846,16 @@ async function loadFromDirectoryHandle(dirHandle) {
       if (v) appData.verbs = v;
       const g = await readJsonFile(dirHandle, 'steps', '03-grouping', 'grouping.json');
       if (g) { appData.items = g; }
+      const wc03 = await readJsonFile(dirHandle, 'steps', '03-grouping', 'candidates.json');
+      if (wc03) appData.itemCandidates = wc03;
+      const dc03 = await readJsonFile(dirHandle, 'steps', '03-grouping', 'discovery.json');
+      if (dc03) appData.discovery03 = dc03;
+      const f03 = await readTextFile(dirHandle, 'steps', '03-grouping', 'fewshot.md');
+      if (f03) appData.fewshot03 = f03;
+      const rk03 = await readJsonFile(dirHandle, 'steps', '03-grouping', 'ranking.json');
+      if (rk03) appData.ranking03 = rk03;
+      const ev03 = await readDirJsonFiles(dirHandle, 'steps', '03-grouping', 'per_item');
+      if (ev03 && Object.keys(ev03).length) appData.evidence03 = ev03;
       const r = await readJsonFile(dirHandle, 'steps', '04-attributes', 'ratings.json');
       if (r) appData.ratings = r;
       const w = await readJsonFile(dirHandle, 'steps', '05-weapons', 'weapons.json');
@@ -1907,6 +1876,10 @@ async function loadFromDirectoryHandle(dirHandle) {
       if (p6) appData.phases = p6;
       const p7 = await readJsonFile(dirHandle, 'steps', '07-priorities', 'priorities.json');
       if (p7) appData.priorities = p7;
+      const f07 = await readTextFile(dirHandle, 'steps', '07-priorities', 'fewshot.md');
+      if (f07) appData.fewshot07 = f07;
+      const rk07 = await readJsonFile(dirHandle, 'steps', '07-priorities', 'ranking.json');
+      if (rk07) appData.ranking07 = rk07;
       const p8 = await readJsonFile(dirHandle, 'steps', '08-pitfalls', 'pitfalls.json');
       if (p8) appData.pitfalls = p8;
       const c08 = await readJsonFile(dirHandle, 'steps', '08-pitfalls', 'candidates.json');
@@ -1957,6 +1930,20 @@ document.getElementById('fallbackDirInput').addEventListener('change', async (e)
   if (v) appData.verbs = v;
   const g = await readBySuffix('steps/03-grouping/grouping.json');
   if (g) { appData.items = g; }
+  const wc03 = await readBySuffix('steps/03-grouping/candidates.json');
+  if (wc03) appData.itemCandidates = wc03;
+  const dc03f = await readBySuffix('steps/03-grouping/discovery.json');
+  if (dc03f) appData.discovery03 = dc03f;
+  const rk03f = await readBySuffix('steps/03-grouping/ranking.json');
+  if (rk03f) appData.ranking03 = rk03f;
+  const evMap03F = {};
+  for (const k of Object.keys(byPath)) {
+    const kn = k.replace(/\\/g, '/');
+    if (!/steps\/03-grouping\/per_item\/[^/]+\.json$/.test(kn)) continue;
+    try { const d = await byPath[k].json(); evMap03F[d.name_en || kn.split('/').pop().replace(/\.json$/, '')] = d; }
+    catch (err) { console.warn('fallback miss per_item', k, err); }
+  }
+  if (Object.keys(evMap03F).length) appData.evidence03 = evMap03F;
   const r = await readBySuffix('steps/04-attributes/ratings.json');
   if (r) appData.ratings = r;
   const w = await readBySuffix('steps/05-weapons/weapons.json');
@@ -1981,6 +1968,8 @@ document.getElementById('fallbackDirInput').addEventListener('change', async (e)
   if (p6) appData.phases = p6;
   const p7 = await readBySuffix('steps/07-priorities/priorities.json');
   if (p7) appData.priorities = p7;
+  const rk07f = await readBySuffix('steps/07-priorities/ranking.json');
+  if (rk07f) appData.ranking07 = rk07f;
   const p8 = await readBySuffix('steps/08-pitfalls/pitfalls.json');
   if (p8) appData.pitfalls = p8;
   const c08 = await readBySuffix('steps/08-pitfalls/candidates.json');
@@ -2055,10 +2044,18 @@ document.addEventListener('click', (e) => {
       if (t != null) { document.getElementById('fileModalBody').innerHTML = `<pre>${escHtml(t)}</pre>`; return; }
       let o = null;
       if (rk === 'candidates') o = appData.weaponCandidates;
+      else if (rk === 'candidates03') o = appData.itemCandidates;
       else if (rk === 'ranking') o = appData.ranking05;
+      else if (rk === 'ranking03') o = appData.ranking03;
+      else if (rk === 'ranking07') o = appData.ranking07;
+      else if (rk === 'priorities') o = appData.priorities;
+      else if (rk === 'grouping') o = appData.items;
+      else if (rk === 'fewshot03') o = appData.fewshot03;
+      else if (rk === 'fewshot07') o = appData.fewshot07;
       else if (rk === 'weapons') o = appData.weapons;
       else if (rk === 'sentences') o = appData.sentences;
       else if (rk && rk.indexOf('ev:') === 0) o = (appData.evidence05 || {})[rk.slice(3)];
+      else if (rk && rk.indexOf('ev03:') === 0) o = (appData.evidence03 || {})[rk.slice(5)];
       document.getElementById('fileModalBody').innerHTML = o ? `<pre>${escHtml(JSON.stringify(o, null, 1))}</pre>` : '<div style="color:#999;">读不到该文件（缺节即 fail）。</div>';
     });
     return;
@@ -2083,6 +2080,22 @@ async function loadFromHttpBase(base) {
       if (v) appData.verbs = v;
       const g = await fetchJson(`${base}/steps/03-grouping/grouping.json`);
       if (g) { appData.items = g; }
+      const wc03h = await fetchJson(`${base}/steps/03-grouping/candidates.json`);
+      if (wc03h) appData.itemCandidates = wc03h;
+      const dc03h = await fetchJson(`${base}/steps/03-grouping/discovery.json`);
+      if (dc03h) appData.discovery03 = dc03h;
+      const f03h = await fetchText(`${base}/steps/03-grouping/fewshot.md`);
+      if (f03h) appData.fewshot03 = f03h;
+      const rk03h = await fetchJson(`${base}/steps/03-grouping/ranking.json`);
+      if (rk03h) appData.ranking03 = rk03h;
+      const evMap03H = {};
+      for (const c of (appData.itemCandidates || [])) {
+        const safe = String(c.name_en || '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+        if (!safe) continue;
+        const d = await fetchJson(`${base}/steps/03-grouping/per_item/${encodeURIComponent(safe)}.json`);
+        if (d) evMap03H[d.name_en || c.name_en] = d;
+      }
+      if (Object.keys(evMap03H).length) appData.evidence03 = evMap03H;
       const r = await fetchJson(`${base}/steps/04-attributes/ratings.json`);
       if (r) appData.ratings = r;
       const w = await fetchJson(`${base}/steps/05-weapons/weapons.json`);
@@ -2107,6 +2120,10 @@ async function loadFromHttpBase(base) {
       if (p6) appData.phases = p6;
       const p7 = await fetchJson(`${base}/steps/07-priorities/priorities.json`);
       if (p7) appData.priorities = p7;
+      const f07h = await fetchText(`${base}/steps/07-priorities/fewshot.md`);
+      if (f07h) appData.fewshot07 = f07h;
+      const rk07h = await fetchJson(`${base}/steps/07-priorities/ranking.json`);
+      if (rk07h) appData.ranking07 = rk07h;
       const p8 = await fetchJson(`${base}/steps/08-pitfalls/pitfalls.json`);
       if (p8) appData.pitfalls = p8;
       const c08 = await fetchJson(`${base}/steps/08-pitfalls/candidates.json`);
@@ -2174,7 +2191,7 @@ function setupFilterListeners() {
 
 function loadEmptyData() {
   // 无mock：清空为真实数据占位，须经 picker/?base= 载入 steps/*/*.json
-  appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], fewshot05:{}, ranking05:null, evidence05:{}, phases:[], priorities:{}, pitfalls:[], candidates08:[], wordings08:[], assemble:{}};
+  appData = {manifest:null, sources:[], candidates:[], grouping:[], ratings:[], weapons:{t1:[],t2:[]}, weaponCandidates:[], fewshot05:{}, ranking05:null, evidence05:{}, itemCandidates:[], discovery03:null, fewshot03:'', ranking03:null, evidence03:{}, fewshot07:'', ranking07:null, phases:[], priorities:{}, pitfalls:[], candidates08:[], wordings08:[], assemble:{}};
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -2187,7 +2204,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
   // 缺省不吃广告纸: 不自动载 mock, 只显示待加载; live 经 picker/?base 进来, mock 仅点按钮显式进
-  appData = {manifest: null, sentences: [], verbs: {verified: [], candidates: []}, items: [], ratings: [], weapons: {t1: [], t2: []}, weaponCandidates: [], fewshot05: {}, ranking05: null, evidence05: {}, phases: [], priorities: {}, pitfalls: [], candidates08: [], wordings08: [], assemble: {}};
+  appData = {manifest: null, sentences: [], verbs: {verified: [], candidates: []}, items: [], ratings: [], weapons: {t1: [], t2: []}, weaponCandidates: [], fewshot05: {}, ranking05: null, evidence05: {}, itemCandidates: [], discovery03: null, fewshot03: '', ranking03: null, evidence03: {}, fewshot07: '', ranking07: null, phases: [], priorities: {}, pitfalls: [], candidates08: [], wordings08: [], assemble: {}};
   state.dataSource = 'empty';
   const params = new URLSearchParams(window.location.search);
   const baseParam = params.get('base');

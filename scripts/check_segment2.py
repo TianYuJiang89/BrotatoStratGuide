@@ -172,104 +172,84 @@ def main(argv: list[str] | None = None) -> int:
     if phases != phases_out:
         fail("outputs/phases.json must equal steps/06-phases/phases.json", errors)
 
-    # --- 07-priorities (#50: upgrades/shop 双断层动态, 去 Top3 写死 + 按名特判) ---
+    # --- 07-priorities (#62: frozen fewshot + priority-ranking 单 agent, shape only) ---
+    # 新口径: {upgrades[N], shop[N]} 每项 {name,kind,why,how_to_get,quotes,analysis,quote_details}.
+    # N 动态由 agent 定 (码只验非空, 不验断层); shop ⊆ grouping candidates 且禁 ban 组;
+    # upgrades ⊆ ratings term_en; quotes 逐字; why 短引逐字; 退役断层/拒绝动词表码逻辑.
     if not isinstance(priorities, dict) or "upgrades" not in priorities or "shop" not in priorities:
-        fail("priorities must be {upgrades[N], shop[N]} (升级断层动态N>=1 + 商店断层动态N>=1)", errors)
+        fail("priorities must be {upgrades[N], shop[N]} (N动态由agent定, 码只验非空)", errors)
         ups, shs = [], []
     else:
         ups, shs = priorities["upgrades"], priorities["shop"]
     if not (isinstance(ups, list) and len(ups) >= 1):
-        fail(f"priorities upgrades must be N>=1 动态 (保底 Top1), got {len(ups) if isinstance(ups, list) else type(ups)}", errors)
+        fail(f"priorities upgrades must be N>=1 (Top1意图由agent保), got {len(ups) if isinstance(ups, list) else type(ups)}", errors)
     if not (isinstance(shs, list) and len(shs) >= 1):
-        fail(f"priorities shop must be N>=1 动态 (保底 Top1), got {len(shs) if isinstance(shs, list) else type(shs)}", errors)
-    sa_names = {r.get("term_en") for r in ratings if r.get("rating") in ("S", "A")}
-    mt_names = {g.get("name_en") for g in grouping if g.get("group") == "must_take"}
-    mt_verified = {g.get("name_en"): g for g in grouping
-                   if g.get("group") == "must_take" and g.get("confidence") == "verified"}
-    # 通用顺延信号 (与 run_segment2.step07 同口径, 不点名, 不含泛 don't want)
-    _REJECT = ("not taking", "not take", "don't take", "do not take",
-               "don't buy", "do not buy", "not buying",
-               "don't pick", "do not pick", "not picking",
-               "don't lock", "do not lock",
-               "skip", "avoid", "ban", "recycle", "sell",
-               "passed on", "ignoring", "ignored", "not interested",
-               "don't want to take", "do not want to take",
-               "don't want to buy", "do not want to buy")
-
-    def _has_refusal(g):
-        qall = " ".join(g.get("quotes", [])).lower() + " " + str(g.get("reason", "")).lower()
-        return any(sig in qall for sig in _REJECT)
-
-    # 期望升级 TopN (#50: 与 run 同刀法, 独立重算): S/A 按 (-count, term_en) 排, 最大断层切分, 不断层多收, 保底 Top1
-    _sa_exp = sorted([r for r in ratings if r.get("rating") in ("S", "A")],
-                     key=lambda x: (-int(x.get("count", 0)), str(x.get("term_en", ""))))
-    _ucounts_exp = [int(r.get("count", 0)) for r in _sa_exp]
-    if len(_sa_exp) <= 1:
-        _expect_up = [r.get("term_en") for r in _sa_exp]
-    elif not _sa_exp:
-        _expect_up = []
-    else:
-        _ugaps = [_ucounts_exp[i] - _ucounts_exp[i + 1] for i in range(len(_ucounts_exp) - 1)]
-        _umx = max(_ugaps)
-        if _umx == 0:
-            _expect_up = [r.get("term_en") for r in _sa_exp]
-        else:
-            _ucut = next(i for i, gp in enumerate(_ugaps) if gp == _umx)
-            _expect_up = [r.get("term_en") for r in _sa_exp[:_ucut + 1]]
-    if isinstance(ups, list) and ups and _expect_up:
-        _got_up = [u.get("name") for u in ups if isinstance(u, dict)]
-        if _got_up != _expect_up:
-            fail(f"priorities upgrades 须为断层 TopN (期望 {_expect_up}, 实得 {_got_up})", errors)
-    # 期望商店 TopN (与 run 同刀法, 独立重算): must_take verified 按 (-count, name) 排, 去拒绝, 最大断层切分
-    _cands_exp = sorted(list(mt_verified.values()), key=lambda x: (-int(x.get("count", 0)), str(x.get("name_en", ""))))
-    _filt_exp = [g for g in _cands_exp if not _has_refusal(g)]
-    _counts_exp = [int(g.get("count", 0)) for g in _filt_exp]
-    if len(_filt_exp) == 1:
-        _expect_names = [_filt_exp[0].get("name_en")]
-    elif not _filt_exp:
-        _expect_names = []
-    else:
-        _gaps = [_counts_exp[i] - _counts_exp[i + 1] for i in range(len(_counts_exp) - 1)]
-        _mx = max(_gaps)
-        if _mx == 0:
-            _expect_names = [g.get("name_en") for g in _filt_exp]
-        else:
-            _cut = next(i for i, gp in enumerate(_gaps) if gp == _mx)
-            _expect_names = [g.get("name_en") for g in _filt_exp[:_cut + 1]]
-    if isinstance(shs, list) and shs and _expect_names:
-        _got_names = [s.get("name") for s in shs if isinstance(s, dict)]
-        if _got_names != _expect_names:
-            fail(f"priorities shop 须为断层 TopN (期望 {_expect_names}, 实得 {_got_names})", errors)
+        fail(f"priorities shop must be N>=1 (Top1意图由agent保), got {len(shs) if isinstance(shs, list) else type(shs)}", errors)
+    rating_names = {r.get("term_en") for r in ratings if isinstance(r, dict)}
+    cand_names07 = {g.get("name_en") for g in grouping if isinstance(g, dict)}
+    ban_names07 = {g.get("name_en") for g in grouping
+                   if isinstance(g, dict) and g.get("group") == "ban"}
+    import re as _re7
+    _short_re7 = _re7.compile(r'原话["“]([^"”]+)["”]')
     for u in (ups if isinstance(ups, list) else []):
-        for k in ("name", "kind", "why", "how_to_get", "quotes"):
+        for k in ("name", "kind", "why", "how_to_get", "quotes", "analysis"):
             if k not in u or (isinstance(u[k], str) and not u[k].strip()):
                 fail(f"priorities upgrades missing {k}: {u.get('name')}", errors)
         if u.get("kind") != "upgrade":
             fail(f"priorities upgrades kind must be upgrade: {u.get('name')}", errors)
-        if u.get("name") not in sa_names:
-            fail(f"priorities upgrades must be in ratings S/A: {u.get('name')}", errors)
+        if u.get("name") not in rating_names:
+            fail(f"priorities upgrades must be in ratings term_en (幻觉即 fail): {u.get('name')}", errors)
         if len(str(u.get("why", ""))) < 8 or len(str(u.get("how_to_get", ""))) < 8:
             fail(f"priorities upgrades why/how_to_get too short: {u.get('name')}", errors)
-        _check_quotes(f"priorities upgrade {u.get('name')}", u.get("quotes", []), u.get("quote_details", []))
+        if len(str(u.get("analysis", "")).strip()) < 4:
+            fail(f"priorities upgrades analysis must be nonempty: {u.get('name')}", errors)
+        _qs = u.get("quotes", [])
+        _shorts = [s.strip() for s in _short_re7.findall(str(u.get("why", ""))) if s.strip()]
+        if not _shorts:
+            fail(f"priorities upgrades why 缺短引标记 原话\"...\": {u.get('name')}", errors)
+        for _s in _shorts:
+            if not any(_s in _q for _q in _qs if isinstance(_q, str)):
+                fail(f"priorities upgrades why 短引须逐字出自 quotes: {u.get('name')}", errors)
+                break
+        _check_quotes(f"priorities upgrade {u.get('name')}", _qs, u.get("quote_details", []))
     for s in (shs if isinstance(shs, list) else []):
-        for k in ("name", "kind", "why", "how_to_get", "quotes"):
+        for k in ("name", "kind", "why", "how_to_get", "quotes", "analysis"):
             if k not in s or (isinstance(s[k], str) and not s[k].strip()):
                 fail(f"priorities shop missing {k}: {s.get('name')}", errors)
         if s.get("kind") != "shop":
             fail(f"priorities shop kind must be shop: {s.get('name')}", errors)
-        if s.get("name") not in mt_names:
-            fail(f"priorities shop must be in grouping must_take: {s.get('name')}", errors)
-        if s.get("name") not in mt_verified:
-            fail(f"priorities shop must be verified (拿取锚绿): {s.get('name')}", errors)
-        else:
-            _ge = mt_verified.get(s.get("name"))
-            if _ge is not None and _has_refusal(_ge):
-                fail(f"priorities shop 有拒绝动词应顺延 (通用顺延未执行): {s.get('name')}", errors)
+        if s.get("name") not in cand_names07:
+            fail(f"priorities shop must be in grouping candidates (幻觉即 fail): {s.get('name')}", errors)
+        if s.get("name") in ban_names07:
+            fail(f"priorities shop ban 件禁入 TopN: {s.get('name')}", errors)
         if len(str(s.get("why", ""))) < 8 or len(str(s.get("how_to_get", ""))) < 8:
             fail(f"priorities shop why/how_to_get too short: {s.get('name')}", errors)
-        _check_quotes(f"priorities shop {s.get('name')}", s.get("quotes", []), s.get("quote_details", []))
+        if len(str(s.get("analysis", "")).strip()) < 4:
+            fail(f"priorities shop analysis must be nonempty: {s.get('name')}", errors)
+        _qs = s.get("quotes", [])
+        _shorts = [x.strip() for x in _re7.compile(r'原话["“]([^"”]+)["”]').findall(str(s.get("why", ""))) if x.strip()]
+        if not _shorts:
+            fail(f"priorities shop why 缺短引标记 原话\"...\": {s.get('name')}", errors)
+        for _x in _shorts:
+            if not any(_x in _q for _q in _qs if isinstance(_q, str)):
+                fail(f"priorities shop why 短引须逐字出自 quotes: {s.get('name')}", errors)
+                break
+        _check_quotes(f"priorities shop {s.get('name')}", _qs, s.get("quote_details", []))
     if priorities != priorities_out:
         fail("outputs/priorities.json must equal steps/07-priorities/priorities.json", errors)
+    # 07 运行快照 + 审计节点: fewshot 单本须与 repo FROZEN 逐字节一致, ranking 落盘, log 可查
+    try:
+        _few07_run = (work / "steps" / "07-priorities" / "fewshot.md").read_bytes()
+        _few07_repo = (REPO / "prompts" / "step07-priorities-fewshot.md").read_bytes()
+        if _few07_run != _few07_repo:
+            fail("steps/07-priorities/fewshot.md must equal repo FROZEN fewshot (逐字节, 重跑 07 即回填)", errors)
+    except Exception:
+        fail("steps/07-priorities/fewshot.md 读失败 (缺运行快照, 重跑 07 即回填)", errors)
+    if not (work / "steps" / "07-priorities" / "ranking.json").exists():
+        fail("steps/07-priorities/ranking.json 缺失 (终判, 缺节即 fail)", errors)
+    _log07 = work / "steps" / "07-priorities" / "agent-ranking.log.jsonl"
+    if not _log07.exists() or _log07.stat().st_size == 0:
+        fail("07审计节点缺log (入参不可查, 重跑07回填): agent-ranking.log.jsonl", errors)
 
     # --- 08-pitfalls (两跳: 种子池 + 种子链约束, 闭集词表已废) ---
     try:

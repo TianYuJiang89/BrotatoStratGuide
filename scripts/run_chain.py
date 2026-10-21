@@ -139,8 +139,26 @@ def _reuse_ok_verbs(path: Path) -> bool:
 
 
 def _reuse_ok_grouping(path: Path) -> bool:
+    # #62: 新 schema {name_en,count,group,quotes,analysis,note,quote_details}, 旧件退役
     d = _load_json(path)
-    return isinstance(d, list) and len(d) > 0
+    if not (isinstance(d, list) and len(d) > 0):
+        return False
+    try:
+        for r in d:
+            if not isinstance(r, dict):
+                return False
+            for k in ("name_en", "count", "group", "quotes", "analysis", "note", "quote_details"):
+                if k not in r:
+                    return False
+            if r.get("group") not in ("must_take", "mentioned_not_taken", "ban", "casual_mention"):
+                return False
+            for _old in ("tier", "confidence", "inferred", "has_verb", "verb",
+                          "verb_type", "mapped_to", "reason"):
+                if _old in r:
+                    return False
+        return True
+    except Exception:
+        return False
 
 
 def _reuse_ok_ratings(path: Path) -> bool:
@@ -431,7 +449,7 @@ def run_01_05(workdir: Path, force: set[str]) -> tuple[list[dict], dict, list[di
         print("[chain] 03-grouping SKIP (复用已绿)")
         grouping = _load_json(g_path)
     else:
-        grouping = step03(workdir, verbs, sentences)
+        grouping = step03(workdir, sentences)
         print(f"[chain] 03-grouping DONE: {len(grouping)} 件")
     # 04-attributes
     r_path = workdir / "steps" / "04-attributes" / "ratings.json"

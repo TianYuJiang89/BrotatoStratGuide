@@ -235,114 +235,24 @@ def step06(workdir: Path, sentences: list[dict]) -> list[dict]:
 
 
 def step07(workdir: Path, sentences: list[dict], ratings: list[dict],
-           grouping: list[dict], phases: list[dict]) -> dict:
-    # #45: 跳过空段 (overview/review 诚实空出不进节奏引用, how_to_get 可引章节奏)
-    if not isinstance(phases, list) or not phases:
-        raise SystemExit("step07 缺 phases (06 未跑): 先跑 step06 作者章节分桶")
-    live_phases = [p for p in phases if isinstance(p, dict) and p.get("quotes")]
-    # live_phases 仅用于节奏引用 (空段跳过); 升级沿用 S/A 排名 + 商店读新分组, 不自创不重评
-    _ = live_phases
-    # 升级 TopN 断层动态 (#50: 与商店侧同一刀法, 去 sa[:3] 写死; 只认 04 输出 S/A + count 降序, 不自创不重评; 04 新评级自动跟)
-    sa = [r for r in ratings if r.get("rating") in ("S", "A")]
-    sa = sorted(sa, key=lambda x: (-int(x.get("count", 0)), str(x.get("term_en", ""))))
-    if not sa:
-        raise SystemExit("step07 升级候选不足 S/A=0: 段1 ratings 疑异常")
-    if len(sa) == 1:
-        top_up = sa
-    else:
-        _ucounts = [int(r.get("count", 0)) for r in sa]
-        _ugaps = [_ucounts[i] - _ucounts[i + 1] for i in range(len(_ucounts) - 1)]
-        _umx = max(_ugaps)
-        if _umx == 0:
-            top_up = sa
-        else:
-            _ucut = next(i for i, gp in enumerate(_ugaps) if gp == _umx)
-            top_up = sa[:_ucut + 1]
-    if not top_up:
-        raise SystemExit(f"step07 升级断层切分空 (S/A={len(sa)}): 保底 Top1 失败")
-    # 商店 TopN 断层动态 (#49: 去 Top3 写死 + Peacock 按名顺延; 只认新分组 must_take + verified + count 降序)
-    # 通用顺延 (不点名): 任一候选 quotes+reason 含拒绝动词原话即顺延 (拿取否定/跳过系逐字, 不含泛 don't want)
-    _REJECT = ("not taking", "not take", "don't take", "do not take",
-               "don't buy", "do not buy", "not buying",
-               "don't pick", "do not pick", "not picking",
-               "don't lock", "do not lock",
-               "skip", "avoid", "ban", "recycle", "sell",
-               "passed on", "ignoring", "ignored", "not interested",
-               "don't want to take", "do not want to take",
-               "don't want to buy", "do not want to buy")
+           grouping: list[dict], phases: list[dict], agent_fn=None,
+           force: bool = False) -> dict:
+    """优先级 TopN (#62: frozen fewshot + priority-ranking 单 agent; #49/#50 码切码顺延已退役).
 
-    def _has_refusal(g: dict) -> bool:
-        qall = " ".join(g.get("quotes", [])).lower() + " " + str(g.get("reason", "")).lower()
-        return any(sig in qall for sig in _REJECT)
-
-    cands = [g for g in grouping if g.get("group") == "must_take" and g.get("confidence") == "verified"]
-    cands = sorted(cands, key=lambda x: (-int(x.get("count", 0)), str(x.get("name_en", ""))))
-    filtered: list[dict] = [g for g in cands if not _has_refusal(g)]
-    if not filtered:
-        raise SystemExit(f"step07 商店候选不足 must_take verified 去拒绝后=0 (cands={len(cands)}): 段1 grouping 疑异常")
-    # 断层切分 (与 05 排名制同一刀法): gaps=count[i]-count[i+1], 最大断层即止, 不断层(max==0)多收, 保底 Top1
-    counts = [int(g.get("count", 0)) for g in filtered]
-    if len(filtered) == 1:
-        shop = filtered
-    else:
-        gaps = [counts[i] - counts[i + 1] for i in range(len(counts) - 1)]
-        mx = max(gaps)
-        if mx == 0:
-            shop = filtered
-        else:
-            cut = next(i for i, gp in enumerate(gaps) if gp == mx)
-            shop = filtered[:cut + 1]
-    if not shop:
-        raise SystemExit(f"step07 商店断层切分空 (filtered={len(filtered)}): 保底 Top1 失败")
-    qlookup = _quote_lookup(sentences)
-
-    def _how(name: str, fallback_q: str) -> tuple[str, list[str], list[dict]]:
-        # 怎么拿: 找含本名 + buy/lock/roll/upgrade/shop 任一的现场句, 原话数字不丢; 未提空出用 fallback
-        lname = name.lower()
-        best = None
-        for s in sentences:
-            low = s["text"].lower()
-            if lname in low or lname.rstrip("s") in low:
-                if any(k in low for k in ("buy", "lock", "roll", "upgrade", "shop", "take", "pick up", "get")):
-                    best = s
-                    break
-        if best is None:
-            for s in sentences:
-                if lname in s["text"].lower() or lname.rstrip("s") in s["text"].lower():
-                    best = s
-                    break
-        q = best["text"] if best else fallback_q
-        hits = qlookup.get(q, [])
-        h = hits[0] if hits else {"start": None, "end": None, "t": None, "context": q[:300]}
-        return q, [q], [{"quote": q, "start": h["start"], "end": h["end"], "t": h["t"], "context": h["context"]}]
-
-    upgrades = []
-    for r in top_up:
-        base_q = (r.get("quotes") or [""])[0] or r.get("term_en", "")
-        q, qs, qd = _how(r["term_en"], base_q)
-        upgrades.append({
-            "name": r["term_en"], "kind": "upgrade",
-            "why": f"{r.get('summary', '') or r.get('reason', '')}",  # #60: 新 ratings 只读 rating+summary, 回落旧 reason 保兼容
-            "how_to_get": f"拿法看商店/升级节奏;原话[{_short(q)}]",
-            "quotes": qs, "quote_details": qd,
-        })
-    shops = []
-    for g in shop:
-        base_q = (g.get("quotes") or [""])[0] or g.get("name_en", "")
-        q, qs, qd = _how(g["name_en"], base_q)
-        shops.append({
-            "name": g["name_en"], "kind": "shop",
-            "why": f"{g.get('reason', '')}",
-            "how_to_get": f"拿法看商店/升级节奏,roll到即锁;原话[{_short(q)}]",
-            "quotes": qs, "quote_details": qd,
-        })
-    priorities = {"upgrades": upgrades, "shop": shops}
-    outdir = workdir / "steps" / "07-priorities"
-    outdir.mkdir(parents=True, exist_ok=True)
-    (outdir / "priorities.json").write_text(json.dumps(priorities, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (workdir / "outputs").mkdir(parents=True, exist_ok=True)
-    (workdir / "outputs" / "priorities.json").write_text(json.dumps(priorities, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return priorities
+    调度 (loop, 语义零进代码): 通览 grouping + 04 ratings + 05 weapons + 06 phases +
+    全量整句 → upgrades/shop TopN + why/how_to_get (+analysis 全过程).
+    N 动态由 agent 定 (码只验非空, 不验切分); 可推翻 group 建议, 拿 quote 说话;
+    ban 件永不进 TopN. 退役: count 码切 (升级/商店双侧)、拒绝词表码顺延、
+    不收敛多收/保底码规则 (Top1 意图进 fewshot, 码只验非空).
+    缺件/编 quote/幻觉名/ban 进 TopN 即 fail loud, 不回落不补空.
+    """
+    from step0307_loop import run_step07_loop
+    try:
+        weapons = json.loads((workdir / "steps" / "05-weapons" / "weapons.json").read_text(encoding="utf-8"))
+    except Exception:
+        weapons = {"t1": [], "t2": []}
+    return run_step07_loop(workdir, sentences, grouping, ratings, weapons, phases,
+                           agent_fn=agent_fn, force=force)
 
 
 # 08两跳召回((a)方案): 第一跳纯警告标记产种子池(零游戏名词) + agent提名主题扩展 + merge种子链约束.

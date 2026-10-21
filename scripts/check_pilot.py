@@ -102,45 +102,34 @@ def main(argv: list[str] | None = None) -> int:
         if not isinstance(c.get("inferred"), bool):
             fail(f"candidates inferred must be bool: {c.get('normalized_to')}", errors)
 
-    # --- verified 全部分组 (道具试点: 只查 items, 武器 verified 属武器表不在本组, #61 slice 已退役走 wiki-cache) ---
+    # --- 03-grouping 新口径 (#62: candidates 自洽, shape only) ---
+    # grouping 须== steps/03-grouping/candidates.json (discovery completeness);
+    # 旧 68 全收录 / 动词锚 / 拒绝动词 / tier 口径全退役. 缺 candidates.json 即 fail.
+    try:
+        _pilot_cands = json.loads((work / "steps" / "03-grouping" / "candidates.json").read_text(encoding="utf-8"))
+        _pilot_cand_names = {c.get("name_en") for c in _pilot_cands if isinstance(c, dict)}
+    except Exception:
+        _pilot_cands, _pilot_cand_names = None, set()
+        fail("missing steps/03-grouping/candidates.json (先跑 03 新链回填)", errors)
     if isinstance(grouping, list):
         grouped_names = {g.get("name_en") for g in grouping if isinstance(g, dict)}
-        # wiki-cache items 集 (道具子集), 武器不查分组
-        try:
-            _wiki = json.loads((REPO / "data" / "wiki-cache.json").read_text(encoding="utf-8"))
-            item_set = set((_wiki.get("items", {}) or {}).keys())
-        except Exception:
-            item_set = grouped_names
-        for r in verified:
-            if r.get("object_norm") in item_set and r.get("object_norm") not in grouped_names:
-                fail(f"verified not grouped: {r.get('object_norm')}", errors)
-        # 全收录: count>0 68 全进表
-        if len(grouping) != 68:
-            fail(f"grouping must be 68 (count>0 全收录), got {len(grouping)}", errors)
+        if _pilot_cands is not None and grouped_names != set(_pilot_cand_names):
+            fail(f"grouping must equal candidates {sorted(_pilot_cand_names)}, got {sorted(grouped_names)}", errors)
         for g in grouping:
-            for k in ("name_en", "count", "group", "confidence", "reason", "quotes"):
+            for k in ("name_en", "count", "group", "quotes", "analysis", "note", "quote_details"):
                 if k not in g:
                     fail(f"grouping missing {k}: {g.get('name_en')}", errors)
             if g.get("group") not in ("must_take", "mentioned_not_taken", "ban", "casual_mention"):
                 fail(f"bad group: {g.get('name_en')}={g.get('group')}", errors)
-            if g.get("group") == "must_take" and g.get("tier") not in ("core", "convenient", "compromise"):
-                fail(f"must_take must have tier: {g.get('name_en')}", errors)
-            # 低频一句话交代
-            if isinstance(g.get("count"), int) and g["count"] <= 3:
-                rs = str(g.get("reason", ""))
-                if len(rs.strip()) < 8:
-                    fail(f"low-freq must have one-liner: {g.get('name_en')}", errors)
-            # reason 禁计数泄漏
-            rs = str(g.get("reason", ""))
-            if "字幕" in rs and "次" in rs and "原话" not in rs:
-                warns.append(f"WARN: reason 疑计数泄漏: {g.get('name_en')}")
-            # ban 必须有拒绝动词原话
-            if g.get("group") == "ban":
-                qall = " ".join(g.get("quotes", [])).lower()
-                if not any(w in qall for w in ("ban", "avoid", "recycl", "sell", "skip", "ignor")):
-                    # 放宽: reason 含原话即过
-                    if "ban" not in rs.lower() and "避开" not in rs:
-                        fail(f"ban must have rejection verb quote: {g.get('name_en')}", errors)
+            for _old in ("tier", "confidence", "inferred", "has_verb", "verb",
+                         "verb_type", "mapped_to", "reason"):
+                if _old in g:
+                    fail(f"grouping retired field must be absent: {_old} ({g.get('name_en')})", errors)
+            qs = g.get("quotes", [])
+            if not isinstance(qs, list) or not qs:
+                fail(f"grouping must have quotes: {g.get('name_en')}", errors)
+            if isinstance(g.get("count"), int) and g.get("count") != len(qs):
+                fail(f"grouping count must == len(quotes): {g.get('name_en')}", errors)
     else:
         fail("grouping must be array", errors)
 

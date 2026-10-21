@@ -377,147 +377,19 @@ def _dynamic_scan(sentences: list[dict]):
     return terms, wall, iall, term_counts, weapons_counts, items_counts
 
 
-def step03(workdir: Path, verbs: dict, sentences: list[dict]) -> list[dict]:
-    """分组: 锚+裁量 (#48: 删阈值 + 删全部按名特判; 只认动词信号; 68 全收录保留; 禁读 builds/mentions).
+def step03(workdir: Path, sentences: list[dict], agent_fn=None, force: bool = False) -> list[dict]:
+    """分组: frozen fewshot + discovery/evidence/grouping-ranking 三段 agent (#62; #48/#50 锚+裁量已退役).
 
-    锚 (机检只认逐字):
-    - ban 系原话 (ban/recycle/sell 闭集原话, 或 candidates mapped_to==ban 含 agent 补) -> ban, 无按名例外.
-    - 拿取系原话 (take/buy/pick up/lock/get/roll for 闭集原话, 或 mapped_to 落拿取系含 agent 补) + 高频 -> must_take.
-      高频无固定数: 68 件 count 的 mean+stdev 动态 cutoff #50 口径 (count>=cutoff 即高频, 无 >=8/>=4 写死;
-      换视频 count 分布变 cutoff 跟着动, 口径不动, 值不动).
-    - skip 系原话 (skip 闭集原话, 或 mapped_to==skip 如 ignoring->skip 含 agent 补) + 高频 -> mentioned_not_taken;
-      skip 系低频 -> casual (低频路过照旧).
-    裁量 (只查格式, 审计标黄): 无动词或信号冲突无法定级 -> candidate + inferred true, reason 写清拿不准.
+    调度 (loop, 语义零进代码): discovery(串行, fewshot 发现段+全量整句→candidates, completeness 归它,
+    scope 自此脱离 slice) → evidence×N(并行, 每件独立单 agent→group 建议/quotes/analysis/note)
+    → grouping-ranking(串行, 通览全量整句+N 份 evidence→定四组, 拿 quote 说话禁数帽).
+    退役: slice(03 输入+fetch 产+ensure 刷+check 认)、closed/mapped 动词锚、verb_type/has_verb/
+    inferred/confidence 码检、拒绝动词表、count 最大断层、不断层多收/保底 Top1 码规则
+    (Top1 意图进 fewshot, 码只验非空)、03 读 verbs(verbs 留给自家消费者)。
+    缺件/编 quote/幻觉名即 fail loud, 不回落不补空。
     """
-    import statistics as _stats
-    # #48 动词信号集 (闭集 10 下限内划分, 无按名, 无阈值) #50 口径: _BAN/_TAKE/_SKIP 构成为本视频动词分布口径,
-    # 换视频新增转述 (如 snatch→take 新变体) 走 agent 补 candidates, 不改集合, 值不动.
-    _BAN = {"ban", "recycle", "sell"}  # ban 系原话
-    _TAKE = {"take", "buy", "pick up", "lock", "get", "roll for"}  # 拿取系原话
-    _SKIP = {"skip"}  # 跳过系原话 (mapped skip 含 ignoring->skip 等种子 + agent 补)
-
-    ver_by: dict[str, list] = defaultdict(list)
-    for r in verbs.get("verified", []):
-        ver_by[r["object_norm"]].append(r)
-    cand_by: dict[str, list] = defaultdict(list)
-    for r in verbs.get("candidates", []):
-        cand_by[r["normalized_to"]].append(r)
-
-    _, _, _, _, _, items_counts = _dynamic_scan(sentences)
-    qlookup = _quote_lookup(sentences)
-    # 只收 count>0 (沿全收录), 排序 count desc; 高频 cutoff 动态 (mean+stdev, 无固定数)
-    items_all = [(k, v[0], v[1]) for k, v in items_counts.items() if v[0] > 0]
-    _counts = [c for _, c, _ in items_all]
-    _cutoff = (_stats.mean(_counts) + _stats.pstdev(_counts)) if len(_counts) >= 2 else 0
-
-    grouping: list[dict] = []
-    for name, count, quotes in sorted(items_all, key=lambda x: -x[1]):
-        ver_list = ver_by.get(name, [])
-        cand_list = cand_by.get(name, [])
-        has_verb = bool(ver_list) or any((c.get("surface_verb") for c in cand_list))
-        if ver_list:
-            confidence, inferred = "verified", False
-            verb = Counter(r["verb"] for r in ver_list).most_common(1)[0][0]
-            verb_type = "closed"
-            surf_v, mapped, surf_w = verb, verb, name
-            disc = "机检锚点：精确英文名 + 闭集动词 + 原文整句引用"
-        elif cand_list:
-            with_verb = [c for c in cand_list if c.get("surface_verb")]
-            if with_verb:
-                c0 = with_verb[0]
-                confidence, inferred = "candidate", False
-                verb = c0.get("mapped_to")
-                sv = str(c0.get("surface_verb", ""))
-                verb_type = "closed" if sv in CLOSED_VERBS else "mapped"
-                surf_v, mapped, surf_w = c0.get("surface_verb"), c0.get("mapped_to"), c0.get("surface", name)
-                disc = c0.get("reason", "")
-            else:
-                c0 = cand_list[0]
-                confidence, inferred = "candidate", True
-                verb, verb_type, surf_v, mapped = None, "none", None, None
-                surf_w = c0.get("surface", name)
-                disc = "无动词意图推断 (inferred:true)，待人点"
-        else:
-            confidence, inferred, has_verb = "candidate", False, False
-            verb, verb_type, surf_v, mapped, surf_w = None, "none", None, None, name
-            disc = "路过提及，无动词"
-
-        # 分组只认动词信号 (#48, 无阈值无按名, 不读 builds/tags): ban > skip > 拿取+高频 > 路过; 拿不准进 candidates 位.
-        _ban_verbs = [r for r in ver_list if r.get("verb") in _BAN]
-        _ban_cand = [c for c in cand_list if c.get("mapped_to") in _BAN]
-        _skip_verbs = [r for r in ver_list if r.get("verb") in _SKIP]
-        _skip_cand = [c for c in cand_list if c.get("mapped_to") in _SKIP]
-        _take_verbs = [r for r in ver_list if r.get("verb") in _TAKE]
-        _take_cand = [c for c in cand_list if c.get("mapped_to") in _TAKE]
-        _has_ban = bool(_ban_verbs or _ban_cand)
-        _has_skip = bool(_skip_verbs or _skip_cand or any("ignor" in str(c.get("surface_verb", "")) for c in cand_list))
-        _has_take = bool(_take_verbs or _take_cand)
-        _is_high = count >= _cutoff
-        if _has_ban:
-            _bq = (_ban_verbs + _ban_cand)[0]["quote"] if (_ban_verbs + _ban_cand) else (quotes[0] if quotes else name)
-            q0 = _bq[:60]
-            reason = f"【ban】明确拒绝：拒绝动词原话（ban 系），原话[{q0}...]"
-            group, tier = "ban", None
-            verb, verb_type, surf_v, mapped = "ban", "closed", "ban", "ban"
-            confidence, inferred = ("verified" if _ban_verbs else "candidate"), False
-            disc = "拒绝动词原话（ban 系），机检锚点" if _ban_verbs else "动词转述拒绝（mapped ban，含 agent 补），待人点"
-        elif _has_skip and _is_high:
-            q0 = (ver_list + cand_list)[0]["quote"][:60] if (ver_list + cand_list) else (quotes[0][:60] if quotes else name)
-            reason = f"【提过未拿】跳过语境（skip/ignoring 原话），有资源没拿，原话[{q0}...]"
-            group, tier = "mentioned_not_taken", None
-            # verb 保持 skip 信号 (verified skip 则 closed，否则 mapped)
-            if _skip_verbs:
-                verb, verb_type, surf_v, mapped = "skip", "closed", "skip", "skip"
-                confidence, inferred = "verified", False
-                disc = "跳过动词原话（skip 系），机检锚点"
-            else:
-                _sc0 = (_skip_cand or cand_list)[0] if (_skip_cand or cand_list) else None
-                sv0 = str((_sc0 or {}).get("surface_verb", "skip"))
-                verb, verb_type = "skip", ("closed" if sv0 in CLOSED_VERBS else "mapped")
-                surf_v, mapped = (_sc0 or {}).get("surface_verb", "skip"), "skip"
-                confidence, inferred = "candidate", False
-                disc = f"动词转述跳过（{sv0}→skip，含 agent 补），待人点"
-        elif _has_take and _is_high:
-            group, tier = "must_take", "convenient"
-            q0 = (ver_list + cand_list)[0]["quote"][:60] if (ver_list + cand_list) else (quotes[0][:60] if quotes else name)
-            # 本变体统一 convenient (删 core/compromise 按名分档；无 Engineering/Structure tags，无 Mutation/Focus 特判)
-            reason = f"【必拿·顺手】拿取动词原话（{_take_verbs[0].get('verb') if _take_verbs else (_take_cand[0].get('mapped_to') if _take_cand else 'take')}）+ 高频提及，遇到即拿，原话[{q0}...]"
-            # confidence/inferred 保持锚信号：有 verified 拿取即 verified 绿，否则 candidate 黄
-            if _take_verbs:
-                confidence, inferred = "verified", False
-            else:
-                confidence, inferred = "candidate", False
-        else:
-            reason = "【路过提及】商店刷新或路过提及，无明确评价，不影响构筑主线。"
-            group, tier = "casual_mention", None
-            # confidence/inferred 保持：有动词即原信号，拿不准（无动词）进 candidates 位标黄
-            if not has_verb:
-                confidence, inferred = "candidate", True
-
-        seen_q: list[str] = []
-        for q in quotes:
-            if q not in seen_q:
-                seen_q.append(q)
-        details = []
-        for q in seen_q:
-            hits = qlookup.get(q, [])
-            h = hits[0] if hits else {"start": None, "end": None, "t": None, "context": q[:300]}
-            details.append({"quote": q, "start": h["start"], "end": h["end"], "t": h["t"], "context": h["context"]})
-        grouping.append({"name_en": name, "name_zh": _zh(name), "count": count,
-                         "group": group, "tier": tier, "confidence": confidence,
-                         "inferred": inferred, "has_verb": has_verb, "verb": verb,
-                         "verb_type": verb_type, "surface_verb": surf_v,
-                         "mapped_to": mapped, "surface_word": surf_w,
-                         "discretion_reason": disc, "reason": reason,
-                         "quotes": seen_q, "quote_details": details})
-
-    outdir = workdir / "steps" / "03-grouping"
-    outdir.mkdir(parents=True, exist_ok=True)
-    (outdir / "grouping.json").write_text(json.dumps(grouping, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    outp = workdir / "outputs"
-    outp.mkdir(parents=True, exist_ok=True)
-    (outp / "groups.json").write_text(json.dumps(grouping, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return grouping
+    from step0307_loop import run_step03_loop
+    return run_step03_loop(workdir, sentences, agent_fn=agent_fn, force=force)
 
 
 def step04(workdir: Path, sentences: list[dict], agent_fn=None, force: bool = False) -> list[dict]:
@@ -559,7 +431,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.rpc:
         print(f'cd "{workdir}" && "F:/Pi/CLI/pi.cmd" --mode rpc --no-session '
               f"--no-skills --no-extensions --no-context-files --tools read,bash,write --thinking off")
-        print("子 prompt 见 prompts/step01-sentences.md / step02-verbs.md / step03-grouping.md "
+        print("子 prompt 见 prompts/step01-sentences.md / step02-verbs.md "
+              "/ prompts/step03-grouping-fewshot.md (FROZEN, discovery/evidence/grouping-ranking 三段 agent, #62) "
               "/ prompts/step04-ratings-fewshot.md (FROZEN, for-loop x39) / prompts/step05-{discovery,evidence,ranking}-fewshot.md "
               "(FROZEN v2, 三本手册各贴各, discovery/evidence/ranking 三段 agent, #61)")
         return 0
@@ -571,7 +444,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[segment1] 01-sentences: {len(sentences)} 句 (start/end 新 schema) -> steps/01-sentences/sentences.json")
     verbs = step02(workdir, sentences)
     print(f"[segment1] 02-verbs: verified={len(verbs['verified'])} candidates={len(verbs['candidates'])} (+start/end/context)")
-    grouping = step03(workdir, verbs, sentences)
+    grouping = step03(workdir, sentences)
     print(f"[segment1] 03-grouping: {len(grouping)} 件 (quotes 去重, +quote_details)")
     ratings = step04(workdir, sentences)
     print(f"[segment1] 04-attributes: {len(ratings)} terms (主17+次级22) -> steps/04-attributes/ratings.json")

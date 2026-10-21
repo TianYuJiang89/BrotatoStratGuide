@@ -52,6 +52,10 @@ def main(argv: list[str] | None = None) -> int:
         work / "inputs" / "manifest.json",
         work / "steps" / "01-sentences" / "sentences.json",
         work / "steps" / "02-verbs" / "verbs.json",
+        work / "steps" / "03-grouping" / "candidates.json",
+        work / "steps" / "03-grouping" / "discovery.json",
+        work / "steps" / "03-grouping" / "fewshot.md",
+        work / "steps" / "03-grouping" / "ranking.json",
         work / "steps" / "03-grouping" / "grouping.json",
         work / "outputs" / "groups.json",
         work / "steps" / "04-attributes" / "ratings.json",
@@ -80,6 +84,22 @@ def main(argv: list[str] | None = None) -> int:
     weapons = json.loads((work / "steps" / "05-weapons" / "weapons.json").read_text(encoding="utf-8"))
     weapons_out = json.loads((work / "outputs" / "weapons.json").read_text(encoding="utf-8"))
     weapon_candidates = json.loads((work / "steps" / "05-weapons" / "candidates.json").read_text(encoding="utf-8"))
+    item_candidates = json.loads((work / "steps" / "03-grouping" / "candidates.json").read_text(encoding="utf-8"))
+    discovery_info = json.loads((work / "steps" / "03-grouping" / "discovery.json").read_text(encoding="utf-8"))
+    # 打勾覆盖机检 (#62 v2: 收+丢==全表, 缺件即 fail; 分片动态, 不写死片数)
+    try:
+        _wiki_items = sorted((json.loads((REPO / "data" / "wiki-cache.json").read_text(encoding="utf-8")).get("items", {}) or {}).keys())
+    except Exception:
+        _wiki_items = []
+        fail("data/wiki-cache.json items 读失败 (打勾覆盖无全表可比)", errors)
+    # fewshot 运行快照 provenance: 03 单本 + 05 三本须与 repo FROZEN 文件逐字节一致
+    try:
+        _few_run = (work / "steps" / "03-grouping" / "fewshot.md").read_bytes()
+        _few_repo = (REPO / "prompts" / "step03-grouping-fewshot.md").read_bytes()
+        if _few_run != _few_repo:
+            fail("steps/03-grouping/fewshot.md must equal repo FROZEN fewshot (逐字节, 重跑 03 即回填)", errors)
+    except Exception:
+        fail("steps/03-grouping/fewshot.md 读失败 (缺运行快照, 重跑 03 即回填)", errors)
     # fewshot 运行快照 provenance: 三本任务手册须与 repo FROZEN 文件逐字节一致 (审计离线可读即认此件)
     for _task in ("discovery", "evidence", "ranking"):
         try:
@@ -152,51 +172,121 @@ def main(argv: list[str] | None = None) -> int:
             if k not in c:
                 fail(f"candidates missing read-only {k}: {c.get('normalized_to')}@{c.get('sentence_id')}", errors)
 
-    # --- 03-grouping (#48 锚+裁量: 68 全收录 + ban 必有拒绝动词 + must_take 必有拿取系动词; 无阈值无按名) ---
+    # --- 03-grouping (#62: frozen fewshot + discovery/evidence/grouping-ranking, shape only) ---
+    # 新 schema: candidates.json [{name_en,count,quotes,quote_details}] (discovery 补全, scope 脱离 slice)
+    # + ranking.json {must_take[],mentioned_not_taken[],ban[],casual_mention[]} (终判, 可推翻) 
+    # + per_item/<Safe>.json (evidence 原始) + grouping.json [{name_en,count,group,quotes,analysis,note,quote_details}]
+    # 链: ranking 四组==candidates; grouping==candidates 自洽; 旧件 tier/confidence/inferred/has_verb/
+    # verb/verb_type/mapped_to/reason 全退役 (出现即 fail); count==len(quotes); note 短引逐字验.
+    import re as _re3
+    _short_re3 = _re3.compile(r'原话["“]([^"”]+)["”]')
+    if not isinstance(item_candidates, list) or not item_candidates:
+        fail("item candidates must be non-empty array (discovery completeness)", errors)
+        _cand_names3: list = []
+    else:
+        _cand_names3 = []
+        for c in item_candidates:
+            if not isinstance(c, dict):
+                fail("item candidates must be objects", errors)
+                continue
+            for k in ("name_en", "count", "quotes", "quote_details"):
+                if k not in c:
+                    fail(f"item candidates missing {k}: {c.get('name_en')}", errors)
+            for _old in ("tier", "confidence", "inferred", "has_verb", "verb",
+                          "verb_type", "mapped_to", "reason"):
+                if _old in c:
+                    fail(f"item candidates retired field must be absent: {_old}", errors)
+            _cand_names3.append(c.get("name_en"))
+            qs = c.get("quotes", [])
+            if not isinstance(qs, list) or not qs:
+                fail(f"item candidates must have quotes: {c.get('name_en')}", errors)
+                qs = []
+            if isinstance(qs, list) and len(qs) != len(set(qs)):
+                fail(f"item candidates quotes must be deduped: {c.get('name_en')}", errors)
+            if c.get("count") != len(qs):
+                fail(f"item candidates count must == len(quotes): {c.get('name_en')}", errors)
+            for q in qs:
+                if q not in {s.get("text") for s in sentences if isinstance(s, dict)}:
+                    fail(f"item candidates quotes must be verbatim: {c.get('name_en')}", errors)
+                    break
+            qd = c.get("quote_details", [])
+            if not isinstance(qd, list) or len(qd) != len(qs):
+                fail(f"item candidates quote_details must parallel quotes: {c.get('name_en')}", errors)
+        if len(_cand_names3) != len(set(_cand_names3)):
+            fail("item candidates must be deduped by name_en", errors)
+    # 打勾覆盖机检 (#62 v2: 收+丢==全表, 缺件即 fail; 分片动态, 不写死片数)
+    _d_chunks = discovery_info.get("chunks") if isinstance(discovery_info, dict) else None
+    if not isinstance(_d_chunks, list) or not _d_chunks:
+        fail("steps/03-grouping/discovery.json chunks 非法 (须为非空分片表)", errors)
+        _d_chunks = []
+    else:
+        if sorted(sum([list(c) for c in _d_chunks], [])) != sorted(_wiki_items):
+            fail("discovery.json 分片须覆盖全表 (动态分片, 缺件即 fail)", errors)
+        _d_got: list = []
+        _d_drop: list = []
+        for _i, _ch in enumerate(_d_chunks):
+            _cp = work / "steps" / "03-grouping" / f"discovery-chunk-{_i}.json"
+            if not _cp.exists():
+                fail(f"steps/03-grouping/discovery-chunk-{_i}.json 缺失 (分片 verdict, 缺节即 fail)", errors)
+                continue
+            try:
+                _cd = json.loads(_cp.read_text(encoding="utf-8"))
+            except Exception:
+                fail(f"discovery-chunk-{_i}.json 非法 JSON", errors)
+                continue
+            if not isinstance(_cd, dict) or not isinstance(_cd.get("收"), list) or not isinstance(_cd.get("丢"), list):
+                fail(f"discovery-chunk-{_i}.json 须为 {{收[], 丢[]}}", errors)
+                continue
+            _names = [x.get("name_en") for x in _cd["收"] if isinstance(x, dict)] + [x for x in _cd["丢"] if isinstance(x, str)]
+            if sorted(_names) != sorted(_ch):
+                fail(f"discovery-chunk-{_i}.json 收+丢须==本片 (缺件/串片即 fail)", errors)
+            _d_got += [x.get("name_en") for x in _cd["收"] if isinstance(x, dict)]
+            _d_drop += [x for x in _cd["丢"] if isinstance(x, str)]
+        if sorted(_d_got + _d_drop) != sorted(_wiki_items):
+            fail("discovery 全片收+丢须==全表 (沉默遗漏即 fail)", errors)
+        if sorted(_d_got) != sorted(_cand_names3):
+            fail("discovery 收须==candidates (合并一致)", errors)
     if isinstance(grouping, list):
         grouped_names = {g.get("name_en") for g in grouping if isinstance(g, dict)}
-        try:
-            # #61 slice 已退役: 道具全集走 wiki-cache (不读 slice)
-            import json as _js
-            _wiki = _js.loads((REPO / "data" / "wiki-cache.json").read_text(encoding="utf-8"))
-            item_set = set((_wiki.get("items", {}) or {}).keys())
-        except Exception:
-            item_set = grouped_names
-        for r in verified:
-            if r.get("object_norm") in item_set and r.get("object_norm") not in grouped_names:
-                fail(f"verified not grouped: {r.get('object_norm')}", errors)
-        if len(grouping) != 68:
-            fail(f"grouping must be 68 (count>0 全收录), got {len(grouping)}", errors)
+        if set(_cand_names3) and grouped_names != set(_cand_names3):
+            fail(f"grouping must equal candidates {sorted(_cand_names3)}, got {sorted(grouped_names)}", errors)
         for g in grouping:
-            for k in ("name_en", "count", "group", "confidence", "reason", "quotes"):
+            for k in ("name_en", "count", "group", "quotes", "analysis", "note", "quote_details"):
                 if k not in g:
                     fail(f"grouping missing {k}: {g.get('name_en')}", errors)
             if g.get("group") not in ("must_take", "mentioned_not_taken", "ban", "casual_mention"):
                 fail(f"bad group: {g.get('name_en')}={g.get('group')}", errors)
-            if g.get("group") == "must_take" and g.get("tier") not in ("core", "convenient", "compromise"):
-                fail(f"must_take must have tier: {g.get('name_en')}", errors)
-            if isinstance(g.get("count"), int) and g["count"] <= 3:
-                if len(str(g.get("reason", "")).strip()) < 8:
-                    fail(f"low-freq must have one-liner: {g.get('name_en')}", errors)
-            rs = str(g.get("reason", ""))
-            if "字幕" in rs and "次" in rs and "原话" not in rs:
-                warns.append(f"WARN: reason 疑计数泄漏: {g.get('name_en')}")
-            if g.get("group") == "ban":
-                qall = " ".join(g.get("quotes", [])).lower()
-                if not any(w in qall for w in ("ban", "avoid", "recycl", "sell", "skip", "ignor")):
-                    if "ban" not in rs.lower() and "避开" not in rs:
-                        fail(f"ban must have rejection verb quote: {g.get('name_en')}", errors)
-            if g.get("group") == "must_take":
-                # #48 锚: 拿取系动词信号 (verb/mapped_to 落拿取系, 含 agent 补; 无按名无阈值)
-                _vv = str(g.get("verb", "") or "")
-                _mm = str(g.get("mapped_to", "") or "")
-                if _vv not in ("take", "buy", "pick up", "lock", "get", "roll for") and _mm not in ("take", "buy", "pick up", "lock", "get", "roll for"):
-                    fail(f"must_take must have take-verb signal: {g.get('name_en')}={_vv}/{_mm}", errors)
-            # quotes 去重
+            for _old in ("tier", "confidence", "inferred", "has_verb", "verb",
+                          "verb_type", "mapped_to", "surface_verb", "surface_word",
+                          "discretion_reason", "reason"):
+                if _old in g:
+                    fail(f"grouping retired field must be absent: {_old} ({g.get('name_en')})", errors)
             qs = g.get("quotes", [])
+            if not isinstance(qs, list) or not qs:
+                fail(f"grouping must have quotes (空证据即 fail): {g.get('name_en')}", errors)
+                qs = []
             if isinstance(qs, list) and len(qs) != len(set(qs)):
                 fail(f"quotes must be deduped (展示去重): {g.get('name_en')}", errors)
-            # quote_details 只读
+            if isinstance(g.get("count"), int) and g.get("count") != len(qs):
+                fail(f"grouping count must == len(quotes): {g.get('name_en')}", errors)
+            for q in qs:
+                if q not in {s.get("text") for s in sentences if isinstance(s, dict)}:
+                    fail(f"grouping quotes must be verbatim: {g.get('name_en')}", errors)
+                    break
+            _ana = str(g.get("analysis", ""))
+            if len(_ana.strip()) < 4:
+                fail(f"grouping analysis must be nonempty: {g.get('name_en')}", errors)
+            if not g.get("note") or len(str(g.get("note")).strip()) < 2:
+                fail(f"grouping note too short: {g.get('name_en')}", errors)
+            if len(str(g.get("note", ""))) > 120:
+                fail(f"grouping note must be <=120: {g.get('name_en')}", errors)
+            _shorts = [s.strip() for s in _short_re3.findall(str(g.get("note", ""))) if s.strip()]
+            if not _shorts:
+                fail(f"grouping note 缺短引标记 原话\"...\": {g.get('name_en')}", errors)
+            for _s in _shorts:
+                if not any(_s in _q for _q in qs if isinstance(_q, str)):
+                    fail(f"grouping note 短引须逐字出自 quotes: {g.get('name_en')}", errors)
+                    break
             qd = g.get("quote_details", [])
             if not isinstance(qd, list) or len(qd) != len(qs):
                 fail(f"quote_details must parallel quotes: {g.get('name_en')}", errors)
@@ -208,9 +298,71 @@ def main(argv: list[str] | None = None) -> int:
     else:
         fail("grouping must be array", errors)
     if grouping != outputs:
-        # outputs/groups.json 为旧 pilot 格式 (无 quote_details) 时允许? 不, 段1要求一致
-        # 兼容: 若 outputs 缺 quote_details, 视为未刷新, fail 提示重跑
         fail("outputs/groups.json must equal steps/03-grouping/grouping.json (重跑 01-03 新 schema 后须一致)", errors)
+    # 链: ranking 四组终判名==candidates (cut 自洽, 可推翻 tier 但名必须对上)
+    try:
+        ranking03 = json.loads((work / "steps" / "03-grouping" / "ranking.json").read_text(encoding="utf-8"))
+    except Exception:
+        ranking03 = None  # type: ignore
+        fail("steps/03-grouping/ranking.json 缺失或非法 (终判, 缺节即 fail)", errors)
+    if isinstance(ranking03, dict):
+        got_r3: set = set()
+        for _t in ("must_take", "mentioned_not_taken", "ban", "casual_mention"):
+            for _x in (ranking03.get(_t) or []):
+                if isinstance(_x, dict):
+                    got_r3.add(_x.get("name_en"))
+                    _rn, _rnote = _x.get("name_en"), str(_x.get("note", ""))
+                    _rs = [s.strip() for s in _short_re3.findall(_rnote) if s.strip()]
+                    if not _rs:
+                        fail(f"ranking note 缺短引标记 原话\"...\": {_rn}", errors)
+                    else:
+                        _safe = re.sub(r"[^A-Za-z0-9]+", "_", str(_rn)).strip("_")
+                        _pp = work / "steps" / "03-grouping" / "per_item" / f"{_safe}.json"
+                        try:
+                            _pev = json.loads(_pp.read_text(encoding="utf-8"))
+                            _pqs = _pev.get("quotes", [])
+                        except Exception:
+                            _pqs = []
+                        for _s in _rs:
+                            if not any(_s in _q for _q in _pqs if isinstance(_q, str)):
+                                fail(f"ranking note 短引须逐字出自 evidence quotes: {_rn}", errors)
+                                break
+        if set(_cand_names3) and got_r3 != set(_cand_names3):
+            fail(f"ranking 四组须==candidates {sorted(_cand_names3)}, got {sorted(got_r3)}", errors)
+    # 链: per_item 每件存在 + group 合法 + 名对上 + quotes 非空
+    for _n in _cand_names3:
+        _safe = re.sub(r"[^A-Za-z0-9]+", "_", str(_n)).strip("_")
+        _pp = work / "steps" / "03-grouping" / "per_item" / f"{_safe}.json"
+        if not _pp.exists():
+            fail(f"per_item missing (evidence 原始): {_n}", errors)
+            continue
+        try:
+            _ev = json.loads(_pp.read_text(encoding="utf-8"))
+        except Exception:
+            fail(f"per_item 非法 JSON: {_n}", errors)
+            continue
+        if not isinstance(_ev, dict) or _ev.get("name_en") != _n:
+            fail(f"per_item name_en 须对上: {_n}", errors)
+        if _ev.get("group") not in ("must_take", "mentioned_not_taken", "ban", "casual_mention"):
+            fail(f"per_item group 须四组之一: {_n}", errors)
+        _eq = _ev.get("quotes", [])
+        if not isinstance(_eq, list) or not _eq:
+            fail(f"per_item quotes 须非空: {_n}", errors)
+        for _q in _eq:
+            if _q not in {s.get("text") for s in sentences if isinstance(s, dict)}:
+                fail(f"per_item quotes 须逐字: {_n}", errors)
+                break
+    # 审计节点三元组: 每次 LLM 调用须留 log
+    _logs3 = [work / "steps" / "03-grouping" / "agent-ranking.log.jsonl"]
+    _d_chunks_for_logs = discovery_info.get("chunks") if isinstance(discovery_info, dict) else []
+    for _i in range(len(_d_chunks_for_logs) if isinstance(_d_chunks_for_logs, list) else 0):
+        _logs3.append(work / "steps" / "03-grouping" / f"agent-discovery-chunk-{_i}.log.jsonl")
+    for _n in _cand_names3:
+        _safe = re.sub(r"[^A-Za-z0-9]+", "_", str(_n)).strip("_")
+        _logs3.append(work / "steps" / "03-grouping" / f"agent-evidence-{_safe}.log.jsonl")
+    for _lp in _logs3:
+        if not _lp.exists() or _lp.stat().st_size == 0:
+            fail(f"03审计节点缺log (入参不可查, 重跑03回填): {_lp.name}", errors)
 
     # --- 04-attributes (#60: frozen fewshot + for-loop x39, shape only) ---
     if not isinstance(ratings, list) or len(ratings) != 39:

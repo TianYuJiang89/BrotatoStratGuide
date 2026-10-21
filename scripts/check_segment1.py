@@ -354,7 +354,7 @@ def main(argv: list[str] | None = None) -> int:
         fail("weapons T1>=1 (验收线, 由 ranking 保)", errors)
     sent_texts = {s.get("text") for s in sentences if isinstance(s, dict)}
     for w in (t1 + t2):
-        for k in ("name_en", "count", "tier", "note", "quotes", "analysis", "quote_details"):
+        for k in ("name_en", "count", "tier", "note", "quotes", "analysis", "copies", "copies_quote", "quote_details"):
             if k not in w:
                 fail(f"weapons missing {k}: {w.get('name_en')}", errors)
         for _old in ("anchors", "confidence", "kind", "inferred", "score", "reason"):
@@ -388,6 +388,17 @@ def main(argv: list[str] | None = None) -> int:
             if not any(_s in _q for _q in qs if isinstance(_q, str)):
                 fail(f"weapons note 短引须逐字出自 quotes: {w.get('name_en')}", errors)
                 break
+        _cop, _cq = str(w.get("copies", "")), str(w.get("copies_quote", ""))
+        if not _cop.strip():
+            fail(f"weapons 缺 copies (配比须明示): {w.get('name_en')}", errors)
+        elif _cop.strip() == "未提及":
+            if _cq.strip():
+                fail(f"weapons copies 未提及则 quote 须空: {w.get('name_en')}", errors)
+        else:
+            if not _cq.strip():
+                fail(f"weapons 缺 copies_quote: {w.get('name_en')}", errors)
+            elif not any(_cq.strip() in _q for _q in qs if isinstance(_q, str)):
+                fail(f"weapons copies_quote 须逐字出自 quotes: {w.get('name_en')}", errors)
         qd = w.get("quote_details", [])
         if not isinstance(qd, list) or len(qd) != len(qs):
             fail(f"weapons quote_details must parallel quotes: {w.get('name_en')}", errors)
@@ -435,6 +446,17 @@ def main(argv: list[str] | None = None) -> int:
                             if not any(_s in _q for _q in _pqs if isinstance(_q, str)):
                                 fail(f"ranking note 短引须逐字出自 evidence quotes: {_rn}", errors)
                                 break
+                        _rcop, _rcq = str(_x.get("copies", "")), str(_x.get("copies_quote", ""))
+                        if not _rcop.strip():
+                            fail(f"ranking 缺 copies: {_rn}", errors)
+                        elif _rcop.strip() == "未提及":
+                            if _rcq.strip():
+                                fail(f"ranking copies 未提及则 quote 须空: {_rn}", errors)
+                        else:
+                            if not _rcq.strip():
+                                fail(f"ranking 缺 copies_quote: {_rn}", errors)
+                            elif not any(_rcq.strip() in _q for _q in _pqs if isinstance(_q, str)):
+                                fail(f"ranking copies_quote 须逐字出自 evidence quotes: {_rn}", errors)
         if set(cand_names) and got_r != set(cand_names):
             fail(f"ranking t1+t2 must equal candidates {sorted(cand_names)}, got {sorted(got_r)}", errors)
     # 链: per_weapon 每把存在 (Safe 名) + tier 合法 + 名对上 + quotes 非空
@@ -467,6 +489,17 @@ def main(argv: list[str] | None = None) -> int:
             if not any(_s in _q for _q in _eq if isinstance(_q, str)):
                 fail(f"per_weapon note 短引须逐字出自 quotes: {_n}", errors)
                 break
+        _ecop, _ecq = str(_ev.get("copies", "")), str(_ev.get("copies_quote", ""))
+        if not _ecop.strip():
+            fail(f"per_weapon 缺 copies: {_n}", errors)
+        elif _ecop.strip() == "未提及":
+            if _ecq.strip():
+                fail(f"per_weapon copies 未提及则 quote 须空: {_n}", errors)
+        else:
+            if not _ecq.strip():
+                fail(f"per_weapon 缺 copies_quote: {_n}", errors)
+            elif not any(_ecq.strip() in _q for _q in _eq if isinstance(_q, str)):
+                fail(f"per_weapon copies_quote 须逐字出自 quotes: {_n}", errors)
     # 审计节点三元组: 每次 LLM 调用须留 log (入参 prompt 可查), 缺 log 即 fail
     _logs = [work / "steps" / "05-weapons" / "agent-discovery.log.jsonl",
              work / "steps" / "05-weapons" / "agent-ranking.log.jsonl"]

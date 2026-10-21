@@ -54,8 +54,8 @@ def test_fewshot_frozen_per_task_exists():
     # v2: 按任务拆三本手册, 各贴各的 (例子全留、废话全砍)
     specs = {
         "discovery": ("TASK_DISCOVERY", "Slingshot", "claw tree", "禁数帽"),
-        "evidence": ("TASK_EVIDENCE", "T1/T2", "take a second minigun", "four screwdrivers"),
-        "ranking": ("TASK_RANKING", "Blunderbuss", "horde wave", "同句多引"),
+        "evidence": ("TASK_EVIDENCE", "T1/T2", "take a second minigun", "four screwdrivers", "copies", "未提及"),
+        "ranking": ("TASK_RANKING", "Blunderbuss", "horde wave", "同句多引", "copies", "终定"),
     }
     for task, needles in specs.items():
         p = REPO / "prompts" / f"step05-{task}-fewshot.md"
@@ -144,6 +144,8 @@ def test_validate_evidence_ok_and_fail_loud():
         "quotes": [sents[0]["text"]],
         "analysis": "来源=捡→整局扛把子→T1。",
         "note": "主力连发，原话“take a second minigun”。",
+        "copies": "见第二把就拿",
+        "copies_quote": "take a second minigun",
     }
     out = m.validate_evidence(good, "Minigun", sents)
     assert out["tier"] == "T1"
@@ -177,6 +179,22 @@ def test_validate_evidence_ok_and_fail_loud():
     bad["note"] = "主力连发原话“take a third minigun”。"
     with pytest.raises(SystemExit):
         m.validate_evidence(bad, "Minigun", sents)
+    # copies缺件即fail
+    bad = dict(good)
+    del bad["copies"]
+    with pytest.raises(SystemExit):
+        m.validate_evidence(bad, "Minigun", sents)
+    # 未提及须空quote
+    bad = dict(good)
+    bad["copies"] = "未提及"
+    with pytest.raises(SystemExit):
+        m.validate_evidence(bad, "Minigun", sents)
+    # copies_quote编数字即fail
+    bad = dict(good)
+    bad["copies"] = "八把成型"
+    bad["copies_quote"] = "eight screwdrivers"
+    with pytest.raises(SystemExit):
+        m.validate_evidence(bad, "Minigun", sents)
     # agent填count即fail
     bad = dict(good)
     bad["count"] = 5
@@ -192,12 +210,16 @@ def test_validate_evidence_ok_and_fail_loud():
 def test_validate_ranking_ok_and_fail_loud():
     m = _load("step05_loop", "scripts/step05_loop.py")
     evs = [
-        {"name_en": "Minigun", "tier": "T1", "quotes": ["q1"], "analysis": "a", "note": "n1"},
-        {"name_en": "SMG", "tier": "T2", "quotes": ["q2"], "analysis": "a", "note": "n2"},
+        {"name_en": "Minigun", "tier": "T1", "quotes": ["q1"], "analysis": "a", "note": "n1",
+         "copies": "2把起", "copies_quote": "q1"},
+        {"name_en": "SMG", "tier": "T2", "quotes": ["q2"], "analysis": "a", "note": "n2",
+         "copies": "1把过渡", "copies_quote": "q2"},
     ]
     cands = ["Minigun", "SMG"]
-    good = {"t1": [{"name_en": "Minigun", "note": "主力，原话“q1”。"}],
-            "t2": [{"name_en": "SMG", "note": "过渡，原话“q2”。"}]}
+    good = {"t1": [{"name_en": "Minigun", "note": "主力，原话“q1”。",
+                      "copies": "2把起", "copies_quote": "q1"}],
+            "t2": [{"name_en": "SMG", "note": "过渡，原话“q2”。",
+                      "copies": "1把过渡", "copies_quote": "q2"}]}
     out = m.validate_ranking(good, cands, evs)
     assert [x["name_en"] for x in out["t1"]] == ["Minigun"]
     # T1>=1 验收线
@@ -247,12 +269,14 @@ def test_run_loop_with_fake_agents_cyborg_shape(tmp_path):
             return {"name_en": name_en, "tier": tier,
                     "quotes": quotes_by[name_en],
                     "analysis": f"{name_en}来源→机制→{tier}。",
-                    "note": f"{name_en}人话原话\"{quotes_by[name_en][0][:12]}\"。"}
+                    "note": f"{name_en}人话原话\"{quotes_by[name_en][0][:12]}\"。",
+                    "copies": f"{name_en}2把起",
+                    "copies_quote": quotes_by[name_en][0][:12]}
         if kind == "ranking":
-            return {"t1": [{"name_en": "Minigun", "note": f"主力原话\"{quotes_by['Minigun'][0][:12]}\"。"},
-                           {"name_en": "Screwdriver", "note": f"体系原话\"{quotes_by['Screwdriver'][0][:12]}\"。"}],
-                    "t2": [{"name_en": "SMG", "note": f"过渡原话\"{quotes_by['SMG'][0][:12]}\"。"},
-                           {"name_en": "Nuclear Launcher", "note": f"horde位原话\"{quotes_by['Nuclear Launcher'][0][:12]}\"。"}]}
+            return {"t1": [{"name_en": "Minigun", "note": f"主力原话\"{quotes_by['Minigun'][0][:12]}\"。", "copies": "2把起", "copies_quote": quotes_by['Minigun'][0][:12]},
+                           {"name_en": "Screwdriver", "note": f"体系原话\"{quotes_by['Screwdriver'][0][:12]}\"。", "copies": "4把成型", "copies_quote": quotes_by['Screwdriver'][0][:12]}],
+                    "t2": [{"name_en": "SMG", "note": f"过渡原话\"{quotes_by['SMG'][0][:12]}\"。", "copies": "1把过渡", "copies_quote": quotes_by['SMG'][0][:12]},
+                           {"name_en": "Nuclear Launcher", "note": f"horde位原话\"{quotes_by['Nuclear Launcher'][0][:12]}\"。", "copies": "1把horde", "copies_quote": quotes_by['Nuclear Launcher'][0][:12]}]}
         raise AssertionError(f"unknown kind {kind}")
 
     # 用小词汇表 monkeypatch load_weapon_vocab
@@ -321,6 +345,7 @@ def test_check_segment1_05_shape_only_no_anchors_numbers():
     assert "analysis" in src
     assert "ranking.json" in src, "check_05 must验ranking终判名==candidates"
     assert "per_weapon" in src, "check_05 must验per_weapon evidence原始"
+    assert "copies" in src, "check_05 must验配比逐字 (copies/copies_quote)"
     for banned in ("拿取动词", "verified 拿取", "把数/波次", "数字词", "最大断层", "registry-slice",
                    "anchors 须", "confidence须", "kind须", "inferred须"):
         assert banned not in src, f"check_05 must retire anchor/number/slice checks ({banned})"

@@ -7,7 +7,7 @@ Deterministic-first:
   名在表 (武器词汇表78, 幻觉即 fail) / 去重 / T1+T2==candidates 自洽 / 落盘
   (candidates.json + weapons.json + per_weapon/* + 日志).
 - agent judgment 只做: discovery 补全 (completeness 归它, scan 子串已退役) /
-  evidence 单把判断 (tier建议+quotes+analysis+note) / ranking 切分 (t1/t2+note定稿, T1>=1由它保,
+  evidence 单把判断 (tier建议+quotes+analysis+note+copies配比建议) / ranking 切分 (t1/t2+note定稿+copies终定, T1>=1由它保,
   可推翻 evidence tier, 切分拿 quote 说话禁数帽).
 - 缺件/编 quote/幻觉名即 fail loud, 不回落不补空.
 
@@ -20,7 +20,7 @@ Deterministic-first:
 - steps/05-weapons/candidates.json: [{name_en, count, quotes, quote_details}]
 - steps/05-weapons/per_weapon/<Safe>.json: evidence 原始 (validated, 无 count)
 - steps/05-weapons/weapons.json (+ outputs/weapons.json):
-  {t1[], t2[]} 每条 {name_en, count, tier, quotes, analysis, note, quote_details}
+  {t1[], t2[]} 每条 {name_en, count, tier, quotes, analysis, note, copies, copies_quote, quote_details}
   - confidence/kind/inferred/anchors/score/断层/数字词表/verified加分全退役 (出现即 fail).
   - count==len(quotes); note 短引导逐字验 (原话"..."/原话“...”须出自 quotes, 码保, 缺标记/改写即 fail).
 """
@@ -168,11 +168,15 @@ def build_evidence_prompt(name_en: str, sentences: list[dict], fewshot_text: str
         + '{"name_en": "<与 TASK_WEAPON 一字不差>", "tier": "T1/T2（建议）", '
         + '"quotes": ["逐字出自上表，去重，非空"], '
         + '"analysis": "来源→机制→分档", '
-        + '"note": "≤120字人话+短引（含把数/波次数字逐字）"}\n\n'
+        + '"note": "≤120字人话+短引（含把数/波次数字逐字）", '
+        + '"copies": "≤20字人话（2把起/最多4把/1把过渡/未提及）", '
+        + '"copies_quote": "逐字出自本条quotes（未提及则空）"}\n\n'
         + "- name_en 须与 TASK_WEAPON 一字不差；幻觉名即 fail。\n"
         + "- quotes 须逐字等于上表某条 text，去重，非空；空证据即 fail（武器无 `-` 档）。编 quote 即 fail。\n"
         + "- analysis 写全过程（来源→机制→分档）。\n"
         + "- note ≤120 字，人话 + 短引（短引须出自本条 quotes 逐字，含把数/波次数字逐字，不编数字）。\n"
+        + "- copies 配比是 judgment 不是数数：≤20字人话（可模糊）；copies_quote 逐字出自本条 quotes；"
+        + "没提拿几把写 copies=未提及 + copies_quote 空串；编数字即 fail。\n"
         + "- 你不输出 count。缺件即 fail，不回落不补空。\n"
     )
     return prompt
@@ -195,12 +199,15 @@ def build_ranking_prompt(sentences: list[dict], evidences: list[dict], fewshot_t
         + "\n\n---\n\n# TASK_RANKING（只切分，不编 quote；T1≥1 由你保）\n\n"
         + f"候选名单（须全切分，一把不丢）: {names}\n\n"
         + "## 输出契约（只输出一件 JSON 对象，不输出其它文字）\n\n"
-        + '{"t1": [{"name_en": "<候选一字不差>", "note": "≤120字定稿人话+短引"}], '
-        + '"t2": [{"name_en": "...", "note": "..."}]}\n\n'
+        + '{"t1": [{"name_en": "<候选一字不差>", "note": "≤120字定稿人话+短引", '
+        + '"copies": "终定配比", "copies_quote": "逐字"}], '
+        + '"t2": [{"name_en": "...", "note": "...", "copies": "...", "copies_quote": "..."}]}\n\n'
         + "- T1≥1（验收线，由你保）；可推翻 evidence tier；切分拿 quote 说话，禁数帽。\n"
         + "- T1+T2 须 == 候选名单（自洽，一把不多一把不少）；幻觉名即 fail。\n"
         + "- note 每条 ≤120 字，人话 + 短引（短引须出自对应 evidence quotes 逐字）。\n"
-        + "- 你不输出 quotes/analysis/count（只定 tier+note）。缺件即 fail。\n"
+        + "- copies 每条终定（可推翻 evidence）：copies_quote 须逐字出自对应 evidence quotes；"
+        + "evidence 未提及则只能未提及；编数字即 fail。\n"
+        + "- 你不输出 quotes/analysis/count（只定 tier+note+copies）。缺件即 fail。\n"
     )
     return prompt
 
@@ -246,6 +253,23 @@ def validate_discovery(data: dict, sentences: list[dict], vocab: list[str]) -> l
     return out
 
 
+def _check_copies(who: str, cop, cq, quotes: list[str]) -> tuple[str, str]:
+    if not isinstance(cop, str) or not cop.strip():
+        _fail(f"{who} 缺 copies (配比须明示, 未提及请写未提及, 缺件即 fail)")
+    cop = cop.strip()
+    cq = cq if isinstance(cq, str) else ""
+    if cop == "未提及":
+        if cq.strip():
+            _fail(f"{who} copies 未提及则 copies_quote 须空")
+        return cop, ""
+    if not cq.strip():
+        _fail(f"{who} 缺 copies_quote (配比须逐字短引, 缺件即 fail)")
+    cq = cq.strip()
+    if not any(cq in q for q in quotes if isinstance(q, str)):
+        _fail(f"{who} copies_quote 须逐字出自 quotes (编数字即 fail): {cq[:60]!r}")
+    return cop, cq
+
+
 def validate_evidence(data: dict, name_en: str, sentences: list[dict]) -> dict:
     if not isinstance(data, dict):
         _fail(f"{name_en} evidence 输出须为 JSON 对象, got {type(data)}")
@@ -254,7 +278,7 @@ def validate_evidence(data: dict, name_en: str, sentences: list[dict]) -> dict:
     for f in RETIRED_FIELDS:
         if f in data:
             _fail(f"{name_en} 字段 {f} 已退役 (#61, 出现即 fail)")
-    for k in ("name_en", "tier", "quotes", "analysis", "note"):
+    for k in ("name_en", "tier", "quotes", "analysis", "note", "copies", "copies_quote"):
         if k not in data:
             _fail(f"{name_en} evidence 缺 {k} (缺件即 fail, 不补空)")
     if data.get("name_en") != name_en:
@@ -279,8 +303,11 @@ def validate_evidence(data: dict, name_en: str, sentences: list[dict]) -> dict:
     if len(note) > NOTE_MAX_LEN:
         _fail(f"{name_en} evidence note 须≤{NOTE_MAX_LEN}字, got {len(note)}")
     _fail_short(f"{name_en} evidence", note, [q for q in qs if isinstance(q, str)])
+    _cop, _cq = _check_copies(f"{name_en} evidence", data.get("copies"), data.get("copies_quote"),
+                                [q for q in qs if isinstance(q, str)])
     return {"name_en": name_en, "tier": data.get("tier"),
-            "quotes": list(qs), "analysis": str(ana).strip(), "note": str(note).strip()}
+            "quotes": list(qs), "analysis": str(ana).strip(), "note": str(note).strip(),
+            "copies": _cop, "copies_quote": _cq}
 
 
 def validate_ranking(data: dict, candidate_names: list[str], evidences: list[dict]) -> dict:
@@ -308,7 +335,7 @@ def validate_ranking(data: dict, candidate_names: list[str], evidences: list[dic
         for e in arr:
             if not isinstance(e, dict):
                 _fail(f"ranking {tier_key} 条目须为对象")
-            for k in ("name_en", "note"):
+            for k in ("name_en", "note", "copies", "copies_quote"):
                 if k not in e:
                     _fail(f"ranking {tier_key} 缺 {k} (缺件即 fail)")
             name = e.get("name_en")
@@ -326,7 +353,10 @@ def validate_ranking(data: dict, candidate_names: list[str], evidences: list[dic
                 _fail(f"ranking {name} note 须≤{NOTE_MAX_LEN}字, got {len(note)}")
             _evq = ev_by.get(name, {}).get("quotes", [])
             _fail_short(f"ranking {name}", note, [q for q in _evq if isinstance(q, str)])
-            out_arr.append({"name_en": name, "note": str(note).strip()})
+            _cop, _cq = _check_copies(f"ranking {name}", e.get("copies"), e.get("copies_quote"),
+                                        [q for q in _evq if isinstance(q, str)])
+            out_arr.append({"name_en": name, "note": str(note).strip(),
+                            "copies": _cop, "copies_quote": _cq})
     if set(seen) != set(candidate_names):
         _fail(f"ranking T1+T2 须==candidates 自洽: 期望 {sorted(candidate_names)}, 实得 {sorted(seen)}")
     return {"t1": out_t1, "t2": out_t2}
@@ -771,6 +801,8 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
             out_arr.append({"name_en": name, "count": len(qs), "tier": tier_key,
                             "quotes": qs, "analysis": str(ev.get("analysis", "")).strip(),
                             "note": str(r.get("note", "")).strip(),
+                            "copies": str(r.get("copies", "")).strip(),
+                            "copies_quote": str(r.get("copies_quote", "")).strip(),
                             "quote_details": details})
     # 自洽: T1+T2==candidates (ranking 已验, 此处再保)
     got = sorted([w["name_en"] for w in (t1_out + t2_out)])

@@ -1,13 +1,14 @@
-# TASK_RANKING（FROZEN 2026-10-21 v2：只切分，不编 quote；T1≥1 由你保）
+# TASK_RANKING（FROZEN 2026-10-21 v3：只切分，不编 quote；T1≥1 由你保）
 
 输入：全量整句 + N 份 evidence。输出一件 JSON，不输出其它文字：
-{"t1": [{"name_en": "<候选一字不差>", "note": "≤120字定稿人话+短引"}], "t2": [{"name_en": "...", "note": "..."}]}
+{"t1": [{"name_en": "<候选一字不差>", "note": "≤120字定稿人话+短引", "copies": "终定配比", "copies_quote": "逐字"}], "t2": [{"name_en": "...", "note": "...", "copies": "...", "copies_quote": "..."}]}
 
 T1=carry/主力：整局扛伤害或体系入口。T2=过渡/备选：有 T1 即换、不升满。
 可推翻 evidence tier；切分拿 quote 说话，禁数帽。
 T1+T2 == 候选名单，一把不多一把不少；幻觉名即 fail。
 note ≤120 字：人话+短引（短引须出自对应 evidence quotes 逐字）。
 同句多引：同一原话被多把引用时判归属，只一家能拿它当判据。
+配比终定：每条 copies/copies_quote 可推翻 evidence；copies_quote 须逐字出自对应 evidence quotes；evidence 写未提及你也只能写未提及。
 你不输出 quotes/analysis/count。缺件即 fail。
 
 ## 切分例（6 例，3×T1 + 3×T2）

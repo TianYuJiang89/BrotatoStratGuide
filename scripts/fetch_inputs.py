@@ -107,8 +107,9 @@ def build_meta(dump: dict, difficulty: str, subs_source: str) -> dict:
     published = normalize_published(str(dump.get("upload_date") or ""))
     description = str(dump.get("description") or "")
     chapters_raw = dump.get("chapters") or []
-    if not isinstance(chapters_raw, list) or not chapters_raw:
-        _fail("meta 抓不到 chapters (作者章节缺失, 不猜测不脑补)")
+    if not isinstance(chapters_raw, list):
+        _fail("meta chapters 非数组 (yt-dlp 原值异常)")
+    # #67 章节门拆除: 无章节不再 fail（#63 segmentation 已退役章节分桶，空数组照发，下游不读章节）。
     chapters: list[dict] = []
     for c in chapters_raw:
         if not isinstance(c, dict):

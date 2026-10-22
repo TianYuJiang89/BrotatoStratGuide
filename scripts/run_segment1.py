@@ -141,11 +141,12 @@ def sha1_of(path: Path) -> str:
 def ensure_inputs(slug: str, vid: str, workdir: Path) -> dict:
     """inputs 校验 + slice 退役 (#61: Step00 后新链只认 inputs, 不读旧链).
 
-    四件须已由 scripts/fetch_inputs.py 产出. 本步只做:
-    - 四件存在性校验 (缺件即报错, 指引先跑 fetch_inputs 取证)
+    三件须已由 scripts/fetch_inputs.py 产出. 本步只做:
+    - 三件存在性校验 (缺件即报错, 指引先跑 fetch_inputs 取证)
     - sha 对上校验 (manifest.sources[0].sha1 == source.vtt 实际 sha)
-    - registry-slice 动态刷新 (全局 wiki-cache + terms + runtime source.vtt, 幂等)
+    - registry-slice 残留即删 (#61 退役, 不读不刷新)
     meta/manifest 为 Step00 取证产物, 本步不覆写 (provenance 只认取证).
+    #67 章节门拆除: meta.chapters 可空数组, 下游 (06 segmentation) 不读章节, 此处不验章节.
     """
     inputs = workdir / "inputs"
     for _f in ("source.vtt", "meta.json", "manifest.json"):
@@ -162,24 +163,7 @@ def ensure_inputs(slug: str, vid: str, workdir: Path) -> dict:
         except Exception:
             pass
     manifest = json.loads((inputs / "manifest.json").read_text(encoding="utf-8"))
-    # #45: chapters timed 校验 (老格式纯字符串数组视为缺取证, 指引重跑 Step00)
-    try:
-        _meta = json.loads((inputs / "meta.json").read_text(encoding="utf-8"))
-    except Exception:
-        raise SystemExit(
-            f"meta.json 读失败 for {slug}/{vid}: 先跑 scripts/fetch_inputs.py --url <youtube-url> "
-            f"--slug {slug} --variant {vid} 取证")
-    _chs = _meta.get("chapters")
-    if (not isinstance(_chs, list) or not _chs
-            or any(not isinstance(c, dict) for c in _chs)
-            or any(not isinstance((c or {}).get("title"), str)
-                    or not isinstance((c or {}).get("start"), (int, float))
-                    or not isinstance((c or {}).get("end"), (int, float))
-                    for c in _chs)):
-        raise SystemExit(
-            f"meta.json chapters 非 timed 格式 ([{{title,start,end}}]) for {slug}/{vid}: "
-            f"老格式纯字符串数组视为缺取证, 先跑 scripts/fetch_inputs.py --url <youtube-url> "
-            f"--slug {slug} --variant {vid} 回填 (source.vtt 不动, sha 不变)")
+    # #67 章节门拆除: 不验 meta.chapters（可空数组，下游不读章节）。只验三件 + sha。
     actual_sha = sha1_of(inputs / "source.vtt")
     expect_sha = (manifest.get("sources") or [{}])[0].get("sha1", "")
     if actual_sha != expect_sha:

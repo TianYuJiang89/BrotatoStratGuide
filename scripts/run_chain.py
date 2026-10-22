@@ -199,7 +199,7 @@ def _reuse_ok_weapons(path: Path) -> bool:
 def ensure_step00(slug: str, vid: str, workdir: Path, url: str = "", cookies: str = "") -> dict:
     """Step00 取证 (固定代码): 只吃 URL+slug+variant, 来源写 manifest. 缺件即 fail loud.
 
-    - inputs 三件已在 -> 直接校验 (沿 run_segment1.ensure_inputs: sha 对上 + chapters timed, #61 slice 已退役).
+    - inputs 三件已在 -> 直接校验 (沿 run_segment1.ensure_inputs: sha 对上, #67 章节不验, #61 slice 已退役).
     - inputs 缺件 + --url 已给 -> 调 fetch_inputs 取证后校验.
     - inputs 缺件 + 无 --url -> fail loud (指引先给 URL 取证, 不猜测不回落).
     """

@@ -39,6 +39,7 @@ import argparse
 import hashlib
 import json
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -196,10 +197,33 @@ def _reuse_ok_weapons(path: Path) -> bool:
         return False
 
 
+def _url_video_id(url: str) -> str:
+    """从 URL 解析 video id (#69, 无网络): watch?v=/youtu.be/shorts/live/embed; 解析失败返回 ''."""
+    from urllib.parse import urlparse, parse_qs
+    try:
+        u = (url or "").strip()
+        if not u:
+            return ""
+        p = urlparse(u if "://" in u else "https://" + u)
+        host = (p.hostname or "").lower()
+        if "youtu.be" in host:
+            seg = (p.path or "").strip("/").split("/")
+            return seg[0] if seg and re.fullmatch(r"[A-Za-z0-9_-]{6,}", seg[0]) else ""
+        qs = parse_qs(p.query or "")
+        for v in (qs.get("v") or []):
+            if re.fullmatch(r"[A-Za-z0-9_-]{6,}", v):
+                return v
+        m = re.search(r"/(?:shorts|live|embed)/([A-Za-z0-9_-]{6,})", p.path or "")
+        return m.group(1) if m else ""
+    except Exception:
+        return ""
+
+
 def ensure_step00(slug: str, vid: str, workdir: Path, url: str = "", cookies: str = "") -> dict:
     """Step00 取证 (固定代码): 只吃 URL+slug+variant, 来源写 manifest. 缺件即 fail loud.
 
     - inputs 三件已在 -> 直接校验 (沿 run_segment1.ensure_inputs: sha 对上, #67 章节不验, #61 slice 已退役).
+    - 显式 --url 且三件齐 -> 先比 video_id: 同片跳过 (幂等不重下), 换片才重取 (fetch 内整目录备份, #69).
     - inputs 缺件 + --url 已给 -> 调 fetch_inputs 取证后校验.
     - inputs 缺件 + 无 --url -> fail loud (指引先给 URL 取证, 不猜测不回落).
     """
@@ -207,7 +231,18 @@ def ensure_step00(slug: str, vid: str, workdir: Path, url: str = "", cookies: st
     inputs = workdir / "inputs"
     need = ["source.vtt", "meta.json", "manifest.json"]
     missing = [f for f in need if not (inputs / f).exists()]
-    if missing and (url or "").strip():
+    if (url or "").strip():
+        if not missing:
+            _want = _url_video_id(url)
+            _have = ""
+            try:
+                _m = json.loads((inputs / "manifest.json").read_text(encoding="utf-8"))
+                _srcs = _m.get("sources") or []
+                _have = str((_srcs[0].get("video_id") if _srcs else "") or "")
+            except Exception:
+                _have = ""
+            if _want and _have and _want == _have:
+                return _ensure(slug, vid, workdir)
         from fetch_inputs import main as _fetch_main
         argv = ["--url", url.strip(), "--slug", slug, "--variant", vid,
                 "--work-root", str(workdir.parent.parent), "--issue", "55"]

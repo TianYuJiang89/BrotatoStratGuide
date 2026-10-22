@@ -28,9 +28,11 @@ import argparse
 import hashlib
 import json
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from typing import NoReturn
 
@@ -161,6 +163,20 @@ def build_manifest(slug: str, variant: str, covers: list[str],
 
 
 # #61 退役: build_registry_slice 已删 (scan 子串 scope 作废, completeness 归 discovery agent).
+
+
+def backup_variant_dir(workdir: Path) -> Path | None:
+    """换片自动清场 (#69): 既有变体目录整搬备份, 返回备份路径; 不存在返回 None (只搬不删)."""
+    if not workdir.exists():
+        return None
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    dest = workdir.parent / f"{workdir.name}.bak.{stamp}"
+    n = 1
+    while dest.exists():
+        n += 1
+        dest = workdir.parent / f"{workdir.name}.bak.{stamp}-{n}"
+    shutil.move(str(workdir), str(dest))
+    return dest
 
 
 def _sop_version() -> str:
@@ -298,6 +314,18 @@ def main(argv: list[str] | None = None) -> int:
                               sha1, _sop_version(), args.issue)
 
     workdir = Path(args.work_root) / slug / variant
+    # #69 换片自动清场: 既有取证且 video_id 不同 -> 整目录备份后重建 (不清则新旧混跑, 见 #68).
+    # 同 id 原地覆盖 (幂等); 无既有直写. 只搬不删.
+    _old_id = ""
+    try:
+        _old_manifest = json.loads((workdir / "inputs" / "manifest.json").read_text(encoding="utf-8"))
+        _old_srcs = _old_manifest.get("sources") or []
+        _old_id = str((_old_srcs[0].get("video_id") if _old_srcs else "") or "")
+    except Exception:
+        _old_id = ""
+    if _old_id and _old_id != video_id:
+        _bak = backup_variant_dir(workdir)
+        print(f"video changed ({_old_id} -> {video_id}): backup {workdir} -> {_bak}")
     inputs = workdir / "inputs"
     inputs.mkdir(parents=True, exist_ok=True)
     (inputs / "source.vtt").write_bytes(raw)

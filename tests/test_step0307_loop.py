@@ -447,3 +447,11 @@ def test_audit_03_07_show_nodes_not_anchors():
     for marker in ("agent-discovery.log.jsonl", "agent-evidence-",
                    "agent-ranking.log.jsonl", "per_item", "fewshot.md"):
         assert marker in html, f"audit 03节须按调用列节点 ({marker})"
+
+
+def test_discovery_chunk_suffix_file_write_takes_precedence():
+    """#70: discovery chunk 后缀须写明文件落盘优先 (消歧 JSON-only vs 写文件)."""
+    src = (REPO / "scripts" / "step0307_loop.py").read_text(encoding="utf-8")
+    assert "文件落盘为必须" in src, "discovery chunk prompt 须声明落盘必须 (#70)"
+    assert "只输出一件 JSON" in src and "文件内容格式" in src, \
+        "须说明 JSON-only 指文件内容格式 (#70)"

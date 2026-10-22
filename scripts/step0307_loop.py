@@ -731,7 +731,8 @@ def run_step03_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
                 pass
         full_prompt = (prompt
                        + f"\n\n只写相对路径 `steps/03-grouping/discovery-{safe_i}.json`，"
-                         f"禁 `..` 与绝对盘符。\n")
+                         f"禁 `..` 与绝对盘符。文件落盘为必须（不写文件即缺件 fail）；"
+                         f"“只输出一件 JSON”指文件内容格式，写完文件后再输出同一 JSON。\n")
         if agent_fn is not None:
             try:
                 raw_d = agent_fn("discovery", i, prompt)

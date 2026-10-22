@@ -838,9 +838,11 @@ table.guide-table th {{
       <span class="contract-badge">SHA: {short_sha}</span>
       <span class="contract-badge">SABCD 语义落地 (#58)</span>
       <span class="contract-badge">武器 D/E/R 落地 (#61)</span>
-      <span class="contract-badge">道具/优先级 Agent 落地 (#62)</span>
-      <span class="contract-badge">波次运营切分落地 (#63)</span>
-      <span class="contract-badge">六节完整度: 39属性 / 4武器 / 68道具 / {len(phases_data)}阶段 / {len(priorities_data.get('upgrades', [])) + len(priorities_data.get('shop', []))}优先 / 4避坑</span>
+      <span class="contract-badge">道具池分组落地 (#62)</span>
+      <span class="contract-badge">运营波次切分落地 (#63)</span>
+      <span class="contract-badge">优先级双通道修正 (#65)</span>
+      <span class="contract-badge">六节纯净收尾组装 (#66)</span>
+      <span class="contract-badge">六节完整度: {len(ratings_data)}属性 / {len(weapons_data.get('t1', [])) + len(weapons_data.get('t2', []))}武器 / {len(groups_data)}道具 / {len(phases_data)}阶段 / {len(priorities_data.get('upgrades', [])) + len(priorities_data.get('shop', []))}优先 / {len(pitfalls_data)}避坑</span>
     </div>
     <button class="contract-toggle" onclick="document.getElementById('contractDrawer').classList.toggle('open')">查看契约决议草案 ▾</button>
   </div>
@@ -853,11 +855,13 @@ table.guide-table th {{
         <p>• <b>SHA 锚定</b>: 页面头部显式呈现 <code>SHA {short_sha}</code>，与审计 09 组装及 manifest 一致。</p>
       </div>
       <div class="contract-box">
-        <h4>2. 属性/武器/道具/波次标准 (#58 / #61 / #62 / #63 决议)</h4>
-        <p>• <b>属性 SABCD</b>: 1S / 3A / 5B / 5C / 3D 梯队，废除助动词计数。</p>
-        <p>• <b>武器三段架构</b>: T1/T2 分档 + 人话 note + copies 持枪配置建议。</p>
-        <p>• <b>道具与优先级 (#62)</b>: Discovery 逐个打勾 → Evidence → Grouping-Ranking(四组人话 note) → Priority-Ranking(升级/商店 TopN 告别断层硬码与动词表)。</p>
+        <h4>2. 属性/武器/道具/波次/优先级标准 (#58-#66 决议)</h4>
+        <p>• <b>属性 SABCD (#58)</b>: 1S / 3A / 5B / 5C / 3D 梯队，废除助动词计数。</p>
+        <p>• <b>武器三段架构 (#61)</b>: T1/T2 分档 + 人话 note + copies 持枪配置建议。</p>
+        <p>• <b>道具池分组 (#62)</b>: Discovery 逐个打勾 → Evidence → Grouping-Ranking(四组人话 note)。</p>
         <p>• <b>运营节奏 (#63)</b>: Frozen 20-shot 切分 + 三问(目标/焦点/转折) Agent，波次原话作证不脑补，N 不定自由分段。</p>
+        <p>• <b>优先级双通道 (#65)</b>: 认清“升级 4 选 1”与“局间商店购买”通道差异；synthesis 综合论证；TopN 动态。</p>
+        <p>• <b>终局组装 (#66)</b>: 09 纯净聚合六节，02 动词表彻底退役，过程件不进 guide.json。</p>
       </div>
       <div class="contract-box">
         <h4>3. 缺项与徽标 (Fail-loud)</h4>
@@ -1160,7 +1164,7 @@ table.guide-table th {{
               </tr>
 """
 
-    html_out += """            </tbody>
+    html_out += f"""            </tbody>
           </table>
         </div>
       </details>
@@ -1292,7 +1296,7 @@ table.guide-table th {{
         </div>
 """
 
-    html_out += """      </div>
+    html_out += f"""      </div>
     </div>
   </div><!-- /variant-a -->
 

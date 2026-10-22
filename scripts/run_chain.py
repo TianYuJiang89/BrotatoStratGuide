@@ -436,7 +436,7 @@ def run_01_05(workdir: Path, force: set[str]) -> tuple[list[dict], list[dict], l
         print("[chain] 03-grouping SKIP (复用已绿)")
         grouping = _load_json(g_path)
     else:
-        grouping = step03(workdir, sentences)
+        grouping = step03(workdir, sentences, force=should_force("03", force))
         print(f"[chain] 03-grouping DONE: {len(grouping)} 件")
     # 04-attributes
     r_path = workdir / "steps" / "04-attributes" / "ratings.json"
@@ -444,7 +444,7 @@ def run_01_05(workdir: Path, force: set[str]) -> tuple[list[dict], list[dict], l
         print("[chain] 04-attributes SKIP (复用已绿)")
         ratings = _load_json(r_path)
     else:
-        ratings = step04(workdir, sentences)
+        ratings = step04(workdir, sentences, force=should_force("04", force))
         print(f"[chain] 04-attributes DONE: {len(ratings)} terms")
     # 05-weapons
     w_path = workdir / "steps" / "05-weapons" / "weapons.json"
@@ -452,7 +452,7 @@ def run_01_05(workdir: Path, force: set[str]) -> tuple[list[dict], list[dict], l
         print("[chain] 05-weapons SKIP (复用已绿)")
         weapons = _load_json(w_path)
     else:
-        weapons = step05(workdir, sentences)
+        weapons = step05(workdir, sentences, force=should_force("05", force))
         print(f"[chain] 05-weapons DONE: T1={len(weapons['t1'])} T2={len(weapons['t2'])}")
     return sentences, grouping, ratings, weapons
 
@@ -501,7 +501,7 @@ def run_07_09(workdir: Path, sentences: list[dict], grouping, ratings, weapons,
         print("[chain] 07-priorities SKIP (复用已绿)")
         priorities = _load_json(pri_path)
     else:
-        priorities = step07(workdir, sentences, ratings, grouping, phases)
+        priorities = step07(workdir, sentences, ratings, grouping, phases, force=should_force("07", force))
         print(f"[chain] 07-priorities DONE: upgrades={len(priorities['upgrades'])} "
               f"shop={len(priorities['shop'])}")
     g_path = workdir / "steps" / "09-assemble" / "guide.json"

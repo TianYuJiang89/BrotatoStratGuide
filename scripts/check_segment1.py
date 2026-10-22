@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Machine check for B-段1 (#40, #61): 01-03 新 schema + 04-attributes + 05-weapons.
+"""Machine check for B-段1 (#40, #61, #66 02退役): 01 直达 03 新 schema + 04-attributes + 05-weapons.
 
 沿试点 check_pilot.py (schema + 全收录 + 低频一句话 + sha), 加:
 - 01 新 schema: {id,text[,start,end]} (B-04 起统一加, ?t= 跳链用)
-- 02/03 新字段: start/end/context 只读 (不进机检锚点, 但须存在)
+- 03 新字段: start/end/context 只读 (不进机检锚点, 但须存在; #66 02 已退役)
 - 03 quotes 去重 (count 口径不动)
 - 04: 39 全量 (主 17 + 次级 22), 提过即算口径 (count>0 必 S-D, count==0 必 -)
 - 05 (#61): T1+T2 == candidates (discovery 自洽), T1>=1, note 短引逐字验 (码保)
@@ -51,7 +51,6 @@ def main(argv: list[str] | None = None) -> int:
         work / "inputs" / "meta.json",
         work / "inputs" / "manifest.json",
         work / "steps" / "01-sentences" / "sentences.json",
-        work / "steps" / "02-verbs" / "verbs.json",
         work / "steps" / "03-grouping" / "candidates.json",
         work / "steps" / "03-grouping" / "discovery.json",
         work / "steps" / "03-grouping" / "fewshot.md",
@@ -77,7 +76,6 @@ def main(argv: list[str] | None = None) -> int:
 
     manifest = json.loads((work / "inputs" / "manifest.json").read_text(encoding="utf-8"))
     sentences = json.loads((work / "steps" / "01-sentences" / "sentences.json").read_text(encoding="utf-8"))
-    verbs = json.loads((work / "steps" / "02-verbs" / "verbs.json").read_text(encoding="utf-8"))
     grouping = json.loads((work / "steps" / "03-grouping" / "grouping.json").read_text(encoding="utf-8"))
     outputs = json.loads((work / "outputs" / "groups.json").read_text(encoding="utf-8"))
     ratings = json.loads((work / "steps" / "04-attributes" / "ratings.json").read_text(encoding="utf-8"))
@@ -147,33 +145,7 @@ def main(argv: list[str] | None = None) -> int:
 
     sent_by_id = {s["id"]: s["text"] for s in sentences if isinstance(s, dict)}
 
-    # --- 02-verbs (#48 种子 + agent 补, 只查格式) ---
-    if not isinstance(verbs, dict) or "verified" not in verbs or "candidates" not in verbs:
-        fail("verbs must be {verified[], candidates[]}", errors)
-        verified, candidates = [], []
-    else:
-        verified, candidates = verbs["verified"], verbs["candidates"]
-    for r in verified:
-        for k in ("verb", "object_norm", "sentence_id", "quote"):
-            if k not in r:
-                fail(f"verified missing {k}: {r}", errors)
-        if r.get("quote") != sent_by_id.get(r.get("sentence_id")):
-            fail(f"verified quote must equal sentences text: {r.get('object_norm')}@{r.get('sentence_id')}", errors)
-        for k in ("start", "end", "context"):
-            if k not in r:
-                fail(f"verified missing read-only {k}: {r.get('object_norm')}@{r.get('sentence_id')}", errors)
-    for c in candidates:
-        for k in ("surface", "quote", "reason"):
-            if not c.get(k):
-                fail(f"candidates must have {k}: {c.get('normalized_to')}", errors)
-        if c.get("quote") != sent_by_id.get(c.get("sentence_id")):
-            fail(f"candidates quote must equal sentences text: {c.get('normalized_to')}@{c.get('sentence_id')}", errors)
-        if not isinstance(c.get("inferred"), bool):
-            fail(f"candidates inferred must be bool: {c.get('normalized_to')}", errors)
-        for k in ("start", "end", "context"):
-            if k not in c:
-                fail(f"candidates missing read-only {k}: {c.get('normalized_to')}@{c.get('sentence_id')}", errors)
-
+    # --- 02-verbs (#66 已退役: verbs.json 停产, 本 check 不再必查; 旧 G 目录残留忽略) ---
     # --- 03-grouping (#62: frozen fewshot + discovery/evidence/grouping-ranking, shape only) ---
     # 新 schema: candidates.json [{name_en,count,quotes,quote_details}] (discovery 补全, scope 脱离 slice)
     # + ranking.json {must_take[],mentioned_not_taken[],ban[],casual_mention[]} (终判, 可推翻) 
@@ -711,42 +683,51 @@ def main(argv: list[str] | None = None) -> int:
                    "steps/06-phases", "steps/07-priorities", "steps/08-pitfalls", "steps/09-assemble"):
         if marker not in audit_html:
             fail(f"audit.html 缺 06-09 空节占位 (#42): {marker}", errors)
-    # 06-09 输入标注 (每步卡标清真实输入, 沿 01-05 已标口径)
-    for marker in ("steps/06-phases/phases.json", "steps/07-priorities/priorities.json",
+    # 06-09 输入标注 (#66 改认新文件名: 06 wordings / 07 selection / 08 wordings+candidates, 不只终稿)
+    for marker in ("steps/06-phases/wordings.json", "steps/06-phases/phases.json",
+                   "steps/07-priorities/selection.json", "steps/07-priorities/priorities.json",
+                   "steps/08-pitfalls/wordings.json", "steps/08-pitfalls/candidates.json",
                    "steps/08-pitfalls/pitfalls.json", "steps/09-assemble/guide.json"):
         if marker not in audit_html:
-            fail(f"audit.html 缺 06-09 输入标注 (#42): {marker}", errors)
-    # DAG 分组 (#42: 01→{02→03,04,05,06,08}→07→09 分层, 不再直线串行; 04/05 已按层)
-    if "01→{02→03,04,05,06,08}→07→09" not in audit_html:
-        fail("audit.html 缺 DAG 分层总览 (#42): 01→{02→03,04,05,06,08}→07→09", errors)
+            fail(f"audit.html 缺 06-09 输入标注 (#66 新文件名): {marker}", errors)
+    # DAG 分组 (#66 02 退役: 01→{03,04,05,06,08}→07→09; 旧 02→03 已删)
+    if "01→{03,04,05,06,08}→07→09" not in audit_html:
+        fail("audit.html 缺 DAG 分层总览 (#66 02 退役): 01→{03,04,05,06,08}→07→09", errors)
+    if "01→{02→03" in audit_html:
+        fail("audit.html 须无旧 DAG 02→03 残留 (#66 02 退役)", errors)
     for marker in ('data-dag-layer="L0"', 'data-dag-layer="L1"',
                    'data-dag-layer="L2"', 'data-dag-layer="L3"'):
         if marker not in audit_html:
             fail(f"audit.html 缺 DAG 分层标记 (#42): {marker}", errors)
     if "DAG L1" not in audit_html:
         fail("audit.html 缺 DAG L1 并行层标注 (#42: 04/05 已按层)", errors)
-    # 左侧 DAG 导航 (长页跳转: 按 DAG 分层列全 10 节, 缺节即 fail)
+    # 左侧 DAG 导航 (#66 02 退役: 长页按 DAG 分层列 9 节, 无 02, 缺节即 fail)
     if 'id="sideNav"' not in audit_html:
         fail("audit.html 缺左侧导航 (#42跟进): 缺 id=sideNav", errors)
-    for marker in ("audit-inputs", "audit-01-sentences", "audit-02-verbs", "audit-03-grouping",
+    if "audit-02-verbs" in audit_html:
+        fail("audit.html 须无 02 节残留 (#66 02 退役): audit-02-verbs", errors)
+    for marker in ("audit-inputs", "audit-01-sentences", "audit-03-grouping",
                    "audit-04-attributes", "audit-05-weapons", "audit-06-phases", "audit-08-pitfalls",
                    "audit-07-priorities", "audit-09-assemble"):
         if marker not in audit_html:
             fail(f"audit.html 左侧导航缺锚点 (#42跟进): {marker}", errors)
         if f'href="#{marker}"' not in audit_html:
             fail(f"audit.html 左侧导航缺链接 (#42跟进): #{marker}", errors)
-    # step1/2 行级明细 (句子/动词行点开进抽屉, 与 step3 卡片对齐, 缺钩子即 fail)
-    for marker in ("data-sent", "data-verb-v", "data-verb-c",
-                   "openSentenceDrawer", "openVerbDrawer", "fullContextHtml",
+    # step1 行级明细 (#66 02 退役: 句子行点开进抽屉, 动词钩子已删, 缺钩子即 fail)
+    for marker in ("data-sent",
+                   "openSentenceDrawer", "fullContextHtml",
                    "data-jump-sent", "sentJumpLink"):
         if marker not in audit_html:
-            fail(f"audit.html 缺 step1/2 行明细 (#42跟进): {marker}", errors)
-    # 06-09 审计 (卡片钩子 + 抽屉明细 + 07依赖穿透, 缺即 fail；08按节点公约无卡片/抽屉，只列D/W节点)
-    for marker in ("data-phase", "data-priority",
-                   "openPhaseDrawer", "openPriorityDrawer",
-                   "依赖来源", "继承自"):
+            fail(f"audit.html 缺 step1 行明细 (#66 02 退役): {marker}", errors)
+    for marker in ("data-verb-v", "data-verb-c", "openVerbDrawer", "audit-02-verbs",
+                   "steps/02-verbs", "02-verbs"):
+        if marker in audit_html:
+            fail(f"audit.html 须无 02 marker 残留 (#66 02 退役): {marker}", errors)
+    # 06-09 审计 (#66 按节点公约改认: 06 phase 卡片+抽屉; 07/08 只列 S/W/D 节点, 无旧卡片)
+    for marker in ("data-phase", "openPhaseDrawer",
+                   "S selection", "W wording", "D discovery"):
         if marker not in audit_html:
-            fail(f"audit.html 缺06-09审计 (#42): {marker}", errors)
+            fail(f"audit.html 缺06-09审计 (#66 节点公约): {marker}", errors)
     # 默认工作区 (picker 从 G:\brotato-work/上次目录开始: 固定 id + IndexedDB 存句柄)
     for marker in ("startIn", "brotato-work-root"):
         if marker not in audit_html:
@@ -784,9 +765,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     for w in warns:
         print(w)
-    print(f"OK: segment1 cleared, sentences={len(sentences)} verified={len(verified)} "
-          f"candidates={len(candidates)} grouping={len(grouping)} "
-          f"ratings={len(ratings)} weapons=T1:{len(t1)} T2:{len(t2)} sha={actual_sha[:8]}")
+    print(f"OK: segment1 cleared, sentences={len(sentences)} grouping={len(grouping)} "
+          f"ratings={len(ratings)} weapons=T1:{len(t1)} T2:{len(t2)} sha={actual_sha[:8]} (#66 02 已退役)")
     return 0
 
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""B-段1实施 (#40): 04-attributes + 05-weapons, cyborg/ultimate 单变体.
+"""B-段1实施 (#40, #66 02退役): 01-sentences 直达 03-grouping/04-attributes/05-weapons, cyborg/ultimate 单变体.
 
-沿 #39 决议 (B 全链展开):
-- 清单 9 步, 段1 = 04-attributes + 05-weapons.
+沿 #39 决议 (B 全链展开) + #66 (02 整步退役):
+- 清单 8 步 (02 已退役), 段1 = 01 + 03 + 04 + 05 (01 直达 03, 02 跳过).
 - 载体延续试点三件套 (prompts/step0X + steps/0X-*/ + check + audit 动态读).
 - Q3 复读: 轻量只去展示重 (grouping.quotes 去重, count 沿 build_mentions 不动).
 - Q4 时间戳: sentence {id,text[,start,end]}, B-04 起统一加; 开 04 前先重跑 01-03 一次 (幂等).
-- Q5 context: quote 不动, verbs/grouping/audit 加只读 context (前后 1 句), 不进机检.
+- Q5 context: quote 不动, grouping/audit 加只读 context (前后 1 句), 不进机检 (#66: verbs 已退役).
 - 旧 SOP 只作参考, 不作输入; 旧链冻结.
 
 本脚本确定性执行 (沿 run_pilot.py 模式, 子 agent RPC 为 --rpc 模式):
@@ -18,10 +18,10 @@
 全局 (repo 侧只读, 非 runtime):
   data/terms.csv (主 17 + 次级 22) + data/wiki-cache.json (注册表唯一 URL 源)
 中间产物 (G work 动态产生, 不读 repo runtime):
-  steps/01-sentences/ -> 02-verbs -> 03-grouping/04-attributes/05-weapons (count/quotes 现场扫 sentences, rating/note 自推, 禁读 data/mentions + data/builds)
+  steps/01-sentences/ -> 03-grouping/04-attributes/05-weapons (count/quotes 现场扫 sentences, rating/note 自推, 禁读 data/mentions + data/builds)
+  (#66: 02-verbs 已退役, verbs.json 停产, 01 直达 03/04/05, 不经 02)
 输出:
   steps/01-sentences/sentences.json (新 schema, start/end)
-  steps/02-verbs/verbs.json (新 schema, +start/end/context)
   steps/03-grouping/grouping.json (= outputs/groups.json, +quote_details)
   steps/04-attributes/ratings.json (+ outputs/ratings.json)
   steps/05-weapons/weapons.json (+ outputs/weapons.json)
@@ -36,21 +36,11 @@ import json
 import re
 import sys
 from pathlib import Path
-from collections import defaultdict, Counter
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "scripts"))
 
-# 复用 pilot 动词表 (闭集 10 下限, 不扩展)
-from run_pilot import (  # noqa: E402
-    CLOSED_VERBS,  # 闭集 10 下限 (#48 不动)
-    VERB_PATTERNS,  # 闭集变形种子
-    PARAPHRASE_MAP,  # 转述种子 (#48: 种子保留，agent 补走 candidates 格式)
-    PARA_PATTERNS,  # 转述种子 pattern
-)
-
-VERB_RES = {k: re.compile(v, re.IGNORECASE) for k, v in VERB_PATTERNS.items()}
-PARA_RES = {k: re.compile(v, re.IGNORECASE) for k, v in PARA_PATTERNS.items()}
+# #66 02 退役: pilot 动词表导入已删 (step02 停产, 01 直达 03/04/05).
 
 TS_RE = re.compile(
     r"(\d{2}):(\d{2}):(\d{2})[.,](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[.,](\d{3})"
@@ -228,155 +218,6 @@ def step01(workdir: Path) -> list[dict]:
     return sentences
 
 
-def _word_pat(name: str) -> re.Pattern:
-    return re.compile(r"\b" + re.escape(name) + r"\b", re.IGNORECASE)
-
-
-def _alias_pat(name: str) -> re.Pattern:
-    parts = name.strip().split()
-    if len(parts) > 1:
-        pat = r"\b" + r"\s+".join(re.escape(p) for p in parts) + r"(?:s|es)?\b"
-    else:
-        w = parts[0]
-        pat = r"\b" + re.escape(w) + r"(?:s|es)?\b"
-    return re.compile(pat, re.IGNORECASE)
-
-
-def step02(workdir: Path, sentences: list[dict]) -> dict:
-    # #61 registry-slice 已退役: 全量注册表 (wiki-cache weapons+items) 直读, 不读 slice.
-    # slice 曾为 count>0 子集; 全量只多不少, verb 匹配无损 (空命中自然无 verified/candidates).
-    from build_mentions import load_registry_names as _load_reg
-    _wall, _iall = _load_reg(REPO / "data")
-    names: list[str] = list(_wall) + list(_iall)
-    exact_res = {n: _word_pat(n) for n in names}
-    alias_res = {n: _alias_pat(n) for n in names}
-    by_id = {s["id"]: s for s in sentences}
-
-    verified: list[dict] = []
-    candidates: list[dict] = []
-    seen: set[tuple] = set()
-
-    for s in sentences:
-        sid = s["id"]
-        text = s["text"]
-        _verb_occs: list[tuple[int, str]] = []
-        for v, rx in VERB_RES.items():
-            for m in rx.finditer(text):
-                _verb_occs.append((m.start(), v))
-        _para_occs: list[tuple[int, str]] = []
-        for p, rx in PARA_RES.items():
-            for m in rx.finditer(text):
-                _para_occs.append((m.start(), p))
-        closed_hits = sorted({v for _, v in _verb_occs})
-        para_hits = sorted({p for _, p in _para_occs})
-        for n in names:
-            m_exact = exact_res[n].search(text)
-            m_alias = alias_res[n].search(text)
-            if not m_exact and not m_alias:
-                continue
-            is_exact = bool(m_exact)
-            surf_m = m_exact if m_exact else m_alias
-            surface_word = surf_m.group(0) if surf_m else n
-            _item_pos = surf_m.start() if surf_m else 0
-            _closest = min(_verb_occs, key=lambda x: abs(x[0] - _item_pos)) if _verb_occs else None
-            _closest_para = min(_para_occs, key=lambda x: abs(x[0] - _item_pos)) if _para_occs else None
-            # context + start/end (只读, 不进机检锚点)
-            ctx = build_context(sentences, sid - 1)
-            base_extra = {"start": s.get("start"), "end": s.get("end"),
-                          "t": int(s["start_s"]) if s.get("start_s") is not None else None,
-                          "context": ctx}
-            if closed_hits and is_exact:
-                assert _closest is not None
-                verb = _closest[1]
-                key = (sid, n, verb, "v")
-                if key in seen:
-                    continue
-                seen.add(key)
-                verified.append({"verb": verb, "object_norm": n,
-                                 "sentence_id": sid, "quote": text, **base_extra})
-            elif closed_hits and not is_exact:
-                assert _closest is not None
-                verb = _closest[1]
-                key = (sid, n, verb, "a")
-                if key in seen:
-                    continue
-                seen.add(key)
-                candidates.append({"surface": surface_word, "normalized_to": n,
-                                   "surface_verb": verb, "mapped_to": verb,
-                                   "sentence_id": sid, "quote": text,
-                                   "inferred": False,
-                                   "reason": f"别名归一（{surface_word}→{n}）+ 闭集动词 {verb}",
-                                   **base_extra})
-            elif para_hits:
-                # #48 种子 + agent 补：种子保留 (PARAPHRASE_MAP/PARA_PATTERNS)，agent 补的每条走 candidates
-                # （surface_verb/mapped_to/reason，字段已在 schema，不加字段；check 只查格式）。
-                # 去写死：删 `bought turret instead of` 按句特判，instead-of 类转述由 agent 补（种子只保 grab/snatch/pick/avoid/ignoring 等）。
-                assert _closest_para is not None
-                surf_v = _closest_para[1]
-                mapped = PARAPHRASE_MAP.get(surf_v, "skip" if surf_v in ("ignoring", "avoid", "avoiding") else "take")
-                key = (sid, n, surf_v, "p")
-                if key in seen:
-                    continue
-                seen.add(key)
-                candidates.append({"surface": surface_word, "normalized_to": n,
-                                   "surface_verb": surf_v, "mapped_to": mapped,
-                                   "sentence_id": sid, "quote": text,
-                                   "inferred": False,
-                                   "reason": f"别名归一（{surface_word}→{n}）+ 动词转述（{surf_v}→{mapped}）",
-                                   **base_extra})
-            else:
-                key = (sid, n, "none", "n")
-                if key in seen:
-                    continue
-                seen.add(key)
-                candidates.append({"surface": surface_word, "normalized_to": n,
-                                   "surface_verb": None, "mapped_to": None,
-                                   "sentence_id": sid, "quote": text,
-                                   "inferred": True,
-                                   "reason": f"无动词意图推断：提及 {n} 虽无闭集动词，结合语境算关注意图（inferred:true），待人点",
-                                   **base_extra})
-
-    # 去 cap (#46): candidates 全量保留，不按件截断（cyborg 下 trim 为空转，去前后 71 一致）
-    verbs = {"verified": verified, "candidates": candidates}
-    outdir = workdir / "steps" / "02-verbs"
-    outdir.mkdir(parents=True, exist_ok=True)
-    (outdir / "verbs.json").write_text(
-        json.dumps(verbs, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return verbs
-
-
-ZH_FALLBACK = {"Turret": "炮塔", "Pocket Factory": "口袋工厂",
-               "Coffee": "咖啡", "Landmines": "地雷", "Boxing Glove": "拳套"}
-
-
-def _zh(name: str) -> str:
-    return ZH_FALLBACK.get(name, name)
-
-
-def _quote_lookup(sentences: list[dict]) -> dict[str, list[dict]]:
-    """quote text -> [{start,end,t,context}] (复读多时间戳取首个)."""
-    mp: dict[str, list[dict]] = defaultdict(list)
-    for i, s in enumerate(sentences):
-        mp[s["text"]].append({"start": s.get("start"), "end": s.get("end"),
-                              "t": int(s["start_s"]) if s.get("start_s") is not None else None,
-                              "context": build_context(sentences, i)})
-    return mp
-
-
-def _dynamic_scan(sentences: list[dict]):
-    """现场扫 count/quotes (全局 wiki-cache + terms + runtime sentences, 禁读 data/mentions)."""
-    from build_mentions import load_registry_names as _lr, load_terms as _lt, build_pattern_map as _bp, scan_cues as _sc
-    terms = _lt(REPO / "data")
-    wall, iall = _lr(REPO / "data")
-    pmap = _bp(terms, wall, iall)
-    cues = [s["text"] for s in sentences]
-    sc = _sc(cues, pmap)
-    term_counts = {en: sc.get(en, (0, [])) for en in terms}
-    weapons_counts = {w: sc.get(f"weapon:{w}", (0, [])) for w in wall}
-    items_counts = {it: sc.get(f"item:{it}", (0, [])) for it in iall}
-    return terms, wall, iall, term_counts, weapons_counts, items_counts
-
-
 def step03(workdir: Path, sentences: list[dict], agent_fn=None, force: bool = False) -> list[dict]:
     """分组: frozen fewshot + discovery/evidence/grouping-ranking 三段 agent (#62; #48/#50 锚+裁量已退役).
 
@@ -385,7 +226,7 @@ def step03(workdir: Path, sentences: list[dict], agent_fn=None, force: bool = Fa
     → grouping-ranking(串行, 通览全量整句+N 份 evidence→定四组, 拿 quote 说话禁数帽).
     退役: slice(03 输入+fetch 产+ensure 刷+check 认)、closed/mapped 动词锚、verb_type/has_verb/
     inferred/confidence 码检、拒绝动词表、count 最大断层、不断层多收/保底 Top1 码规则
-    (Top1 意图进 fewshot, 码只验非空)、03 读 verbs(verbs 留给自家消费者)。
+    (Top1 意图进 fewshot, 码只验非空)、03 不读 verbs (#66 02 退役, verbs 留给自家消费者注释保留)。
     缺件/编 quote/幻觉名即 fail loud, 不回落不补空。
     """
     from step0307_loop import run_step03_loop
@@ -411,7 +252,7 @@ def step05(workdir: Path, sentences: list[dict], agent_fn=None, force: bool = Fa
     → evidence×N(并行, 每把独立单 agent, fewshot+全量整句+一名→tier建议/quotes/analysis/note)
     → ranking(串行, 通览全量整句+N份evidence→切t1/t2+note定稿, T1>=1由它保, 可推翻 evidence tier).
     退役: confidence/kind/inferred/anchors/score+5/断层/数字词表/verified加分/T1-note-必含数字码检、
-    inputs/registry-slice.json (fetch 停产+旧文件删)、05 读 02-verbs。
+    inputs/registry-slice.json (fetch 停产+旧文件删)、05 不读 02-verbs (#66 02 退役, 注释保留)。
     note 保意图不保码检 (码只查非空)。缺件/编 quote/幻觉名即 fail loud, 不回落不补空。
     """
     from step05_loop import run_step05_loop
@@ -431,7 +272,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.rpc:
         print(f'cd "{workdir}" && "F:/Pi/CLI/pi.cmd" --mode rpc --no-session '
               f"--no-skills --no-extensions --no-context-files --tools read,bash,write --thinking off")
-        print("子 prompt 见 prompts/step01-sentences.md / step02-verbs.md "
+        print("子 prompt 见 prompts/step01-sentences.md "
               "/ prompts/step03-grouping-fewshot.md (FROZEN, discovery/evidence/grouping-ranking 三段 agent, #62) "
               "/ prompts/step04-ratings-fewshot.md (FROZEN, for-loop x39) / prompts/step05-{discovery,evidence,ranking}-fewshot.md "
               "(FROZEN v2, 三本手册各贴各, discovery/evidence/ranking 三段 agent, #61)")
@@ -439,11 +280,9 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"[segment1] workdir={workdir} (cwd 锁定, 只读写相对路径)")
     ensure_inputs(slug, vid, workdir)
-    print("[segment1] inputs 三件校验通过 (Step00 取证, 只认 inputs, #61 slice 已退役)")
+    print("[segment1] inputs 三件校验通过 (Step00 取证, 只认 inputs, #61 slice 已退役, #66 02 已退役)")
     sentences = step01(workdir)
     print(f"[segment1] 01-sentences: {len(sentences)} 句 (start/end 新 schema) -> steps/01-sentences/sentences.json")
-    verbs = step02(workdir, sentences)
-    print(f"[segment1] 02-verbs: verified={len(verbs['verified'])} candidates={len(verbs['candidates'])} (+start/end/context)")
     grouping = step03(workdir, sentences)
     print(f"[segment1] 03-grouping: {len(grouping)} 件 (quotes 去重, +quote_details)")
     ratings = step04(workdir, sentences)

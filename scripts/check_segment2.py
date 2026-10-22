@@ -703,14 +703,20 @@ def main(argv: list[str] | None = None) -> int:
     if actual_sha != expect_sha:
         fail(f"sha mismatch: manifest {str(expect_sha)[:8]} vs actual {actual_sha[:8]}", errors)
 
-    # --- audit 常设对应节 (check 与审计节一一对应, 缺节即 fail; 06-09 须为实节) ---
+    # --- audit 常设对应节 (#66 改认新文件名: 06 wordings / 07 selection / 08 wordings; 09 只剩六节清单, 输入段落已删) ---
     audit_html = (REPO / "templates" / "audit.html").read_text(encoding="utf-8")
     for marker in ("audit-06-phases", "audit-07-priorities", "audit-08-pitfalls", "audit-09-assemble",
                    "steps/06-phases", "steps/07-priorities", "steps/08-pitfalls", "steps/09-assemble",
-                   "steps/06-phases/phases.json", "steps/07-priorities/priorities.json",
-                   "steps/08-pitfalls/pitfalls.json", "steps/08-pitfalls/candidates.json", "steps/09-assemble/guide.json"):
+                   "steps/06-phases/wordings.json", "steps/06-phases/phases.json",
+                   "steps/07-priorities/selection.json", "steps/07-priorities/priorities.json",
+                   "steps/08-pitfalls/wordings.json", "steps/08-pitfalls/pitfalls.json",
+                   "steps/08-pitfalls/candidates.json", "steps/09-assemble/guide.json"):
         if marker not in audit_html:
-            fail(f"audit.html 缺对应节 (一一对应): {marker}", errors)
+            fail(f"audit.html 缺对应节 (一一对应, #66 新文件名): {marker}", errors)
+    # 09 节只剩六节清单 (#66 简化: 已实施段落/输入段落/sha徽章+变体徽章已删, 只留 guide 内嵌/live 一致性)
+    for marker in ("audit-02-verbs", "data-verb-v", "data-verb-c", "openVerbDrawer"):
+        if marker in audit_html:
+            fail(f"audit.html 须无 02 marker 残留 (#66 02 退役): {marker}", errors)
     # 实节渲染 (非空占位): 须有卡片渲染逻辑, 不只待加载文案
     for marker in ("appData.phases", "appData.priorities", "appData.pitfalls", "appData.assemble", "appData.candidates08"):
         if marker not in audit_html:

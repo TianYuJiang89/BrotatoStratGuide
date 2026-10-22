@@ -133,11 +133,6 @@ def _reuse_ok_sentences(path: Path) -> bool:
     return isinstance(d, list) and len(d) > 0
 
 
-def _reuse_ok_verbs(path: Path) -> bool:
-    d = _load_json(path)
-    return isinstance(d, dict) and isinstance(d.get("verified"), list) and isinstance(d.get("candidates"), list)
-
-
 def _reuse_ok_grouping(path: Path) -> bool:
     # #62: 新 schema {name_en,count,group,quotes,analysis,note,quote_details}, 旧件退役
     d = _load_json(path)
@@ -420,9 +415,9 @@ def spawn_step_agent(workdir: Path, prompt_rel: str, output_rel: str,
         return out
 
 
-def run_01_05(workdir: Path, force: set[str]) -> tuple[list[dict], dict, list[dict], list[dict], dict]:
-    """01-05 确定性 (复用已绿 SKIP, 否则跑代码; 幂等: 同输入同代码必同文件)."""
-    from run_segment1 import step01, step02, step03, step04, step05
+def run_01_05(workdir: Path, force: set[str]) -> tuple[list[dict], list[dict], list[dict], dict]:
+    """01/03/04/05 确定性 (复用已绿 SKIP, 否则跑代码; 幂等: 同输入同代码必同文件; #66 02 已退役)."""
+    from run_segment1 import step01, step03, step04, step05
     # 01-sentences
     s_path = workdir / "steps" / "01-sentences" / "sentences.json"
     if not should_force("01", force) and _reuse_ok_sentences(s_path):
@@ -434,15 +429,7 @@ def run_01_05(workdir: Path, force: set[str]) -> tuple[list[dict], dict, list[di
     assert isinstance(sentences, list) and sentences
     if not (300 <= len(sentences) <= 600):
         raise SystemExit(f"FAIL: sentences count {len(sentences)} 越界 300-600 (折叠后; 偏差即 fail)")
-    # 02-verbs
-    v_path = workdir / "steps" / "02-verbs" / "verbs.json"
-    if not should_force("02", force) and _reuse_ok_verbs(v_path):
-        print("[chain] 02-verbs SKIP (复用已绿)")
-        verbs = _load_json(v_path)
-    else:
-        verbs = step02(workdir, sentences)
-        print(f"[chain] 02-verbs DONE: verified={len(verbs['verified'])} "
-              f"candidates={len(verbs['candidates'])}")
+    # #66 02-verbs 已退役: 01 直达 03/04/05, 不经 02, verbs.json 停产.
     # 03-grouping
     g_path = workdir / "steps" / "03-grouping" / "grouping.json"
     if not should_force("03", force) and _reuse_ok_grouping(g_path):
@@ -467,7 +454,7 @@ def run_01_05(workdir: Path, force: set[str]) -> tuple[list[dict], dict, list[di
     else:
         weapons = step05(workdir, sentences)
         print(f"[chain] 05-weapons DONE: T1={len(weapons['t1'])} T2={len(weapons['t2'])}")
-    return sentences, verbs, grouping, ratings, weapons
+    return sentences, grouping, ratings, weapons
 
 
 def run_06(workdir: Path, sentences: list[dict], force: set[str],
@@ -552,9 +539,10 @@ def validate_audit(workdir: Path) -> None:
     audit_html = (REPO / "templates" / "audit.html").read_text(encoding="utf-8")
     for marker in ("audit-06-phases", "audit-07-priorities", "audit-08-pitfalls", "audit-09-assemble",
                    "steps/06-phases", "steps/07-priorities", "steps/08-pitfalls", "steps/09-assemble",
-                   "steps/06-phases/phases.json", "steps/07-priorities/priorities.json",
-                   "steps/08-pitfalls/pitfalls.json", "steps/08-pitfalls/candidates.json",
-                   "steps/09-assemble/guide.json"):
+                   "steps/06-phases/wordings.json", "steps/06-phases/phases.json",
+                   "steps/07-priorities/selection.json", "steps/07-priorities/priorities.json",
+                   "steps/08-pitfalls/wordings.json", "steps/08-pitfalls/pitfalls.json",
+                   "steps/08-pitfalls/candidates.json", "steps/09-assemble/guide.json"):
         if marker not in audit_html:
             raise SystemExit(f"FAIL: audit.html 缺对应节 (只读校验, 一一对应): {marker}")
     for marker in ("appData.phases", "appData.priorities", "appData.pitfalls",
@@ -583,7 +571,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--url", default="", help="Step00 取证 URL (缺 inputs 时必填, 只吃 URL+slug+variant)")
     ap.add_argument("--cookies", default="", help="yt-dlp cookies 文件 (被风控时人出)")
     ap.add_argument("--force-step", default="",
-                    help="逗号分隔强制覆盖 (01,02,03,04,05,06,06-wordings,07,08,08-wordings,09,all); 缺省复用已绿 SKIP")
+                    help="逗号分隔强制覆盖 (01,03,04,05,06,06-wordings,07,08,08-wordings,09,all); 缺省复用已绿 SKIP (#66 02 已退役)")
     ap.add_argument("--timeout", type=float, default=LIVENESS_TIMEOUT,
                     help="子进程 liveness 超时秒 (防 hung, 非成本帽; 缺省 1800)")
     ap.add_argument("--print-agent-cmd", action="store_true",
@@ -605,12 +593,12 @@ def main(argv: list[str] | None = None) -> int:
           f"timeout={args.timeout:.0f}s (liveness, 非成本帽)")
     ensure_step00(slug, vid, workdir, url=args.url, cookies=args.cookies)
     print("[chain] Step00 取证通过 (inputs 四件 + sha 对上, 只认 inputs)")
-    sentences, verbs, grouping, ratings, weapons = run_01_05(workdir, force)
+    sentences, grouping, ratings, weapons = run_01_05(workdir, force)
     phases = run_06(workdir, sentences, force, timeout=args.timeout)
     pitfalls = run_08(workdir, sentences, grouping, force, timeout=args.timeout)
     priorities, guide = run_07_09(workdir, sentences, grouping, ratings, weapons,
                                   phases, pitfalls, force)
-    _ = (verbs, priorities, guide)
+    _ = (priorities, guide)
     run_checks(slug, vid, args.work_root)
     validate_audit(workdir)
     print(f"[chain] done. 产物见 {workdir}/steps + outputs; "

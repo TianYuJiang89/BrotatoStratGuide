@@ -588,7 +588,7 @@ html { scroll-behavior: smooth; }
 <header class="topbar">
   <div class="brand">
     <h1>Brotato 过程数据动态审计</h1>
-    <span class="tag-mode">DAG分层视图 01→{02→03,04,05,06,08}→07→09</span>
+    <span class="tag-mode">DAG分层视图 01→{03,04,05,06,08}→07→09</span>
   </div>
   <div class="topbar-controls">
     <div class="source-status" id="sourceStatus">
@@ -661,7 +661,6 @@ html { scroll-behavior: smooth; }
     <a href="#audit-inputs" data-nav="audit-inputs">📦 inputs</a>
     <a href="#audit-01-sentences" data-nav="audit-01-sentences">📝 01-sentences <span class="sidenav-count" id="nav-sent-count"></span></a>
     <div class="sidenav-group">L1 · 并行层</div>
-    <a href="#audit-02-verbs" data-nav="audit-02-verbs">⚡ 02-verbs <span class="sidenav-count" id="nav-verbs-count"></span></a>
     <a href="#audit-03-grouping" data-nav="audit-03-grouping">📊 03-grouping <span class="sidenav-count" id="nav-groups-count"></span></a>
     <a href="#audit-04-attributes" data-nav="audit-04-attributes">📈 04-attributes <span class="sidenav-count" id="nav-ratings-count"></span></a>
     <a href="#audit-05-weapons" data-nav="audit-05-weapons">🔫 05-weapons <span class="sidenav-count" id="nav-weapons-count"></span></a>
@@ -760,11 +759,10 @@ function render() {
 
   const m = appData.manifest;
   const s = appData.sentences || [];
-  const v = appData.verbs || { verified: [], candidates: [] };
 
   let html = `
     <!-- DAG-L0 基座层：inputs + 01-sentences -->
-    <div class="dag-layer" data-dag-layer="L0">DAG L0 · 基座层：01-sentences <small>（inputs/source.vtt 现场扫；下游 02→03 / 04 / 05 / 06 / 08 皆依赖 01）</small></div>
+    <div class="dag-layer" data-dag-layer="L0">DAG L0 · 基座层：01-sentences <small>（inputs/source.vtt 现场扫；下游 03 / 04 / 05 / 06 / 08 皆依赖 01）</small></div>
     <!-- Pipeline Step 0: Inputs & Manifest -->
     <div class="pipeline-step completed" id="audit-inputs" data-dag-layer="L0">
       <div class="pipeline-step-node">0</div>
@@ -808,55 +806,8 @@ function render() {
       </div>
     </div>
 
-    <!-- DAG-L1 并行层：02→03 · 04 · 05 · 06 · 08（依赖 01，可并行） -->
-    <div class="dag-layer" data-dag-layer="L1">DAG L1 · 并行层：02→03 · 04-attributes · 05-weapons · 06-phases · 08-pitfalls <small>（依赖 01，可并行；07 须段1绿后才开）</small></div>
-    <!-- Pipeline Step 2: 02-verbs -->
-    <div class="pipeline-step completed" id="audit-02-verbs" data-dag-layer="L1">
-      <div class="pipeline-step-node">2</div>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">
-            <span>⚡ steps/02-verbs/ · 动词归约与机检双重视图</span>
-          </div>
-          <div>
-            <span class="badge badge-verified">${v.verified.length} verified 锚点</span>
-            <span class="badge badge-candidate" style="margin-left:4px;">${v.candidates.length} candidates 自由裁量</span>
-          </div>
-        </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/01-sentences/sentences.json</code> + <code>inputs/registry-slice.json</code>（闭集10下限不动 + 转述种子保留 + agent 补进 candidates，check 只查格式 surface+quote+reason/inferred bool）</p>
-        <div class="step2-dual">
-          <div class="verb-panel verified">
-            <h4 style="font-size:12px;font-weight:700;color:#047857;margin-bottom:8px;">✅ Verified（精确名 + 闭集10动词 + 原文整句）</h4>
-            ${v.verified.map((item, idx) => `
-              <div class="verb-row" data-verb-v="${idx}">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                  <strong>${item.object_norm}</strong>
-                  <span class="badge badge-verified">动词: ${item.verb}</span>
-                </div>
-                <div style="font-size:11px;color:var(--muted);">"${item.quote}"</div>
-                ${item.context ? `<div style="font-size:11px;color:#999;">上下文: ${item.context}</div>` : ''}
-                ${item.t != null ? `<div style="font-size:11px;"><a href="${(m.sources && m.sources[0] && m.sources[0].url ? m.sources[0].url : '#')}${((m.sources && m.sources[0] && m.sources[0].url || '').includes('?') ? '&' : '?')}t=${item.t}s" target="_blank">⏱${item.start || ('t='+item.t)}</a></div>` : ''}
-              </div>
-            `).join('')}
-          </div>
-          <div class="verb-panel candidates">
-            <h4 style="font-size:12px;font-weight:700;color:#b45309;margin-bottom:8px;">⚠️ Candidates（别名归一 / 动词转述 / 意图推断·标黄）</h4>
-            ${v.candidates.map((item, idx) => `
-              <div class="verb-row candidate-row" data-verb-c="${idx}">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                  <strong>${item.normalized_to}</strong>
-                  ${item.inferred ? `<span class="badge badge-inferred">inferred:true</span>` : `<span class="badge badge-candidate">${item.surface_verb} → ${item.mapped_to}</span>`}
-                </div>
-                <div style="font-size:11px;color:#92400e;margin-top:2px;">理由: ${item.reason}</div>
-                <div style="font-size:11px;color:var(--muted);">"${item.quote}"</div>
-                ${item.context ? `<div style="font-size:11px;color:#999;">上下文: ${item.context}</div>` : ''}
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </div>
-    </div>
-
+    <!-- DAG-L1 并行层：03 · 04 · 05 · 06 · 08（依赖 01，可并行；#66 02 已退役） -->
+    <div class="dag-layer" data-dag-layer="L1">DAG L1 · 并行层：03-grouping · 04-attributes · 05-weapons · 06-phases · 08-pitfalls <small>（依赖 01，可并行；07 须段1绿后才开）</small></div>
     <!-- Pipeline Step 3: 03-grouping & outputs -->
     <div class="pipeline-step completed" id="audit-03-grouping" data-dag-layer="L1">
       <div class="pipeline-step-node">3</div>
@@ -956,8 +907,6 @@ function render() {
           </div>
           <span class="badge badge-verified">check_09 对应节</span>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">已实施： B-段2 实施（#41）落地 prompts/step09-assemble.md + <code>steps/09-assemble/guide.json</code>；09组装一致性（guide == 各步聚合，sha 对上）。</p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">输入：<code>steps/03-grouping/grouping.json</code> + 04/05/06/07/08 聚合 → <code>steps/09-assemble/guide.json</code>（禁读旧链 <code>data/mentions</code>/<code>data/builds</code>）</p>
         ${assembleSectionHtml()}
       </div>
     </div>
@@ -974,12 +923,10 @@ function updateSideNav() {
   quoteToSent = null; // 句子数据已换, quote→id 映射 lazily 重建
   const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt || ''; };
   const s = appData.sentences || [];
-  const v = appData.verbs || { verified: [], candidates: [] };
   const items = appData.items || [];
   const ratings = appData.ratings || [];
   const w = appData.weapons || { t1: [], t2: [] };
   set('nav-sent-count', s.length ? s.length + '句' : '');
-  set('nav-verbs-count', (v.verified.length || v.candidates.length) ? (v.verified.length + '+' + v.candidates.length) : '');
   set('nav-groups-count', items.length ? items.length + '件' : '');
   set('nav-ratings-count', ratings.length ? ratings.length + '/39' : '');
   set('nav-weapons-count', ((w.t1 || []).length + (w.t2 || []).length) ? ('T1:' + (w.t1 || []).length + ' T2:' + (w.t2 || []).length) : '');
@@ -1060,8 +1007,6 @@ function phasesSectionHtml() {
 function assembleSectionHtml() {
   const a = appData.assemble;
   if (!(a && a.sha)) return '<div style="color:#999;">待加载：请载入 steps/09-assemble/guide.json（缺节即 fail）。</div>';
-  const msha = (((appData.manifest || {}).sources) || [])[0] || {};
-  const shaOk = msha.sha1 && String(a.sha).toLowerCase().startsWith(String(msha.sha1).toLowerCase().slice(0, 8));
   const w = appData.weapons || { t1: [], t2: [] };
   const aw = a.weapons || { t1: [], t2: [] };
   const pu = ((appData.priorities || {}).upgrades || []).length + ((appData.priorities || {}).shop || []).length;
@@ -1075,10 +1020,7 @@ function assembleSectionHtml() {
     ['08-pitfalls', `内嵌 ${(a.pitfalls || []).length} / live ${(appData.pitfalls || []).length}`, (a.pitfalls || []).length === (appData.pitfalls || []).length],
   ];
   return `
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
-      <span class="badge ${shaOk ? 'badge-verified' : 'badge-candidate'}">sha ${String(a.sha).slice(0, 8)} ${shaOk ? '对上 manifest' : '未对上 manifest'}</span>
-      <span class="badge-count-pill">${a.slug}/${a.variant}</span>
-    </div>
+    <!-- #66 09简化: sha徽章+变体徽章已删, 只留六节一致性清单; 结论由 check_09 出, 审计只展 -->
     <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;">
     ${rows.map(([k, txt, ok]) => `
       <div style="display:flex;justify-content:space-between;background:#fff;border:1px solid var(--line);border-radius:6px;padding:6px 10px;">
@@ -1120,20 +1062,6 @@ function bindItemCardClicks() {
       if (e.target.closest('a')) return;
       const sent = (appData.sentences||[]).find(x => x.id === +el.dataset.sent);
       if (sent) openSentenceDrawer(sent);
-    });
-  });
-  document.querySelectorAll('[data-verb-v]').forEach(el => {
-    el.addEventListener('click', (e) => {
-      if (e.target.closest('a')) return;
-      const item = ((appData.verbs||{}).verified||[])[+el.dataset.verbV];
-      if (item) openVerbDrawer('verified', item);
-    });
-  });
-  document.querySelectorAll('[data-verb-c]').forEach(el => {
-    el.addEventListener('click', (e) => {
-      if (e.target.closest('a')) return;
-      const item = ((appData.verbs||{}).candidates||[])[+el.dataset.verbC];
-      if (item) openVerbDrawer('candidate', item);
     });
   });
   document.querySelectorAll('[data-phase]').forEach(el => {
@@ -1242,21 +1170,7 @@ function openSentenceDrawer(sent) {
   const idx = all.findIndex(x => x.id === sent.id);
   const prev = idx > 0 ? all[idx-1].text : '';
   const next = (idx >= 0 && idx+1 < all.length) ? all[idx+1].text : '';
-  const refsV = ((appData.verbs||{}).verified||[]).filter(r => r.sentence_id === sent.id);
-  const refsC = ((appData.verbs||{}).candidates||[]).filter(r => r.sentence_id === sent.id);
-  // 全量引用记录: 每条含判定徽标 + 原文 quote + 只读 context + ?t= 跳链, 不节选
-  const refCardFull = (r, isV) => {
-    const tag = isV ? `<span class="badge badge-verified">动词: ${r.verb}</span>` : (r.inferred ? '<span class="badge badge-inferred">inferred:true</span>' : `<span class="badge badge-candidate">${r.surface_verb} → ${r.mapped_to}</span>`);
-    const rl = (r.t != null) ? `<a href="${vurl}${vurl.includes('?') ? '&' : '?'}t=${r.t}s" target="_blank">⏱${r.start || ('t='+r.t)}</a>` : '';
-    return `
-    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><strong>${r.object_norm || r.normalized_to}</strong>${tag}</div>
-      ${(!isV && r.reason) ? `<div style="font-size:11px;color:#92400e;margin-top:2px;">理由: ${r.reason}</div>` : ''}
-      <div style="font-style:italic;margin-top:4px;">“${r.quote}”</div>
-      ${fullContextHtml(r.sentence_id, r.context)}
-      ${rl ? `<div style="margin-top:2px;">${rl}</div>` : ''}
-    </div>`;
-  };
+  // #66 02 退役: 句子抽屉不再展动词反向穿透 (verbs.json 停产).
   document.getElementById('drawerItemName').innerHTML = `句子 #${sent.id} <span style="font-weight:normal;font-size:13px;color:var(--muted);">(steps/01-sentences)</span>`;
   document.getElementById('drawerContent').innerHTML = `
     <div class="drawer-section">
@@ -1275,56 +1189,6 @@ function openSentenceDrawer(sent) {
       ${next ? `<div style="font-size:11px;color:#999;">下一句: ${next}</div>` : ''}
     </div>
 
-    <div class="drawer-section">
-      <h3>3. 引用此句的动词判定 (step 02 反向穿透)</h3>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-        <span class="badge badge-verified">${refsV.length} verified</span>
-        <span class="badge badge-candidate">${refsC.length} candidates</span>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        ${(refsV.length || refsC.length) ? refsV.map(r => refCardFull(r, true)).join('') + refsC.map(r => refCardFull(r, false)).join('') : '<div style="color:var(--muted);">无动词引用此句（路过句）</div>'}
-      </div>
-    </div>
-  `;
-  showDrawer();
-}
-
-// Step 02 verb detail: 判定明细 + 所在句子 + ?t= 跳链
-function openVerbDrawer(kind, item) {
-  state.selectedItem = item;
-  const isV = kind === 'verified';
-  const obj = item.object_norm || item.normalized_to;
-  const vurl = (appData.manifest && appData.manifest.sources && appData.manifest.sources[0]) ? appData.manifest.sources[0].url : '#';
-  const tlink = (item.t != null) ? `<a href="${vurl}${vurl.includes('?') ? '&' : '?'}t=${item.t}s" target="_blank">⏱${item.start || ('t='+item.t)}</a>` : '<span style="color:#aaa;">无时间戳</span>';
-  document.getElementById('drawerItemName').innerHTML = `${obj} <span style="font-weight:normal;font-size:13px;color:var(--muted);">(steps/02-verbs · ${isV ? 'verified' : 'candidate'})</span>`;
-  document.getElementById('drawerContent').innerHTML = `
-    <div class="drawer-section">
-      <h3>1. 判定类型与置信信号</h3>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">
-        ${isV ? '<span class="badge badge-verified">Verified (机检锚点)</span>' : '<span class="badge badge-candidate">Candidates (自由裁量·标黄)</span>'}
-        ${(!isV && item.inferred) ? '<span class="badge badge-inferred">Inferred:true (无动词意图)</span>' : ''}
-        <span class="badge-count-pill">句子 #${item.sentence_id}</span>
-      </div>
-      <div style="font-size:12px;line-height:1.8;">
-        <div>对象: <strong>${obj}</strong></div>
-        <div>动词: <strong>${isV ? item.verb : (item.surface_verb || '—') + ' → ' + (item.mapped_to || '—')}</strong></div>
-        ${(!isV && item.surface) ? `<div>表面词: ${item.surface}</div>` : ''}
-      </div>
-    </div>
-
-    <div class="drawer-section">
-      <h3>2. 判定理由</h3>
-      <div style="font-size:12px;line-height:1.5;">${isV ? '精确英文名 + 闭集10动词 + 原文整句引用（机检锚点）' : (item.reason || '自由裁量')}</div>
-    </div>
-
-    <div class="drawer-section">
-      <h3>3. 原文引用 (?t= 跳链 + 只读 context)</h3>
-      <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;">
-        <div style="font-weight:700;color:var(--accent);margin-bottom:2px;">[#${item.sentence_id}] ${tlink}${sentJumpLink(item.sentence_id)}</div>
-        <div style="font-style:italic;">“${item.quote}”</div>
-        ${fullContextHtml(item.sentence_id, item.context)}
-      </div>
-    </div>
   `;
   showDrawer();
 }
@@ -1587,8 +1451,6 @@ async function loadFromDirectoryHandle(dirHandle) {
       appData.manifest = manifestData;
       const s = await readJsonFile(dirHandle, 'steps', '01-sentences', 'sentences.json');
       if (s) appData.sentences = s;
-      const v = await readJsonFile(dirHandle, 'steps', '02-verbs', 'verbs.json');
-      if (v) appData.verbs = v;
       const g = await readJsonFile(dirHandle, 'steps', '03-grouping', 'grouping.json');
       if (g) { appData.items = g; }
       const wc03 = await readJsonFile(dirHandle, 'steps', '03-grouping', 'candidates.json');
@@ -1687,8 +1549,6 @@ document.getElementById('fallbackDirInput').addEventListener('change', async (e)
   appData.manifest = man;
   const s = await readBySuffix('steps/01-sentences/sentences.json');
   if (s) appData.sentences = s;
-  const v = await readBySuffix('steps/02-verbs/verbs.json');
-  if (v) appData.verbs = v;
   const g = await readBySuffix('steps/03-grouping/grouping.json');
   if (g) { appData.items = g; }
   const wc03 = await readBySuffix('steps/03-grouping/candidates.json');
@@ -1873,8 +1733,6 @@ async function loadFromHttpBase(base) {
       appData.manifest = man;
       const s = await fetchJson(`${base}/steps/01-sentences/sentences.json`);
       if (s) appData.sentences = s;
-      const v = await fetchJson(`${base}/steps/02-verbs/verbs.json`);
-      if (v) appData.verbs = v;
       const g = await fetchJson(`${base}/steps/03-grouping/grouping.json`);
       if (g) { appData.items = g; }
       const wc03h = await fetchJson(`${base}/steps/03-grouping/candidates.json`);
@@ -2019,7 +1877,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
   // 缺省不吃广告纸: 不自动载 mock, 只显示待加载; live 经 picker/?base 进来, mock 仅点按钮显式进
-  appData = {manifest: null, sentences: [], verbs: {verified: [], candidates: []}, items: [], ratings: [], weapons: {t1: [], t2: []}, weaponCandidates: [], discovery05: null, fewshot05: {}, ranking05: null, evidence05: {}, itemCandidates: [], discovery03: null, fewshot03: '', ranking03: null, evidence03: {}, fewshot07: '', ranking07: null, selection07: null, evidence07: {}, buckets06: [], fewshot06: '', segmentation06: null, wordings06: [], evidence06: {}, phases: [], priorities: {}, pitfalls: [], candidates08: [], wordings08: [], assemble: {}};
+  appData = {manifest: null, sentences: [], items: [], ratings: [], weapons: {t1: [], t2: []}, weaponCandidates: [], discovery05: null, fewshot05: {}, ranking05: null, evidence05: {}, itemCandidates: [], discovery03: null, fewshot03: '', ranking03: null, evidence03: {}, fewshot07: '', ranking07: null, selection07: null, evidence07: {}, buckets06: [], fewshot06: '', segmentation06: null, wordings06: [], evidence06: {}, phases: [], priorities: {}, pitfalls: [], candidates08: [], wordings08: [], assemble: {}};
   state.dataSource = 'empty';
   const params = new URLSearchParams(window.location.search);
   const baseParam = params.get('base');

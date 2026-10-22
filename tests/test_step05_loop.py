@@ -426,3 +426,10 @@ def test_audit_05_shows_analysis_not_anchors():
                    'steps/05-weapons/fewshot-evidence.md',
                    'steps/05-weapons/fewshot-ranking.md'):
         assert marker in html, f"audit 须经工作区快照读fewshot ({marker})"
+
+
+def test_ranking_prompt_copies_unmentioned_rule():
+    """#71: ranking prompt 须明示 copies 未提及口径 (未提及+空串, 沿 evidence 口径)."""
+    src = (REPO / "scripts" / "step05_loop.py").read_text(encoding="utf-8")
+    assert "copies=未提及" in src and "copies_quote 空串" in src, \
+        "ranking prompt 须写明 copies 未提及+空串口径 (#71)"

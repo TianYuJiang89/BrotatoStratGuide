@@ -219,7 +219,7 @@ def build_ranking_prompt(sentences: list[dict], evidences: list[dict], fewshot_t
         + "- T1+T2 须 == 候选名单（自洽，一把不多一把不少）；幻觉名即 fail。\n"
         + "- note 每条 ≤120 字，人话 + 短引（短引须出自对应 evidence quotes 逐字）。\n"
         + "- copies 每条终定（可推翻 evidence）：copies_quote 须逐字出自对应 evidence quotes；"
-        + "evidence 未提及则只能未提及；编数字即 fail。\n"
+        + "evidence 未提及则只能未提及，copies 没提拿几把写 copies=未提及 + copies_quote 空串（沿 evidence 口径）；编数字即 fail。\n"
         + "- 你不输出 quotes/analysis/count（只定 tier+note+copies）。缺件即 fail。\n"
     )
     return prompt

@@ -287,19 +287,19 @@ def main(argv: list[str] | None = None) -> int:
 
 
     # --- 07-priorities (#65: frozen fewshot + selection/wording 两段 agent, 新口径) ---
-    # 新口径: selection.json {upgrades[{name,quotes}],shop[{name,quotes}]} (N 动态非空, 名在表, ban/T1 出局)
-    # + per_item/<NN>.json {name,why,how_to_get} (wording, N==selection, 短引+数字码保)
+    # 新口径: selection.json {upgrades[{name,quotes}],shop[{name,quotes}],synthesis{tradeoff,rhythm,exceptions}} (N 动态非空, 名在表, ban/T1 出局, synthesis 三句非空且点名)
+    # + per_item/<NN>.json {name,why,how_to_get} (wording, N==selection, 带标签+synthesis+phases, 短引+数字码保, phases 数字禁进)
     # + priorities.json {upgrades[],shop[]} 每项 {name,kind,why,how_to_get,quotes,quote_details} (code 合并, 无 analysis).
     # N 动态由 agent 定 (码只验非空, 不验切分); shop ⊆ grouping candidates 且禁 ban 组且禁 T1; 
-    # upgrades ⊆ ratings term_en (S/A 优先 B 可例外, 码只验名在表); quotes 逐字; why 短引逐字; 数字不丢.
+    # upgrades ⊆ ratings term_en (S/A 优先 B 可例外, 码只验名在表); quotes 逐字; why 短引逐字; 数字不丢 (phases/synthesis 数字禁进文案).
     # 退役: count 双侧码切/拒绝动词表/verified 门/T1 码规则/保底 Top1 码规则/why 沿 reason/07 读 verbs.
     try:
         _sel07 = json.loads((work / "steps" / "07-priorities" / "selection.json").read_text(encoding="utf-8"))
     except Exception:
         fail("missing steps/07-priorities/selection.json (先跑 step07 selection, 缺节即 fail)", errors)
         _sel07 = None
-    if not isinstance(_sel07, dict) or "upgrades" not in _sel07 or "shop" not in _sel07:
-        fail("selection must be {upgrades[N], shop[N]} (N动态由agent定, 码只验非空)", errors)
+    if not isinstance(_sel07, dict) or "upgrades" not in _sel07 or "shop" not in _sel07 or "synthesis" not in _sel07:
+        fail("selection must be {upgrades[N], shop[N], synthesis} (N动态由agent定, 码只验非空+synthesis三句)", errors)
         _sel_ups, _sel_shs = [], []
     else:
         _sel_ups, _sel_shs = _sel07["upgrades"], _sel07["shop"]
@@ -354,6 +354,18 @@ def main(argv: list[str] | None = None) -> int:
                         break
     if len(_sel_names) != len(set(_sel_names)):
         fail("selection upgrades+shop 须去重", errors)
+    _syn07 = _sel07.get("synthesis") if isinstance(_sel07, dict) else None
+    if not isinstance(_syn07, dict):
+        fail("selection synthesis 须为对象 {tradeoff,rhythm,exceptions}", errors)
+        _syn07 = {}
+    for _k in ("tradeoff", "rhythm", "exceptions"):
+        _v = _syn07.get(_k) if isinstance(_syn07, dict) else None
+        if not isinstance(_v, str) or not _v.strip():
+            fail(f"selection synthesis 缺 {_k} 非空", errors)
+    _joined_syn = " ".join(str(_syn07.get(_k, "")) for _k in ("tradeoff", "rhythm", "exceptions")) if isinstance(_syn07, dict) else ""
+    for _nm in _sel_names:
+        if isinstance(_nm, str) and _nm and _nm not in _joined_syn:
+            fail(f"selection synthesis 须点名 {_nm} (三句须覆盖每个 TopN)", errors)
     # per_item: N==selection, 每项 {name,why,how_to_get}, 短引+数字码保
     _n_sel = (len(_sel_ups) if isinstance(_sel_ups, list) else 0) + (len(_sel_shs) if isinstance(_sel_shs, list) else 0)
     for _i in range(_n_sel):

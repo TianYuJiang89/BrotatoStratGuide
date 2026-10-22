@@ -120,56 +120,77 @@ def test_prompt_build_contains_fewshot_sentences_only():
             assert banned not in src, f"{fn_name} must not encode retired rules ({banned})"
 
 
+def _syn_for(names):
+    j = "、".join(names)
+    return {"tradeoff": f"跨侧取舍覆盖{j}：升级先保，商店让路",
+            "rhythm": f"按06排先后覆盖{j}：前期拿中期转后期守",
+            "exceptions": f"例外覆盖{j}：B进有据，丢掉的暂放"}
+
+
 def test_validate_selection_ok_and_fail_loud():
     m = _load("step07_loop", "scripts/step07_loop.py")
     sents = _sentences()
     grouping, ratings, weapons = _grouping(), _ratings(), _weapons()
     good = {"upgrades": [{"name": "Ranged Damage", "quotes": [sents[0]["text"]]}],
-            "shop": [{"name": "Turret", "quotes": [sents[2]["text"]]}]}
+            "shop": [{"name": "Turret", "quotes": [sents[2]["text"]]}],
+            "synthesis": _syn_for(["Ranged Damage", "Turret"])}
     out = m.validate_selection(good, sents, grouping, ratings, weapons)
     assert [u["name"] for u in out["upgrades"]] == ["Ranged Damage"]
     # B 级例外允许 (S/A 优先但 B 可例外, 码只验名在表)
     b_good = {"upgrades": [{"name": "Crit Chance", "quotes": [sents[5]["text"]]}],
-              "shop": [{"name": "Turret", "quotes": [sents[2]["text"]]}]}
+              "shop": [{"name": "Turret", "quotes": [sents[2]["text"]]}],
+              "synthesis": _syn_for(["Crit Chance", "Turret"])}
     out = m.validate_selection(b_good, sents, grouping, ratings, weapons)
     assert [u["name"] for u in out["upgrades"]] == ["Crit Chance"]
     # 空 TopN 即 fail (码只验非空, 不验断层)
     with pytest.raises(SystemExit):
-        m.validate_selection({"upgrades": [], "shop": good["shop"]}, sents, grouping, ratings, weapons)
+        m.validate_selection({"upgrades": [], "shop": good["shop"], "synthesis": good["synthesis"]}, sents, grouping, ratings, weapons)
     with pytest.raises(SystemExit):
-        m.validate_selection({"upgrades": good["upgrades"], "shop": []}, sents, grouping, ratings, weapons)
+        m.validate_selection({"upgrades": good["upgrades"], "shop": [], "synthesis": good["synthesis"]}, sents, grouping, ratings, weapons)
+    # synthesis 缺件即 fail (三句非空+点名)
+    with pytest.raises(SystemExit):
+        m.validate_selection({"upgrades": good["upgrades"], "shop": good["shop"]}, sents, grouping, ratings, weapons)
+    with pytest.raises(SystemExit):
+        m.validate_selection({"upgrades": good["upgrades"], "shop": good["shop"],
+                              "synthesis": {"tradeoff": "", "rhythm": "x", "exceptions": "y"}}, sents, grouping, ratings, weapons)
+    with pytest.raises(SystemExit):
+        m.validate_selection({"upgrades": good["upgrades"], "shop": good["shop"],
+                              "synthesis": {"tradeoff": "没点名", "rhythm": "没点名", "exceptions": "没点名"}}, sents, grouping, ratings, weapons)
     # 幻觉名即 fail
     with pytest.raises(SystemExit):
         m.validate_selection({"upgrades": [{"name": "幻觉升级", "quotes": [sents[0]["text"]]}],
-                              "shop": good["shop"]}, sents, grouping, ratings, weapons)
+"shop": good["shop"], "synthesis": good["synthesis"]}, sents, grouping, ratings, weapons)
     with pytest.raises(SystemExit):
         m.validate_selection({"upgrades": good["upgrades"],
-                              "shop": [{"name": "幻觉道具", "quotes": [sents[0]["text"]]}]},
+                              "shop": [{"name": "幻觉道具", "quotes": [sents[0]["text"]]}],
+                              "synthesis": good["synthesis"]},
                              sents, grouping, ratings, weapons)
     # 编 quote 即 fail
     with pytest.raises(SystemExit):
         m.validate_selection({"upgrades": [{"name": "Ranged Damage", "quotes": ["我编的一句"]}],
-                              "shop": good["shop"]}, sents, grouping, ratings, weapons)
+                              "shop": good["shop"], "synthesis": good["synthesis"]}, sents, grouping, ratings, weapons)
     # 空证据即 fail
     with pytest.raises(SystemExit):
         m.validate_selection({"upgrades": [{"name": "Ranged Damage", "quotes": []}],
-                              "shop": good["shop"]}, sents, grouping, ratings, weapons)
+                              "shop": good["shop"], "synthesis": good["synthesis"]}, sents, grouping, ratings, weapons)
     # ban 件进 TopN 即 fail
     with pytest.raises(SystemExit):
         m.validate_selection({"upgrades": good["upgrades"],
-                              "shop": [{"name": "Boxing Glove", "quotes": [sents[3]["text"]]}]},
-                             sents, grouping, ratings, weapons)
+                              "shop": [{"name": "Boxing Glove", "quotes": [sents[3]["text"]]}],
+                              "synthesis": _syn_for(["Ranged Damage", "Boxing Glove"])}, sents, grouping, ratings, weapons)
     # T1 入 shop 即 fail (shop∩T1=∅)
     t1_grouping = grouping + [{"name_en": "Minigun", "group": "must_take",
                                "note": "x", "quotes": [sents[1]["text"]], "count": 1}]
     with pytest.raises(SystemExit):
         m.validate_selection({"upgrades": good["upgrades"],
-                              "shop": [{"name": "Minigun", "quotes": [sents[1]["text"]]}]},
+                              "shop": [{"name": "Minigun", "quotes": [sents[1]["text"]]}],
+                              "synthesis": _syn_for(["Ranged Damage", "Minigun"])},
                              sents, t1_grouping, ratings, weapons)
     # 重复即 fail (upgrades+shop 去重)
     with pytest.raises(SystemExit):
         m.validate_selection({"upgrades": [{"name": "Ranged Damage", "quotes": [sents[0]["text"]]}],
-                              "shop": [{"name": "Ranged Damage", "quotes": [sents[0]["text"]]}]},
+"shop": [{"name": "Ranged Damage", "quotes": [sents[0]["text"]]}],
+                              "synthesis": _syn_for(["Ranged Damage", "Ranged Damage"])},
                              sents,
                              grouping + [{"name_en": "Ranged Damage", "group": "must_take",
                                           "note": "x", "quotes": [sents[0]["text"]], "count": 1}],
@@ -178,7 +199,7 @@ def test_validate_selection_ok_and_fail_loud():
     # 退役字段出现即 fail (why/how/count/analysis 只活 wording/代码)
     for old in ("count", "why", "how_to_get", "analysis", "quote_details", "verified"):
         bad = {"upgrades": [{"name": "Ranged Damage", "quotes": [sents[0]["text"]], old: "x"}],
-               "shop": good["shop"]}
+               "shop": good["shop"], "synthesis": good["synthesis"]}
         with pytest.raises(SystemExit):
             m.validate_selection(bad, sents, grouping, ratings, weapons)
 
@@ -258,8 +279,12 @@ def test_run_loop_with_fake_agents_cyborg_shape(tmp_path):
         if kind == "selection":
             assert "TASK_SELECTION" in prompt
             assert "You buy ranged damage at triple the normal rate" in prompt
+            assert "synthesis" in prompt
             return {"upgrades": [{"name": "Ranged Damage", "quotes": [sents[0]["text"]]}],
-                    "shop": [{"name": "Turret", "quotes": [sents[2]["text"]]}]}
+"shop": [{"name": "Turret", "quotes": [sents[2]["text"]]}],
+                    "synthesis": {"tradeoff": "覆盖Ranged Damage、Turret：升级先保商店让路",
+                                  "rhythm": "覆盖Ranged Damage、Turret：按06排先后",
+                                  "exceptions": "覆盖Ranged Damage、Turret：无B例外"}}
         if kind == "wording":
             assert name in ("Ranged Damage", "Turret")
             if name == "Ranged Damage":
@@ -314,7 +339,10 @@ def test_loop_sweeps_stale_files_when_N_shrinks(tmp_path):
     def fake_agent(kind, name, prompt):
         if kind == "selection":
             return {"upgrades": [{"name": "Ranged Damage", "quotes": [sents[0]["text"]]}],
-                    "shop": [{"name": "Turret", "quotes": [sents[2]["text"]]}]}
+"shop": [{"name": "Turret", "quotes": [sents[2]["text"]]}],
+                    "synthesis": {"tradeoff": "覆盖Ranged Damage、Turret",
+                                  "rhythm": "覆盖Ranged Damage、Turret",
+                                  "exceptions": "覆盖Ranged Damage、Turret"}}
         if kind == "wording":
             return {"name": name,
                     "why": "人话一句带短引，原话“triple the normal rate”。" if name == "Ranged Damage"

@@ -40,7 +40,7 @@ def run_build(*args: str, cwd: Path = REPO) -> subprocess.CompletedProcess[str]:
 
 def _resolve_href(html: str, out_path: Path) -> list[Path]:
     """索引中看攻略 href 回解为磁盘路径 (相对 href 或 file:// URI)."""
-    hrefs = re.findall(r'<a class="go" href="([^"]+)"', html)
+    hrefs = re.findall(r'<a href="([^"\'()]+)">看攻略</a>', html)
     out: list[Path] = []
     for h in hrefs:
         if h.startswith("file:"):
@@ -124,7 +124,8 @@ def test_real_g_five_cards_clickable(tmp_path: Path) -> None:
     assert r.returncode == 0, f"real G build must pass: {r.stderr[-2000:]}"
     assert out.is_file(), "must write single file output"
     page = out.read_text(encoding="utf-8")
-    assert page.count('class="card"') == 5, "must render exactly 5 cards"
+    assert page.count('class="card"') == 6, "5 静态卡 + 1 JS 模板 (沿旧版)"
+    assert page.count('data-playable="1"') == 5, "must render exactly 5 static cards"
     for slug, variant in EXPECTED:
         guide = json.loads((work / slug / variant / "outputs" / "guide.json").read_text(encoding="utf-8"))
         meta = json.loads((work / slug / variant / "inputs" / "meta.json").read_text(encoding="utf-8"))
@@ -139,6 +140,10 @@ def test_real_g_five_cards_clickable(tmp_path: Path) -> None:
             assert needle in page, f"card {slug}/{variant} must show live field: {needle[:40]}"
         for c in guide["covers"]:
             assert html_mod.escape(str(c)) in page
+    roster = {r["id"]: r for r in json.loads((REPO / "data" / "roster.json").read_text(encoding="utf-8"))}
+    for slug, _ in EXPECTED:
+        assert html_mod.escape(str(roster[slug]["zh"])) in page, f"card {slug} must show roster zh (旧版视觉)"
+    assert "wiki.spellsandguns.com" in page and "60px-" in page, "avatars must hotlink wiki 60px (沿旧版)"
     targets = _resolve_href(page, out)
     assert len(targets) == 5, f"5 guide links required, got {len(targets)}"
     for t in targets:
@@ -153,8 +158,8 @@ def test_fixture_live_assembly_idempotent_and_relhref(tmp_path: Path) -> None:
     r = run_build("--work-root", str(work), "--out", str(out))
     assert r.returncode == 0, f"fixture build must pass: {r.stderr[-2000:]}"
     page = out.read_text(encoding="utf-8")
-    assert page.count('class="card"') == 5
-    hrefs = re.findall(r'<a class="go" href="([^"]+)"', page)
+    assert page.count('data-playable="1"') == 5
+    hrefs = re.findall(r'<a href="([^"\'()]+)">看攻略</a>', page)
     assert len(hrefs) == 5 and all(not h.startswith("file:") for h in hrefs), \
         f"same-tree out must emit relative hrefs, got {hrefs}"
     for t in _resolve_href(page, out):

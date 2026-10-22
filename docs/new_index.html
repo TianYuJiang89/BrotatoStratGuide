@@ -3,84 +3,108 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>新链攻略索引 · 五角色一页可达</title>
+<title>土豆兄弟 (Brotato) · 新链攻略索引</title>
 <style>
-:root { --bg:#f7f5ef; --card:#fff; --ink:#1f1b16; --muted:#7a7166; --line:#e7e0d2; --acc:#0b5fff; }
+:root { --bg:#f7f5ef; --card:#fff; --ink:#1f1b16; --muted:#7a7166; --line:#e7e0d2; --acc:#0e8a16; }
 * { box-sizing:border-box; }
 body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
 .wrap { max-width:720px; margin:0 auto; padding:16px 14px 80px; }
 header h1 { font-size:22px; margin:14px 0 4px; }
 header p { color:var(--muted); margin:0 0 12px; font-size:14px; }
+.filter { position:sticky; top:0; z-index:5; background:rgba(247,245,239,.96); padding:10px 0; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.filter input[type=search] { flex:1 1 160px; font-size:15px; padding:9px 12px; border:1px solid var(--line); border-radius:999px; background:#fff; }
+.filter select { font-size:14px; padding:9px 10px; border:1px solid var(--line); border-radius:999px; background:#fff; }
+.filter label.chk { font-size:13px; color:var(--muted); display:flex; gap:5px; align-items:center; background:#fff; border:1px solid var(--line); border-radius:999px; padding:8px 12px; }
 .count { font-size:13px; color:var(--muted); margin:8px 2px; }
 .grid { display:grid; gap:10px; }
-.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
-.card h2 { margin:0 0 6px; font-size:18px; }
-.card h2 small { font-weight:400; color:var(--muted); font-size:13px; }
-.card p { margin:4px 0; font-size:14px; }
-.badge { display:inline-block; font-size:12px; border:1px solid var(--line); border-radius:999px; padding:2px 8px; }
-code { font-family:monospace; font-size:13px; background:#f2eee4; padding:1px 6px; border-radius:6px; }
-a { color:var(--acc); }
-.go { display:inline-block; background:#1f1b16; color:#fff !important; border-radius:999px; padding:6px 14px; text-decoration:none; font-weight:700; }
-.src { color:var(--muted); font-size:12px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:flex; gap:12px; align-items:center; }
+.ava { position:relative; width:52px; height:52px; flex:0 0 52px; border-radius:12px; background:#efe9d8; overflow:hidden; }
+.ava span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:26px; }
+.ava img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; image-rendering:pixelated; background:#efe9d8; }
+.card .nm { font-weight:700; }
+.card .nm small { display:block; font-weight:400; color:var(--muted); font-size:12px; }
+.card .nm small a { color:var(--acc); font-weight:400; }
+.card .nm code { font-family:monospace; font-size:11px; background:#f2eee4; padding:0 5px; border-radius:5px; }
+.card .right { margin-left:auto; text-align:right; }
+.tag { font-size:12px; border:1px solid var(--line); border-radius:999px; padding:2px 8px; color:var(--muted); white-space:nowrap; }
+.tag.ok { color:var(--acc); border-color:var(--acc); }
+.links { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; justify-content:flex-end; }
+.links a { font-size:13px; background:#1f1b16; color:#fff; border-radius:999px; padding:4px 10px; text-decoration:none; }
+.empty { background:#fff; border:1px dashed var(--line); border-radius:12px; padding:18px; text-align:center; color:var(--muted); font-size:14px; }
 .foot { margin-top:16px; font-size:13px; color:var(--muted); }
+@media (max-width:480px){ header h1{font-size:19px;} .ava{width:46px;height:46px;flex-basis:46px;} }
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
-<h1>新链攻略索引 · 五角色一页可达</h1>
-<p>确定性组装：五卡字段全从各 outputs/guide.json + inputs/meta.json 现场读出，不手写；缺一单即整页 fail。</p>
+<h1>土豆兄弟 (Brotato) · 新链攻略索引</h1>
+<p>旧版视觉 · 新链数据现场组装 · 五角色一页可达 · 纯静态 · 双击可开 · 手机可读</p>
 </header>
-<div class="count">共 5 单，全部可点</div>
-<div class="grid">
-<article class="card" data-slug="cyborg" data-variant="ultimate">
-  <h2>cyborg <small>ultimate</small></h2>
-  <p>难度：<span class="badge">Ultimate</span></p>
-  <p>SHA：<code>dc4565de024266518a95ca8e71882e4034604dd7</code></p>
-  <p>取证日期：<code>2026-07-08</code></p>
-  <p>视频：<a href="https://www.youtube.com/watch?v=yEY-RoLWjfM" target="_blank" rel="noopener">TERMINATE - Cyborg - Brotato Ultimate Nightmares Guide</a></p>
-  <p><a class="go" href="file:///G:/brotato-work/cyborg/ultimate/outputs/guide.html">看攻略 →</a></p>
-  <p class="src">产物：cyborg/ultimate/outputs/guide.html</p>
-</article>
-<article class="card" data-slug="doctor" data-variant="nightmare">
-  <h2>doctor <small>nightmare</small></h2>
-  <p>难度：<span class="badge">Nightmare</span></p>
-  <p>SHA：<code>f26eaf42afc0a21de8d82d50a72761b24205b2d6</code></p>
-  <p>取证日期：<code>2026-08-20</code></p>
-  <p>视频：<a href="https://www.youtube.com/watch?v=hcXoXvo7G3s" target="_blank" rel="noopener">The EASY Way to Win Nightmare - Doctor - Brotato Nightmare Guide</a></p>
-  <p><a class="go" href="file:///G:/brotato-work/doctor/nightmare/outputs/guide.html">看攻略 →</a></p>
-  <p class="src">产物：doctor/nightmare/outputs/guide.html</p>
-</article>
-<article class="card" data-slug="engineer" data-variant="ultimate">
-  <h2>engineer <small>ultimate</small></h2>
-  <p>难度：<span class="badge">Ultimate</span></p>
-  <p>SHA：<code>9681898bb34c42db5f9f41fc781e44e1d2cd55b1</code></p>
-  <p>取证日期：<code>2026-09-01</code></p>
-  <p>视频：<a href="https://www.youtube.com/watch?v=Wge0_hd9Rt8" target="_blank" rel="noopener">If You Build It, They Will Die - Engineer - Brotato Ultimate Nightmares Guide</a></p>
-  <p><a class="go" href="file:///G:/brotato-work/engineer/ultimate/outputs/guide.html">看攻略 →</a></p>
-  <p class="src">产物：engineer/ultimate/outputs/guide.html</p>
-</article>
-<article class="card" data-slug="one-armed" data-variant="ultimate">
-  <h2>one-armed <small>ultimate</small></h2>
-  <p>难度：<span class="badge">Ultimate</span></p>
-  <p>SHA：<code>416e68dc5a35a6c97068910e6009023cc9438e23</code></p>
-  <p>取证日期：<code>2026-05-27</code></p>
-  <p>视频：<a href="https://www.youtube.com/watch?v=rctxc3DIyy0" target="_blank" rel="noopener">The One You&#x27;ve All Been Waiting For - One Armed - Brotato Ultimate Nightmares Guide</a></p>
-  <p><a class="go" href="file:///G:/brotato-work/one-armed/ultimate/outputs/guide.html">看攻略 →</a></p>
-  <p class="src">产物：one-armed/ultimate/outputs/guide.html</p>
-</article>
-<article class="card" data-slug="ranger" data-variant="ultimate">
-  <h2>ranger <small>ultimate</small></h2>
-  <p>难度：<span class="badge">Ultimate</span></p>
-  <p>SHA：<code>32d0048f4645c194185ed6357b55cae20104b0cf</code></p>
-  <p>取证日期：<code>2026-08-26</code></p>
-  <p>视频：<a href="https://www.youtube.com/watch?v=cYYlQ5v_3Eg" target="_blank" rel="noopener">Goliath, Meet David - Ranger - Brotato Ultimate Nightmares Guide</a></p>
-  <p><a class="go" href="file:///G:/brotato-work/ranger/ultimate/outputs/guide.html">看攻略 →</a></p>
-  <p class="src">产物：ranger/ultimate/outputs/guide.html</p>
-</article>
+<div class="filter" role="search">
+<input id="q" type="search" placeholder="搜索：赛博 / cyborg / ranger…" autocomplete="off">
+<select id="dlc" aria-label="DLC 筛选">
+<option value="all">全部（含 DLC）</option>
+<option value="base">仅本体</option>
+<option value="abyssal">仅 Abyssal Terrors DLC</option>
+</select>
+<label class="chk"><input id="playable" type="checkbox"> 仅看可点</label>
 </div>
-<div class="foot"><p>构建产物，人不手改，只改源码重构建。旧索引页不动（随旧链退役，沿 #51 时机）。</p></div>
+<div class="count" id="count">共 5 个角色，当前可点 5 个，当前命中 5 个</div>
+<div class="grid" id="grid">
+<div class="card" data-slug="cyborg" data-variant="ultimate" data-dlc="" data-playable="1" data-sha="dc4565de024266518a95ca8e71882e4034604dd7"><div class="ava"><span>🥔</span><img loading="lazy" alt="Cyborg" src="https://brotato.wiki.spellsandguns.com/images/thumb/a/a3/Cyborg.png/60px-Cyborg.png" referrerpolicy="no-referrer" onerror="this.remove()"></div><div class="nm">赛博格 (Cyborg)<small>cyborg · ultimate · Ultimate · 取证 2026-07-08 · SHA <code title="dc4565de024266518a95ca8e71882e4034604dd7">dc4565de</code></small><small>视频：<a href="https://www.youtube.com/watch?v=yEY-RoLWjfM" target="_blank" rel="noopener">TERMINATE - Cyborg - Brotato Ultimate Nightmares Guide</a></small></div><div class="right"><span class="tag ok">● 可点</span><div class="links"><a href="file:///G:/brotato-work/cyborg/ultimate/outputs/guide.html">看攻略</a></div></div></div><div class="card" data-slug="doctor" data-variant="nightmare" data-dlc="" data-playable="1" data-sha="f26eaf42afc0a21de8d82d50a72761b24205b2d6"><div class="ava"><span>🥔</span><img loading="lazy" alt="Doctor" src="https://brotato.wiki.spellsandguns.com/images/thumb/6/6c/Doctor.png/60px-Doctor.png" referrerpolicy="no-referrer" onerror="this.remove()"></div><div class="nm">医生 (Doctor)<small>doctor · nightmare · Nightmare · 取证 2026-08-20 · SHA <code title="f26eaf42afc0a21de8d82d50a72761b24205b2d6">f26eaf42</code></small><small>视频：<a href="https://www.youtube.com/watch?v=hcXoXvo7G3s" target="_blank" rel="noopener">The EASY Way to Win Nightmare - Doctor - Brotato Nightmare Guide</a></small></div><div class="right"><span class="tag ok">● 可点</span><div class="links"><a href="file:///G:/brotato-work/doctor/nightmare/outputs/guide.html">看攻略</a></div></div></div><div class="card" data-slug="engineer" data-variant="ultimate" data-dlc="" data-playable="1" data-sha="9681898bb34c42db5f9f41fc781e44e1d2cd55b1"><div class="ava"><span>🥔</span><img loading="lazy" alt="Engineer" src="https://brotato.wiki.spellsandguns.com/images/thumb/d/d8/Engineer.png/60px-Engineer.png" referrerpolicy="no-referrer" onerror="this.remove()"></div><div class="nm">工程师 (Engineer)<small>engineer · ultimate · Ultimate · 取证 2026-09-01 · SHA <code title="9681898bb34c42db5f9f41fc781e44e1d2cd55b1">9681898b</code></small><small>视频：<a href="https://www.youtube.com/watch?v=Wge0_hd9Rt8" target="_blank" rel="noopener">If You Build It, They Will Die - Engineer - Brotato Ultimate Nightmares Guide</a></small></div><div class="right"><span class="tag ok">● 可点</span><div class="links"><a href="file:///G:/brotato-work/engineer/ultimate/outputs/guide.html">看攻略</a></div></div></div><div class="card" data-slug="one-armed" data-variant="ultimate" data-dlc="" data-playable="1" data-sha="416e68dc5a35a6c97068910e6009023cc9438e23"><div class="ava"><span>🥔</span><img loading="lazy" alt="One-Armed" src="https://brotato.wiki.spellsandguns.com/images/thumb/7/75/One_Armed.png/60px-One_Armed.png" referrerpolicy="no-referrer" onerror="this.remove()"></div><div class="nm">独臂 (One-Armed)<small>one-armed · ultimate · Ultimate · 取证 2026-05-27 · SHA <code title="416e68dc5a35a6c97068910e6009023cc9438e23">416e68dc</code></small><small>视频：<a href="https://www.youtube.com/watch?v=rctxc3DIyy0" target="_blank" rel="noopener">The One You&#x27;ve All Been Waiting For - One Armed - Brotato Ultimate Nightmares Guide</a></small></div><div class="right"><span class="tag ok">● 可点</span><div class="links"><a href="file:///G:/brotato-work/one-armed/ultimate/outputs/guide.html">看攻略</a></div></div></div><div class="card" data-slug="ranger" data-variant="ultimate" data-dlc="" data-playable="1" data-sha="32d0048f4645c194185ed6357b55cae20104b0cf"><div class="ava"><span>🥔</span><img loading="lazy" alt="Ranger" src="https://brotato.wiki.spellsandguns.com/images/thumb/e/e9/Ranger.png/60px-Ranger.png" referrerpolicy="no-referrer" onerror="this.remove()"></div><div class="nm">游侠 (Ranger)<small>ranger · ultimate · Ultimate · 取证 2026-08-26 · SHA <code title="32d0048f4645c194185ed6357b55cae20104b0cf">32d0048f</code></small><small>视频：<a href="https://www.youtube.com/watch?v=cYYlQ5v_3Eg" target="_blank" rel="noopener">Goliath, Meet David - Ranger - Brotato Ultimate Nightmares Guide</a></small></div><div class="right"><span class="tag ok">● 可点</span><div class="links"><a href="file:///G:/brotato-work/ranger/ultimate/outputs/guide.html">看攻略</a></div></div></div></div>
+<div class="foot"><p>构建产物，人不手改，只改源码重构建。共 5 单，全部现场组装；旧索引页不动（随旧链退役，沿 #51 时机）。</p><p>头像图标 © Blobfish，via <a href="https://brotato.wiki.spellsandguns.com/">Brotato Wiki</a>（文本 <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>，游戏资产原权保留）<a href="https://brotato.wiki.spellsandguns.com/wiki/Characters">原页：Characters</a> · <a href="https://brotato.wiki.spellsandguns.com/wiki/Stats">原页：Stats</a> 热链 60px 缩略图，注册表集中管理；断网时显示 🥔 占位，仍可读；转述非搬运，不搬截图原片。</p></div>
 </div>
-<!-- GENERATED by scripts/build_new_index.py: do not edit, rebuild from G work guide.json -->
+<script>
+// 索引全能力（沿旧版）：搜索+筛选+仅看可点，同源 ROSTER 内联渲染，file:// 可跑，无 fetch。
+// 搜索 norm：小写去空格/连字符/下划线子串，覆盖中文/英文/slug 去分隔/英文首字母缩写/难度。
+var ROSTER = [{"slug": "cyborg", "variant": "ultimate", "covers": ["Ultimate"], "sha": "dc4565de024266518a95ca8e71882e4034604dd7", "published": "2026-07-08", "videoTitle": "TERMINATE - Cyborg - Brotato Ultimate Nightmares Guide", "videoUrl": "https://www.youtube.com/watch?v=yEY-RoLWjfM", "guide": "file:///G:/brotato-work/cyborg/ultimate/outputs/guide.html", "zh": "赛博格", "en": "Cyborg", "dlc": null, "img": "https://brotato.wiki.spellsandguns.com/images/thumb/a/a3/Cyborg.png/60px-Cyborg.png", "abbr": "c", "playable": true}, {"slug": "doctor", "variant": "nightmare", "covers": ["Nightmare"], "sha": "f26eaf42afc0a21de8d82d50a72761b24205b2d6", "published": "2026-08-20", "videoTitle": "The EASY Way to Win Nightmare - Doctor - Brotato Nightmare Guide", "videoUrl": "https://www.youtube.com/watch?v=hcXoXvo7G3s", "guide": "file:///G:/brotato-work/doctor/nightmare/outputs/guide.html", "zh": "医生", "en": "Doctor", "dlc": null, "img": "https://brotato.wiki.spellsandguns.com/images/thumb/6/6c/Doctor.png/60px-Doctor.png", "abbr": "d", "playable": true}, {"slug": "engineer", "variant": "ultimate", "covers": ["Ultimate"], "sha": "9681898bb34c42db5f9f41fc781e44e1d2cd55b1", "published": "2026-09-01", "videoTitle": "If You Build It, They Will Die - Engineer - Brotato Ultimate Nightmares Guide", "videoUrl": "https://www.youtube.com/watch?v=Wge0_hd9Rt8", "guide": "file:///G:/brotato-work/engineer/ultimate/outputs/guide.html", "zh": "工程师", "en": "Engineer", "dlc": null, "img": "https://brotato.wiki.spellsandguns.com/images/thumb/d/d8/Engineer.png/60px-Engineer.png", "abbr": "e", "playable": true}, {"slug": "one-armed", "variant": "ultimate", "covers": ["Ultimate"], "sha": "416e68dc5a35a6c97068910e6009023cc9438e23", "published": "2026-05-27", "videoTitle": "The One You've All Been Waiting For - One Armed - Brotato Ultimate Nightmares Guide", "videoUrl": "https://www.youtube.com/watch?v=rctxc3DIyy0", "guide": "file:///G:/brotato-work/one-armed/ultimate/outputs/guide.html", "zh": "独臂", "en": "One-Armed", "dlc": null, "img": "https://brotato.wiki.spellsandguns.com/images/thumb/7/75/One_Armed.png/60px-One_Armed.png", "abbr": "oa", "playable": true}, {"slug": "ranger", "variant": "ultimate", "covers": ["Ultimate"], "sha": "32d0048f4645c194185ed6357b55cae20104b0cf", "published": "2026-08-26", "videoTitle": "Goliath, Meet David - Ranger - Brotato Ultimate Nightmares Guide", "videoUrl": "https://www.youtube.com/watch?v=cYYlQ5v_3Eg", "guide": "file:///G:/brotato-work/ranger/ultimate/outputs/guide.html", "zh": "游侠", "en": "Ranger", "dlc": null, "img": "https://brotato.wiki.spellsandguns.com/images/thumb/e/e9/Ranger.png/60px-Ranger.png", "abbr": "r", "playable": true}];
+var q = document.getElementById("q"), dlc = document.getElementById("dlc"),
+    playable = document.getElementById("playable"),
+    grid = document.getElementById("grid"), count = document.getElementById("count");
+function norm(s){ return String(s).toLowerCase().replace(/[\s\-_]+/g,""); }
+function initials(en){
+  var parts = String(en).split(/[\s\-_]+/), a = "";
+  for (var i=0;i<parts.length;i++){ if(parts[i]) a += parts[i][0].toLowerCase(); }
+  return a;
+}
+function hay(r){
+  var ab = r.abbr || initials(r.en);
+  var nospace = String(r.slug).replace(/[-_]+/g,"");
+  var covers = (r.covers || []).join(" ");
+  return norm(String(r.zh)+" "+String(r.en)+" "+String(r.slug)+" "+nospace+" "+ab+" "+String(r.variant)+" "+covers);
+}
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function card(r){
+  var dlcLabel = r.dlc ? "Abyssal Terrors DLC" : "本体";
+  var coversTxt = (r.covers || []).join(" + ");
+  var sub = r.slug+" · "+r.variant+" · "+coversTxt+" · 取证 "+r.published;
+  var ava = r.img
+    ? '<div class="ava"><span>🥔</span><img loading="lazy" alt="'+esc(r.en)+'" src="'+esc(r.img)+'" referrerpolicy="no-referrer" onerror="this.remove()"></div>'
+    : '<div class="ava"><span>🥔</span></div>';
+  var right = '<span class="tag ok">● 可点</span><div class="links"><a href="'+esc(r.guide)+'">看攻略</a></div>';
+  return '<div class="card" data-slug="'+esc(r.slug)+'" data-variant="'+esc(r.variant)+'" data-dlc="'+(r.dlc ? "abyssal" : "")+'" data-playable="'+(r.playable ? "1" : "0")+'" data-sha="'+esc(r.sha)+'">'
+    + ava
+    + '<div class="nm">'+esc(r.zh)+" ("+esc(r.en)+")<small>"+esc(sub)+' · SHA <code title="'+esc(r.sha)+'">'+esc(String(r.sha).slice(0,8))+"</code></small>"
+    + '<small>视频：<a href="'+esc(r.videoUrl)+'" target="_blank" rel="noopener">'+esc(r.videoTitle)+"</a></small></div>"
+    + '<div class="right">'+right+"</div></div>";
+}
+function render(){
+  var kw = norm(q.value.trim()), list = ROSTER.filter(function(r){
+    if (dlc.value === "base" && r.dlc) return false;
+    if (dlc.value === "abyssal" && r.dlc !== "abyssal") return false;
+    if (playable.checked && !r.playable) return false;
+    if (kw && hay(r).indexOf(kw) < 0) return false;
+    return true;
+  });
+  var playableCount = ROSTER.filter(function(r){ return r.playable; }).length;
+  count.textContent = "共 " + ROSTER.length + " 个角色，当前可点 " + playableCount + " 个，当前命中 " + list.length + " 个";
+  if (!list.length) { grid.innerHTML = '<div class="empty">没有命中，换个关键词或把筛选放宽（如选“全部”）。</div>'; return; }
+  grid.innerHTML = list.map(card).join("");
+}
+q.addEventListener("input", render); dlc.addEventListener("change", render); playable.addEventListener("change", render);
+render();
+</script>
+<!-- GENERATED by scripts/build_new_index.py: do not edit, rebuild from G work guide.json + data/roster.json + data/wiki-cache.json -->
 </body>
 </html>

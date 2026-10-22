@@ -43,6 +43,9 @@ REPO = Path(__file__).resolve().parent.parent
 FEWSHOT_DISCOVERY_REL = "prompts/step05-discovery-fewshot.md"
 FEWSHOT_EVIDENCE_REL = "prompts/step05-evidence-fewshot.md"
 FEWSHOT_RANKING_REL = "prompts/step05-ranking-fewshot.md"
+SELFCHECK_FROZEN_REL = "prompts/selfcheck-frozen.md"
+SELFCHECK_MAX_REPAIRS = 2
+SELFCHECK_FILE = "ranking.selfcheck.json"
 VALID_TIERS = {"T1", "T2"}
 # discovery 打勾分片: 武器词汇表动态分片 (40/批, 片数=ceil(n/40), 78→2片);
 # 每片独立 agent 逐个打勾收/丢; 合并验全表覆盖 (收+丢==vocab). 只片数常量写死, 不写死武器数.
@@ -78,6 +81,32 @@ def load_fewshot(rel: str) -> str:
     if "FROZEN" not in txt:
         _fail(f"{rel} 缺 FROZEN 头 (freeze 完整性 fail)")
     return txt
+
+
+def load_selfcheck() -> str:
+    """共享 frozen 自验文案 (#72): 跑检验→非零读报错→只改报错项→重跑, 禁自评."""
+    p = REPO / SELFCHECK_FROZEN_REL
+    if not p.exists():
+        _fail(f"missing {SELFCHECK_FROZEN_REL} (共享自验文案缺件即 fail, 不回落)")
+    txt = p.read_text(encoding="utf-8")
+    if "FROZEN" not in txt:
+        _fail(f"{SELFCHECK_FROZEN_REL} 缺 FROZEN 头 (freeze 完整性 fail)")
+    return txt
+
+
+def build_ranking_selfcheck_suffix() -> str:
+    """05 ranking 真调自验后缀 (#72 试点): 具体检验命令 + 上限 + 计数落盘."""
+    validator = (REPO / "scripts" / "validate_step05_ranking.py").as_posix()
+    return (
+        f"\n\n## 自验（05 ranking 试点，共享 FROZEN + 本步检验命令）\n\n"
+        + f"- 落盘后必须用 bash 跑检验脚本（只读不写）："
+        + f"`python \"{validator}\" --workdir \".\"`，读 exit code + JSON errors。\n"
+        + f"- 跑检验→exit 非零读报错→只改报错项→重跑检验；"
+        + f"禁自评式“看起来没问题”（必须以检验 exit 0 为准）。\n"
+        + f"- 自修上限 {SELFCHECK_MAX_REPAIRS} 次，计数落盘写 `steps/05-weapons/{SELFCHECK_FILE}`"
+        + f"（{{\"attempts\": n, \"last_exit\": code}}）；"
+        + f"超限原样停，交 orchestrator 外闸（代码校验 + max-1 cap，不重试不补空）。\n"
+    )
 
 
 def load_weapon_vocab() -> list[str]:
@@ -222,6 +251,14 @@ def build_ranking_prompt(sentences: list[dict], evidences: list[dict], fewshot_t
         + "evidence 未提及则只能未提及，copies 没提拿几把写 copies=未提及 + copies_quote 空串（沿 evidence 口径）；编数字即 fail。\n"
         + "- 你不输出 quotes/analysis/count（只定 tier+note+copies）。缺件即 fail。\n"
     )
+    # #72 试点: ranking prompt 内嵌共享 frozen 自验文案 (跑检验→只改报错项→重跑, 禁自评, 上限2+计数)
+    try:
+        _selfcheck = load_selfcheck()
+    except SystemExit:
+        raise
+    except Exception as e:
+        _fail(f"自验文案加载失败: {e!r}")
+    prompt = prompt + "\n\n---\n\n" + _selfcheck + "\n"
     return prompt
 
 
@@ -605,6 +642,7 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
     fewshot_d = load_fewshot(FEWSHOT_DISCOVERY_REL)
     fewshot_e = load_fewshot(FEWSHOT_EVIDENCE_REL)
     fewshot_r = load_fewshot(FEWSHOT_RANKING_REL)
+    selfcheck_text = load_selfcheck()
     outdir = workdir / "steps" / "05-weapons"
     per_dir = outdir / "per_weapon"
     outdir.mkdir(parents=True, exist_ok=True)
@@ -615,6 +653,8 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
     (outdir / "fewshot-discovery.md").write_text(fewshot_d, encoding="utf-8", newline="\n")
     (outdir / "fewshot-evidence.md").write_text(fewshot_e, encoding="utf-8", newline="\n")
     (outdir / "fewshot-ranking.md").write_text(fewshot_r, encoding="utf-8", newline="\n")
+    # #72 自验快照进工作区 (与 repo FROZEN 逐字节一致, 审计可查; 外闸不验此件, 缺件不 fail)
+    (outdir / "selfcheck.md").write_text(selfcheck_text, encoding="utf-8", newline="\n")
     _legacy = outdir / "fewshot.md"
     if _legacy.exists():
         _legacy.unlink()  # v1 单本快照已退役, 删 stale 防混淆
@@ -783,11 +823,17 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
                 by_name[n] = fut.result()
             evidences = [by_name[n] for n in candidate_names]
 
-    # ---- ranking (串行) ----
+    # ---- ranking (串行, #72 自验试点) ----
     rank_prompt = build_ranking_prompt(sentences, evidences, fewshot_r)
     rank_path = outdir / "ranking.json"
     rank_log = outdir / "agent-ranking.log"
     rank_rel = "steps/05-weapons/ranking.json"
+    selfcheck_count_path = outdir / SELFCHECK_FILE
+    if force and selfcheck_count_path.exists():
+        try:
+            selfcheck_count_path.unlink()  # 强制重跑删 stale 计数, 新跑由 agent 重写 (缺件不 fail, 仅 provenance)
+        except Exception:
+            pass
 
     def _parse_rank(d):
         return validate_ranking(d, candidate_names, evidences)
@@ -805,7 +851,9 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
 
     if ranking is None:
         full_rank_prompt = (rank_prompt
-                            + f"\n\n只写相对路径 `{rank_rel}`，禁 `..` 与绝对盘符。\n")
+                            + f"\n\n只写相对路径 `{rank_rel}`，禁 `..` 与绝对盘符。文件落盘为必须"
+                            + f"（不写文件即缺件 fail）；“只输出一件 JSON”指文件内容格式，写完文件后再输出同一 JSON。\n"
+                            + build_ranking_selfcheck_suffix())
         if agent_fn is not None:
             try:
                 raw_r = agent_fn("ranking", None, rank_prompt)
@@ -820,6 +868,11 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
             if rank_path.exists() and force:
                 try:
                     rank_path.unlink()
+                except Exception:
+                    pass
+                try:
+                    if selfcheck_count_path.exists():
+                        selfcheck_count_path.unlink()  # 同删 stale 计数 (#72)
                 except Exception:
                     pass
             ranking = _run_single_with_retry(workdir, full_rank_prompt, rank_rel,

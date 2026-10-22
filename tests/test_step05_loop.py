@@ -433,3 +433,72 @@ def test_ranking_prompt_copies_unmentioned_rule():
     src = (REPO / "scripts" / "step05_loop.py").read_text(encoding="utf-8")
     assert "copies=未提及" in src and "copies_quote 空串" in src, \
         "ranking prompt 须写明 copies 未提及+空串口径 (#71)"
+
+
+def test_selfcheck_frozen_shared_exists():
+    """#72: 共享 frozen 自验文案存在 (跑检验→非零读报错→只改报错项→重跑; 禁自评)."""
+    p = REPO / "prompts" / "selfcheck-frozen.md"
+    assert p.exists(), "prompts/selfcheck-frozen.md must exist (#72 共享 frozen 文案)"
+    txt = p.read_text(encoding="utf-8")
+    assert "FROZEN" in txt, "共享文案须 FROZEN 头"
+    for needle in ("跑检验", "非零", "只改报错项", "重跑检验", "看起来没问题",
+                   "自修上限", "2 次", "计数落盘", "超限原样停", "外闸"):
+        assert needle in txt, f"共享文案须含 {needle} (#72)"
+
+
+def test_ranking_prompt_contains_selfcheck():
+    """#72: ranking prompt 须含自验指令 (检验→只改报错项→重跑, 禁自评, 上限2+计数)."""
+    m = _load("step05_loop", "scripts/step05_loop.py")
+    fewshot_r = (REPO / "prompts" / "step05-ranking-fewshot.md").read_text(encoding="utf-8")
+    sents = _sentences()
+    evs = [{"name_en": "Minigun", "tier": "T1", "quotes": [sents[0]["text"]],
+            "analysis": "a", "note": "n", "copies": "x", "copies_quote": sents[0]["text"][:6]}]
+    prompt = m.build_ranking_prompt(sents, evs, fewshot_r)
+    for needle in ("跑检验", "只改报错项", "重跑检验", "看起来没问题", "2 次"):
+        assert needle in prompt, f"ranking prompt 须含自验指令 {needle} (#72 试点05 ranking)"
+
+
+def test_ranking_loop_embeds_validator_cmd_and_count():
+    """#72: ranking 真调后缀须给具体检验命令 + 计数文件 + 上限, 外闸不动."""
+    src = (REPO / "scripts" / "step05_loop.py").read_text(encoding="utf-8")
+    assert "validate_step05_ranking" in src, "ranking 真调须嵌入检验脚本命令 (#72)"
+    assert "ranking.selfcheck.json" in src, "须指示计数落盘 ranking.selfcheck.json (#72)"
+    assert "自修上限" in src and "2" in src, "须明示自修上限 2 次 (#72)"
+    assert "超限原样停" in src, "须明示超限原样停交外闸 (#72)"
+    # 外闸保留是底线: 代码校验 + max-1 cap 不动 (format max1/transient max2)
+    assert "format_left = 1" in src, "外闸 max-1 cap 不动 (#72 底线)"
+    assert "transient_left = 2" in src, "transient max2 口径不动 (#72)"
+
+
+def test_ranking_loop_snapshots_selfcheck_provenance(tmp_path):
+    """#72: ranking 运行须快照自验文案 (与 repo FROZEN 逐字节一致, 审计可查)."""
+    m = _load("step05_loop", "scripts/step05_loop.py")
+    sents = _sentences()
+    workdir = tmp_path / "cyborg" / "ultimate"
+    (workdir / "steps" / "05-weapons" / "per_weapon").mkdir(parents=True, exist_ok=True)
+    (workdir / "outputs").mkdir(parents=True, exist_ok=True)
+    quotes_by = {"Minigun": [sents[0]["text"]], "Screwdriver": [sents[1]["text"]]}
+
+    def fake_agent(kind, name_en, prompt):
+        if kind == "discovery":
+            chunks = m.chunk_vocab(sorted(quotes_by.keys()))
+            ch = chunks[name_en]
+            return {"收": [{"name_en": n, "quotes": quotes_by[n]} for n in ch], "丢": []}
+        if kind == "evidence":
+            return {"name_en": name_en, "tier": "T1", "quotes": quotes_by[name_en],
+                    "analysis": f"{name_en}来源→机制。", "note": f"{name_en}人话原话\"{quotes_by[name_en][0][:12]}\"。",
+                    "copies": "未提及", "copies_quote": ""}
+        if kind == "ranking":
+            return {"t1": [{"name_en": n, "note": f"主力原话\"{quotes_by[n][0][:12]}\"。",
+                               "copies": "未提及", "copies_quote": ""} for n in sorted(quotes_by)], "t2": []}
+        raise AssertionError(kind)
+
+    orig_vocab = m.load_weapon_vocab
+    m.load_weapon_vocab = lambda: sorted(quotes_by.keys())
+    try:
+        m.run_step05_loop(workdir, sents, agent_fn=fake_agent, force=True)
+    finally:
+        m.load_weapon_vocab = orig_vocab
+    snap = (workdir / "steps" / "05-weapons" / "selfcheck.md").read_text(encoding="utf-8")
+    assert snap == (REPO / "prompts" / "selfcheck-frozen.md").read_text(encoding="utf-8"), \
+        "自验快照须与 repo FROZEN 逐字节一致 (#72)"

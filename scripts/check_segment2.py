@@ -287,7 +287,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
     # --- 07-priorities (#65: frozen fewshot + selection/wording 两段 agent, 新口径) ---
-    # 新口径: selection.json {upgrades[{name,quotes}],shop[{name,quotes}],synthesis{tradeoff,rhythm,exceptions}} (N 动态非空, 名在表, ban/T1 出局, synthesis 三句非空且点名)
+    # 新口径: selection.json {upgrades[{name,quotes}],shop[{name,quotes}],synthesis{upgrade_view,shop_view,channel_rule,rhythm,exceptions}} (N 动态非空, 名在表, ban/T1 出局, synthesis 五句非空且点名)
     # + per_item/<NN>.json {name,why,how_to_get} (wording, N==selection, 带标签+synthesis+phases, 短引+数字码保, phases 数字禁进)
     # + priorities.json {upgrades[],shop[]} 每项 {name,kind,why,how_to_get,quotes,quote_details} (code 合并, 无 analysis).
     # N 动态由 agent 定 (码只验非空, 不验切分); shop ⊆ grouping candidates 且禁 ban 组且禁 T1; 
@@ -299,7 +299,7 @@ def main(argv: list[str] | None = None) -> int:
         fail("missing steps/07-priorities/selection.json (先跑 step07 selection, 缺节即 fail)", errors)
         _sel07 = None
     if not isinstance(_sel07, dict) or "upgrades" not in _sel07 or "shop" not in _sel07 or "synthesis" not in _sel07:
-        fail("selection must be {upgrades[N], shop[N], synthesis} (N动态由agent定, 码只验非空+synthesis三句)", errors)
+        fail("selection must be {upgrades[N], shop[N], synthesis} (N动态由agent定, 码只验非空+synthesis五句)", errors)
         _sel_ups, _sel_shs = [], []
     else:
         _sel_ups, _sel_shs = _sel07["upgrades"], _sel07["shop"]
@@ -356,13 +356,13 @@ def main(argv: list[str] | None = None) -> int:
         fail("selection upgrades+shop 须去重", errors)
     _syn07 = _sel07.get("synthesis") if isinstance(_sel07, dict) else None
     if not isinstance(_syn07, dict):
-        fail("selection synthesis 须为对象 {tradeoff,rhythm,exceptions}", errors)
+        fail("selection synthesis 须为对象 {upgrade_view,shop_view,channel_rule,rhythm,exceptions}", errors)
         _syn07 = {}
-    for _k in ("tradeoff", "rhythm", "exceptions"):
+    for _k in ("upgrade_view", "shop_view", "channel_rule", "rhythm", "exceptions"):
         _v = _syn07.get(_k) if isinstance(_syn07, dict) else None
         if not isinstance(_v, str) or not _v.strip():
             fail(f"selection synthesis 缺 {_k} 非空", errors)
-    _joined_syn = " ".join(str(_syn07.get(_k, "")) for _k in ("tradeoff", "rhythm", "exceptions")) if isinstance(_syn07, dict) else ""
+    _joined_syn = " ".join(str(_syn07.get(_k, "")) for _k in ("upgrade_view", "shop_view", "channel_rule", "rhythm", "exceptions")) if isinstance(_syn07, dict) else ""
     for _nm in _sel_names:
         if isinstance(_nm, str) and _nm and _nm not in _joined_syn:
             fail(f"selection synthesis 须点名 {_nm} (三句须覆盖每个 TopN)", errors)
@@ -394,6 +394,8 @@ def main(argv: list[str] | None = None) -> int:
             fail(f"per_item/{_i:02d}.json why 须>=8字: {_pn}", errors)
         if len(_ph.strip()) < 2:
             fail(f"per_item/{_i:02d}.json how_to_get 缺件: {_pn}", errors)
+        if not any(_k in _ph for _k in ("升级", "商店", "捡", "锁", "roll", "Roll")):
+            fail(f"per_item/{_i:02d}.json how_to_get 缺通道词: {_pn}", errors)
         _shorts = [s.strip() for s in _short_re7.findall(_pw) if s.strip()]
         if not _shorts:
             fail(f"per_item/{_i:02d}.json why 缺短引标记 原话\"...\": {_pn}", errors)

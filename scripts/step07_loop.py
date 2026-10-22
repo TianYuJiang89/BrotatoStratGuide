@@ -8,7 +8,7 @@ Deterministic-first:
   自洽 (shop∩T1=∅、shop∩ban=∅、upgrades/shop 非空) / 落盘
   (selection.json + priorities.json + per_item/* + fewshot 快照 + 日志).
 - agent judgment 只做: selection 通览定双 TopN+综合论证 (grouping+ratings+weapons+phases+全量整句→
-  {upgrades[{name,quotes}],shop[{name,quotes}],synthesis{tradeoff,rhythm,exceptions}}, N 动态, 保底意图, S/A 优先 B 可例外须论证,
+  {upgrades[{name,quotes}],shop[{name,quotes}],synthesis{upgrade_view,shop_view,channel_rule,rhythm,exceptions}}, N 动态, 保底意图, S/A 优先 B 可例外须论证,
   T1/ban 不进 shop 意图进 fewshot) → wording×N (每项独立单 agent→{why,how_to_get},
   带本项标签 rating/group + synthesis 全文 + phases 全量节奏参考, 数字不丢, 未提空出, 禁编 phases 波次).
 - 缺件/编 quote/编数字/幻觉名/ban 入 TopN/T1 入 shop 即 fail loud, 不回落不补空.
@@ -22,7 +22,7 @@ Deterministic-first:
 - phases: steps/06-phases/phases.json (运营波次全量 phase/waves/goal/focus/pivot)
 
 输出:
-- steps/07-priorities/selection.json: {upgrades[{name,quotes}],shop[{name,quotes}],synthesis{tradeoff,rhythm,exceptions}} (selection 原始, N 动态非空, synthesis 三句非空且点名)
+- steps/07-priorities/selection.json: {upgrades[{name,quotes}],shop[{name,quotes}],synthesis{upgrade_view,shop_view,channel_rule,rhythm,exceptions}} (selection 原始, N 动态非空, synthesis 五句非空且点名)
 - steps/07-priorities/per_item/<NN>.json: wording 原始 {name,why,how_to_get} (N==selection, 00..N-1, upgrades 先 shop 后)
 - steps/07-priorities/priorities.json (+ outputs/priorities.json):
   {upgrades[],shop[]} 每项 {name,kind,why,how_to_get,quotes,quote_details} (code 合并)
@@ -192,18 +192,18 @@ def build_selection_prompt(sentences: list[dict], grouping: list[dict],
         + "## 03 grouping 四组全证据（建议，可推翻，拿 quote 说话）\n\n```json\n" + grp_blob + "\n```\n\n"
         + "## 04 ratings 全证据（升级只认 term_en，S/A 优先 B 可例外）\n\n```json\n" + rat_blob + "\n```\n\n"
         + "## 05 weapons 全证据（T1 名单，只读，shop∩T1=∅）\n\n```json\n" + w_blob + "\n```\n\n"
-        + "## 06 phases 全量（节奏，tradeoff/rhythm 必用）\n\n```json\n" + ph_blob + "\n```\n"
+        + "## 06 phases 全量（节奏，upgrade_view/shop_view/channel_rule/rhythm 必用）\n\n```json\n" + ph_blob + "\n```\n"
         + ban_line
         + "\n---\n\n# TASK_SELECTION（只定双 TopN 名单+证据+综合论证，不写文案；N 由你定，ban/T1 永不出局）\n\n"
         + "## 输出契约（只输出一件 JSON 对象，不输出其它文字）\n\n"
         + '{"upgrades": [{"name": "<04 term_en 一字不差>", "quotes": ["逐字，去重，非空"]}], '
         + '"shop": [{"name": "<grouping candidates 一字不差>", "quotes": ["逐字，去重，非空"]}], '
-        + '"synthesis": {"tradeoff": "跨侧取舍", "rhythm": "按 06 排先后", "exceptions": "例外交代"}}\n\n'
+        + '"synthesis": {"upgrade_view": "升级4选1顺序", "shop_view": "商店顺序", "channel_rule": "同属性走哪条通道", "rhythm": "按 06 排先后", "exceptions": "例外交代"}}\n\n'
         + "- upgrades ≥1 且 shop ≥1（Top1 意图由你保，码只验非空，不验断层）。\n"
         + "- S/A 优先但 B 级可例外（例外须在文案 why 论证，此处只管给足 quotes 证据）。\n"
         + "- 可推翻 grouping 建议，拿 quote 说话；ban 件/T1 武器名永不进 shop（交集码验）。\n"
         + "- quotes 须逐字等于全量整句某条 text，去重，每条非空；编 quote / 幻觉名 / 空 TopN 即 fail。\n"
-        + "- synthesis 必写三句非空：tradeoff（升级与商店抢钱/roll 时谁让谁）、rhythm（按 06 哪几段排先后）、exceptions（B 进为什么进/must_take 丢掉为什么丢），且须点到每个 TopN 名（码验子串，人抽看讲不讲得通）。\n"
+        + "- synthesis 必写五句非空：upgrade_view（升级4选1按什么顺序拿属性）、shop_view（商店刷出按什么顺序买item）、channel_rule（同属性走哪条通道：Max HP 只走升级/Engineering 靠转/item 买或捡）、rhythm（按 06 排先后）、exceptions（B 进为什么进/must_take 丢掉为什么丢），且须点到每个 TopN 名（码验子串，人抽看讲不讲得通）。\n"
         + "- 你不输出 why/how_to_get/count（只定名单+证据+综合论证）。缺件即 fail，不回落不补空。\n"
     )
     return prompt
@@ -243,7 +243,7 @@ def build_wording_prompt(item: dict, sentences: list[dict], fewshot_text: str,
         + "- why 人话一句+短引（短引须逐字出自本项 quotes）；how_to_get 人话一句（原话数字不丢，未提空出不脑补）。\n"
         + "- 数字不丢：why/how_to_get 里每个 ≥2 位数字须逐字出自本项 quotes（编数字即 fail，码验子串；phases/synthesis 数字禁进文案）。\n"
         + "- 整句复制某条 quote 当 why/how_to_get 即 fail（小结须≠原文）。\n"
-        + "- B 级例外须在 why 写清为什么例外。缺件即 fail，不回落不补空。\n"
+        + "- B 级例外须在 why 写清为什么例外。how_to_get 必含通道词（升级/商店/捡/锁/roll 其一，缺即 fail；属性项交代升级4选1还是配装带，商店项交代买还是捡）。缺件即 fail，不回落不补空。\n"
     )
     return prompt
 
@@ -337,9 +337,9 @@ def validate_selection(data: dict, sentences: list[dict],
                 out_shop.append({"name": nm, "quotes": list(qs)})
     syn = data.get("synthesis")
     if not isinstance(syn, dict):
-        _fail("selection synthesis 须为对象 {tradeoff,rhythm,exceptions} (缺件即 fail)")
+        _fail("selection synthesis 须为对象 {upgrade_view,shop_view,channel_rule,rhythm,exceptions} (缺件即 fail)")
     out_syn: dict[str, str] = {}
-    for k in ("tradeoff", "rhythm", "exceptions"):
+    for k in ("upgrade_view", "shop_view", "channel_rule", "rhythm", "exceptions"):
         v = syn.get(k)
         if not isinstance(v, str) or not v.strip():
             _fail(f"selection synthesis 缺 {k} 非空 (缺件即 fail, 不补空)")
@@ -380,6 +380,8 @@ def validate_wording(data: dict, item: dict, sentences: list[dict]) -> dict:
         _fail(f"{expect_name} wording why 过长 (须≤300), got {len(why)}")
     if len(how) > 300:
         _fail(f"{expect_name} wording how_to_get 过长 (须≤300), got {len(how)}")
+    if not any(k in how for k in ("升级", "商店", "捡", "锁", "roll", "Roll")):
+        _fail(f"{expect_name} wording how_to_get 缺通道词 (升级/商店/捡/锁/roll 必含其一，缺件即 fail)")
     if why in sent_texts or why in item_quotes:
         _fail(f"{expect_name} wording why 整句复制 quote 即 fail (小结须≠原文)")
     if how in sent_texts or how in item_quotes:

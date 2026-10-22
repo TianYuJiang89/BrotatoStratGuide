@@ -122,7 +122,9 @@ def test_prompt_build_contains_fewshot_sentences_only():
 
 def _syn_for(names):
     j = "、".join(names)
-    return {"tradeoff": f"跨侧取舍覆盖{j}：升级先保，商店让路",
+    return {"upgrade_view": f"升级4选1覆盖{j}：先拿后拿",
+            "shop_view": f"商店覆盖{j}：先买后买",
+            "channel_rule": f"通道覆盖{j}：升级走升级商店走商店",
             "rhythm": f"按06排先后覆盖{j}：前期拿中期转后期守",
             "exceptions": f"例外覆盖{j}：B进有据，丢掉的暂放"}
 
@@ -258,6 +260,11 @@ def test_validate_wording_ok_and_fail_loud():
              "how_to_get": "升级优先拿"}
     out = m.validate_wording(good2, item2, sents)
     assert out["name"] == "Ranged Damage"
+    # how_to_get 缺通道词即 fail (升级/商店/捡/锁/roll 必含其一)
+    bad = dict(good)
+    bad["how_to_get"] = "见即拿"
+    with pytest.raises(SystemExit):
+        m.validate_wording(bad, item, sents)
     # 退役字段出现即 fail
     for old in ("quotes", "analysis", "count", "quote_details", "verified"):
         bad = dict(good)
@@ -282,7 +289,9 @@ def test_run_loop_with_fake_agents_cyborg_shape(tmp_path):
             assert "synthesis" in prompt
             return {"upgrades": [{"name": "Ranged Damage", "quotes": [sents[0]["text"]]}],
 "shop": [{"name": "Turret", "quotes": [sents[2]["text"]]}],
-                    "synthesis": {"tradeoff": "覆盖Ranged Damage、Turret：升级先保商店让路",
+                    "synthesis": {"upgrade_view": "升级4选1覆盖Ranged Damage、Turret",
+                                  "shop_view": "商店覆盖Ranged Damage、Turret",
+                                  "channel_rule": "通道覆盖Ranged Damage、Turret：升级走升级商店走商店",
                                   "rhythm": "覆盖Ranged Damage、Turret：按06排先后",
                                   "exceptions": "覆盖Ranged Damage、Turret：无B例外"}}
         if kind == "wording":
@@ -340,14 +349,16 @@ def test_loop_sweeps_stale_files_when_N_shrinks(tmp_path):
         if kind == "selection":
             return {"upgrades": [{"name": "Ranged Damage", "quotes": [sents[0]["text"]]}],
 "shop": [{"name": "Turret", "quotes": [sents[2]["text"]]}],
-                    "synthesis": {"tradeoff": "覆盖Ranged Damage、Turret",
+                    "synthesis": {"upgrade_view": "升级4选1覆盖Ranged Damage、Turret",
+                                  "shop_view": "商店覆盖Ranged Damage、Turret",
+                                  "channel_rule": "通道覆盖Ranged Damage、Turret：升级走升级商店走商店",
                                   "rhythm": "覆盖Ranged Damage、Turret",
                                   "exceptions": "覆盖Ranged Damage、Turret"}}
         if kind == "wording":
             return {"name": name,
                     "why": "人话一句带短引，原话“triple the normal rate”。" if name == "Ranged Damage"
                            else "人话一句带短引，原话“turrets are actually contributing”。",
-                    "how_to_get": "见即拿"}
+                    "how_to_get": "商店见即拿"}
         raise AssertionError(f"unknown kind {kind}")
 
     pri = m.run_step07_loop(workdir, sents, grouping, ratings, weapons, phases,

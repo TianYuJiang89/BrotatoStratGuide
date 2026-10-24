@@ -1,0 +1,2 @@
+# FROZEN fewshot must be byte-equal repo<->work; force LF to survive Windows checkout.
+prompts/*.md text eol=lf

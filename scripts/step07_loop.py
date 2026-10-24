@@ -608,8 +608,8 @@ def run_step07_loop(workdir, sentences, grouping, ratings, weapons, phases,
     per_dir = outdir / "per_item"
     outdir.mkdir(parents=True, exist_ok=True)
     per_dir.mkdir(parents=True, exist_ok=True)
-    # fewshot 快照逐字节一致 (读 repo 原字节直拷, 不经文本归一化, 避 CRLF/LF 误报)
-    (outdir / "fewshot.md").write_bytes((REPO / FEWSHOT_REL).read_bytes())
+    # fewshot 运行快照进工作区 (与 03/05/06/08 一致: 文本归一 LF 写, 与 repo LF 逐字节一致, check 验相等)
+    (outdir / "fewshot.md").write_text(fewshot, encoding="utf-8", newline="\n")
 
     # ---- selection (串行, 通览定双 TopN) ----
     sel_prompt = build_selection_prompt(sentences, grouping, ratings, weapons or {},

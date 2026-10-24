@@ -5,13 +5,13 @@ Seams (deterministic-first, no LLM in tests):
   grouping+ratings+weapons+phases+sentences (07), no slice/verb/gap logic in code
 - discovery validation: item candidates non-empty/quotes verbatim/name in items vocab/dedup
 - evidence validation: shape only (group suggestion/quotes/analysis/note<=120), note short-quote verbatim
-- grouping-ranking validation: 4 groups cover candidates exactly, ban/shop consistency, note short-quote verbatim
+- grouping-ranking validation: 6 groups (#74) cover candidates exactly, ban/shop consistency, note short-quote verbatim + wishlist/taken disclosure
 - 07 validation: upgrades/shop non-empty (N dynamic by agent), names in ratings/candidates,
   ban exclusion, quotes verbatim, why/how_to_get non-empty
 - count backfill by code (agent must not fill count)
 - old anchor fields retired (tier/confidence/inferred/has_verb/verb/verb_type/mapped_to/surface_*,
   refusal list, max-gap cut) must be absent
-- fail loud on missing/fabricated/hallucinated/ban-in-TopN (no fallback, no blank补)
+- fail loud on missing/fabricated/hallucinated/ban-in-TopN/missing-disclosure (#74) (no fallback, no blank补)
 """
 from __future__ import annotations
 
@@ -59,8 +59,8 @@ def test_fewshot_frozen_03_and_07_exist():
     assert p03.exists(), "prompts/step03-grouping-fewshot.md must exist (#62 FROZEN 20-shot)"
     t03 = p03.read_text(encoding="utf-8")
     assert "FROZEN" in t03
-    for needle in ("TASK_DISCOVERY", "must_take", "mentioned_not_taken", "ban", "casual_mention",
-                   "原话", "Top1", "打勾"):
+    for needle in ("TASK_DISCOVERY", "must_take", "wishlist", "taken", "mentioned_not_taken", "ban", "casual_mention",
+                   "原话", "Top1", "打勾", "没拿到", "无下文"):
         assert needle in t03, f"step03 fewshot must contain {needle}"
     # ban 语义样例替代拒绝动词表：须有 ban/recycle/sell 语义例，不许出现“拒绝动词表逐字”码味
     assert "recycle" in t03.lower() or "ban the boxing glove" in t03.lower()
@@ -168,6 +168,33 @@ def test_validate_evidence_ok_and_fail_loud():
     }
     out = m.validate_evidence(good, "Acid", sents)
     assert out["group"] == "must_take"
+    # #74: wishlist/taken 披露码保
+    w_good = {
+        "name_en": "Small Magazine",
+        "group": "wishlist",
+        "quotes": [sents[0]["text"]],
+        "analysis": "来源=想要+追。",
+        "note": "想要没拿到，原话“pick up a pocket factory”。",
+    }
+    out = m.validate_evidence(w_good, "Small Magazine", sents)
+    assert out["group"] == "wishlist"
+    w_bad = dict(w_good)
+    w_bad["note"] = "想要，原话“pick up a pocket factory”。"
+    with pytest.raises(SystemExit):
+        m.validate_evidence(w_bad, "Small Magazine", sents)
+    t_good = {
+        "name_en": "Coffee",
+        "group": "taken",
+        "quotes": [sents[3]["text"]],
+        "analysis": "来源=买两次无下文。",
+        "note": "买两次无下文，原话“lock acid”。",
+    }
+    out = m.validate_evidence(t_good, "Coffee", sents)
+    assert out["group"] == "taken"
+    t_bad = dict(t_good)
+    t_bad["note"] = "买两次，原话“lock acid”。"
+    with pytest.raises(SystemExit):
+        m.validate_evidence(t_bad, "Coffee", sents)
     bad = dict(good)
     bad["quotes"] = []
     with pytest.raises(SystemExit):
@@ -209,27 +236,68 @@ def test_validate_grouping_ranking_ok_and_fail_loud():
     cands = ["Acid", "Boxing Glove"]
     good = {
         "must_take": [{"name_en": "Acid", "note": "复购原话“q1”。"}],
+        "wishlist": [],
+        "taken": [],
         "mentioned_not_taken": [],
         "ban": [{"name_en": "Boxing Glove", "note": "ban 出局原话“q2”。"}],
         "casual_mention": [],
     }
     out = m.validate_grouping_ranking(good, cands, evs)
     assert [x["name_en"] for x in out["must_take"]] == ["Acid"]
-    # 四组须覆盖 candidates，一把不多一把不少
+    # 六组须覆盖 candidates，一把不多一把不少
     bad = {"must_take": [{"name_en": "Acid", "note": "n原话“q1”。"}],
+           "wishlist": [], "taken": [],
            "mentioned_not_taken": [], "ban": [], "casual_mention": []}
     with pytest.raises(SystemExit):
         m.validate_grouping_ranking(bad, cands, evs)
     bad = {"must_take": [{"name_en": "幻觉道具", "note": "n原话“q1”。"}],
+           "wishlist": [], "taken": [],
            "mentioned_not_taken": [], "ban": [{"name_en": "Boxing Glove", "note": "n原话“q2”。"}],
            "casual_mention": []}
     with pytest.raises(SystemExit):
         m.validate_grouping_ranking(bad, cands, evs)
     bad = {"must_take": [{"name_en": "Acid", "note": "没有短引"}],
+           "wishlist": [], "taken": [],
            "mentioned_not_taken": [], "ban": [{"name_en": "Boxing Glove", "note": "n原话“q2”。"}],
            "casual_mention": []}
     with pytest.raises(SystemExit):
         m.validate_grouping_ranking(bad, cands, evs)
+    # 缺组即 fail (六组 #74)
+    bad = {"must_take": [{"name_en": "Acid", "note": "n原话“q1”。"}],
+           "mentioned_not_taken": [], "ban": [{"name_en": "Boxing Glove", "note": "n原话“q2”。"}],
+           "casual_mention": []}
+    with pytest.raises(SystemExit):
+        m.validate_grouping_ranking(bad, cands, evs)
+    # wishlist/taken 缺披露即 fail
+    evs2 = evs + [
+        {"name_en": "Small Magazine", "group": "wishlist", "quotes": ["q3"], "analysis": "a", "note": "n3"},
+        {"name_en": "Coffee", "group": "taken", "quotes": ["q4"], "analysis": "a", "note": "n4"},
+    ]
+    cands2 = ["Acid", "Boxing Glove", "Small Magazine", "Coffee"]
+    bad = {
+        "must_take": [{"name_en": "Acid", "note": "n原话“q1”。"}],
+        "wishlist": [{"name_en": "Small Magazine", "note": "想要原话“q3”。"}],
+        "taken": [{"name_en": "Coffee", "note": "买两次无下文原话“q4”。"}],
+        "mentioned_not_taken": [],
+        "ban": [{"name_en": "Boxing Glove", "note": "n原话“q2”。"}],
+        "casual_mention": [],
+    }
+    with pytest.raises(SystemExit):
+        m.validate_grouping_ranking(bad, cands2, evs2)
+    bad["wishlist"] = [{"name_en": "Small Magazine", "note": "想要没拿到原话“q3”。"}]
+    bad["taken"] = [{"name_en": "Coffee", "note": "买两次原话“q4”。"}]
+    with pytest.raises(SystemExit):
+        m.validate_grouping_ranking(bad, cands2, evs2)
+    good2 = {
+        "must_take": [{"name_en": "Acid", "note": "n原话“q1”。"}],
+        "wishlist": [{"name_en": "Small Magazine", "note": "想要没拿到原话“q3”。"}],
+        "taken": [{"name_en": "Coffee", "note": "买两次无下文原话“q4”。"}],
+        "mentioned_not_taken": [],
+        "ban": [{"name_en": "Boxing Glove", "note": "n原话“q2”。"}],
+        "casual_mention": [],
+    }
+    out = m.validate_grouping_ranking(good2, cands2, evs2)
+    assert [x["name_en"] for x in out["wishlist"]] == ["Small Magazine"]
 
 
 def test_validate_priority_ok_and_ban_in_topn_fail():
@@ -319,6 +387,8 @@ def test_run_loops_with_fake_agents_cyborg_shape(tmp_path):
                     "note": f"{name_en}人话原话\"{quotes_by[name_en][0][:12]}\"。"}
         if kind == "grouping-ranking":
             return {"must_take": [{"name_en": "Acid", "note": f"复购原话\"{quotes_by['Acid'][0][:12]}\"。"}],
+                    "wishlist": [],
+                    "taken": [],
                     "mentioned_not_taken": [],
                     "ban": [{"name_en": "Boxing Glove", "note": f"ban出局原话\"{quotes_by['Boxing Glove'][0][:12]}\"。"}],
                     "casual_mention": []}

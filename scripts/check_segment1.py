@@ -146,12 +146,12 @@ def main(argv: list[str] | None = None) -> int:
     sent_by_id = {s["id"]: s["text"] for s in sentences if isinstance(s, dict)}
 
     # --- 02-verbs (#66 已退役: verbs.json 停产, 本 check 不再必查; 旧 G 目录残留忽略) ---
-    # --- 03-grouping (#62: frozen fewshot + discovery/evidence/grouping-ranking, shape only) ---
+    # --- 03-grouping (#62: frozen fewshot + discovery/evidence/grouping-ranking, shape only; #74 六组) ---
     # 新 schema: candidates.json [{name_en,count,quotes,quote_details}] (discovery 补全, scope 脱离 slice)
-    # + ranking.json {must_take[],mentioned_not_taken[],ban[],casual_mention[]} (终判, 可推翻) 
+    # + ranking.json {must_take[],wishlist[],taken[],mentioned_not_taken[],ban[],casual_mention[]} (#74 六组终判, 可推翻)
     # + per_item/<Safe>.json (evidence 原始) + grouping.json [{name_en,count,group,quotes,analysis,note,quote_details}]
-    # 链: ranking 四组==candidates; grouping==candidates 自洽; 旧件 tier/confidence/inferred/has_verb/
-    # verb/verb_type/mapped_to/reason 全退役 (出现即 fail); count==len(quotes); note 短引逐字验.
+    # 链: ranking 六组==candidates; grouping==candidates 自洽; 旧件 tier/confidence/inferred/has_verb/
+    # verb/verb_type/mapped_to/reason 全退役 (出现即 fail); count==len(quotes); note 短引逐字验; wishlist/taken 披露码保.
     import re as _re3
     _short_re3 = _re3.compile(r'原话["“]([^"”]+)["”]')
     if not isinstance(item_candidates, list) or not item_candidates:
@@ -228,7 +228,7 @@ def main(argv: list[str] | None = None) -> int:
             for k in ("name_en", "count", "group", "quotes", "analysis", "note", "quote_details"):
                 if k not in g:
                     fail(f"grouping missing {k}: {g.get('name_en')}", errors)
-            if g.get("group") not in ("must_take", "mentioned_not_taken", "ban", "casual_mention"):
+            if g.get("group") not in ("must_take", "wishlist", "taken", "mentioned_not_taken", "ban", "casual_mention"):
                 fail(f"bad group: {g.get('name_en')}={g.get('group')}", errors)
             for _old in ("tier", "confidence", "inferred", "has_verb", "verb",
                           "verb_type", "mapped_to", "surface_verb", "surface_word",
@@ -261,6 +261,12 @@ def main(argv: list[str] | None = None) -> int:
                 if not any(_s in _q for _q in qs if isinstance(_q, str)):
                     fail(f"grouping note 短引须逐字出自 quotes: {g.get('name_en')}", errors)
                     break
+            # #74 披露: wishlist 须没拿到/未拿到, taken 须无下文, 缺披露即 fail
+            _gn, _gno = g.get("group"), str(g.get("note", ""))
+            if _gn == "wishlist" and ("没拿到" not in _gno and "未拿到" not in _gno):
+                fail(f"grouping wishlist 缺披露即 fail (须含没拿到/未拿到): {g.get('name_en')}", errors)
+            if _gn == "taken" and "无下文" not in _gno:
+                fail(f"grouping taken 缺披露即 fail (须含无下文): {g.get('name_en')}", errors)
             qd = g.get("quote_details", [])
             if not isinstance(qd, list) or len(qd) != len(qs):
                 fail(f"quote_details must parallel quotes: {g.get('name_en')}", errors)
@@ -273,7 +279,7 @@ def main(argv: list[str] | None = None) -> int:
         fail("grouping must be array", errors)
     if grouping != outputs:
         fail("outputs/groups.json must equal steps/03-grouping/grouping.json (重跑 01-03 新 schema 后须一致)", errors)
-    # 链: ranking 四组终判名==candidates (cut 自洽, 可推翻 tier 但名必须对上)
+    # 链: ranking 六组终判名==candidates (cut 自洽, 可推翻 tier 但名必须对上; #74 披露码保)
     try:
         ranking03 = json.loads((work / "steps" / "03-grouping" / "ranking.json").read_text(encoding="utf-8"))
     except Exception:
@@ -281,7 +287,10 @@ def main(argv: list[str] | None = None) -> int:
         fail("steps/03-grouping/ranking.json 缺失或非法 (终判, 缺节即 fail)", errors)
     if isinstance(ranking03, dict):
         got_r3: set = set()
-        for _t in ("must_take", "mentioned_not_taken", "ban", "casual_mention"):
+        for _t in ("must_take", "wishlist", "taken", "mentioned_not_taken", "ban", "casual_mention"):
+            if _t not in ranking03:
+                fail(f"ranking 缺组即 fail (六组 #74): {_t}", errors)
+                continue
             for _x in (ranking03.get(_t) or []):
                 if isinstance(_x, dict):
                     got_r3.add(_x.get("name_en"))
@@ -301,8 +310,12 @@ def main(argv: list[str] | None = None) -> int:
                             if not any(_s in _q for _q in _pqs if isinstance(_q, str)):
                                 fail(f"ranking note 短引须逐字出自 evidence quotes: {_rn}", errors)
                                 break
+                    if _t == "wishlist" and ("没拿到" not in _rnote and "未拿到" not in _rnote):
+                        fail(f"ranking wishlist 缺披露即 fail (须含没拿到/未拿到): {_rn}", errors)
+                    if _t == "taken" and "无下文" not in _rnote:
+                        fail(f"ranking taken 缺披露即 fail (须含无下文): {_rn}", errors)
         if set(_cand_names3) and got_r3 != set(_cand_names3):
-            fail(f"ranking 四组须==candidates {sorted(_cand_names3)}, got {sorted(got_r3)}", errors)
+            fail(f"ranking 六组须==candidates {sorted(_cand_names3)}, got {sorted(got_r3)}", errors)
     # 链: per_item 每件存在 + group 合法 + 名对上 + quotes 非空
     for _n in _cand_names3:
         _safe = re.sub(r"[^A-Za-z0-9]+", "_", str(_n)).strip("_")
@@ -317,8 +330,8 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if not isinstance(_ev, dict) or _ev.get("name_en") != _n:
             fail(f"per_item name_en 须对上: {_n}", errors)
-        if _ev.get("group") not in ("must_take", "mentioned_not_taken", "ban", "casual_mention"):
-            fail(f"per_item group 须四组之一: {_n}", errors)
+        if _ev.get("group") not in ("must_take", "wishlist", "taken", "mentioned_not_taken", "ban", "casual_mention"):
+            fail(f"per_item group 须六组之一 #74: {_n}", errors)
         _eq = _ev.get("quotes", [])
         if not isinstance(_eq, list) or not _eq:
             fail(f"per_item quotes 须非空: {_n}", errors)
@@ -326,6 +339,11 @@ def main(argv: list[str] | None = None) -> int:
             if _q not in {s.get("text") for s in sentences if isinstance(s, dict)}:
                 fail(f"per_item quotes 须逐字: {_n}", errors)
                 break
+        _enote = str(_ev.get("note", ""))
+        if _ev.get("group") == "wishlist" and ("没拿到" not in _enote and "未拿到" not in _enote):
+            fail(f"per_item wishlist 缺披露即 fail (须含没拿到/未拿到): {_n}", errors)
+        if _ev.get("group") == "taken" and "无下文" not in _enote:
+            fail(f"per_item taken 缺披露即 fail (须含无下文): {_n}", errors)
     # 审计节点三元组: 每次 LLM 调用须留 log
     _logs3 = [work / "steps" / "03-grouping" / "agent-ranking.log.jsonl"]
     _d_chunks_for_logs = discovery_info.get("chunks") if isinstance(discovery_info, dict) else []

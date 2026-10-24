@@ -15,7 +15,7 @@
 - upgrades 须出自 04 ratings term_en；shop 须出自 grouping candidates 且不在 ban 组、不在 T1 名单。
 - quotes 须逐字等于全量整句某条 text，去重，每条非空；编 quote / 幻觉名 / 空 TopN 即 fail。
 - 你不输出 why/how_to_get/count（只定名单+证据+综合论证，文案归 wording）。
-- synthesis 必写五句非空：upgrade_view（升级4选1按什么顺序拿属性）、shop_view（商店刷出按什么顺序买item）、channel_rule（同属性走哪条通道：Max HP 只走升级不走 item、Engineering 靠转不靠买、item 走买还是等捡）、rhythm（按 06 哪几段排先后）、exceptions（B 进为什么进/must_take 丢掉为什么丢），且须点到每个 TopN 名（码验子串，人抽看讲不讲得通）。
+- synthesis 必写五句非空：upgrade_view（升级4选1按什么顺序拿属性）、shop_view（商店刷出按什么顺序买item）、channel_rule（同属性走哪条通道：Max HP 只走升级不走 item、Engineering 靠转不靠买、item 走买还是等捡）、rhythm（按 06 哪几段排先后）、exceptions（B 进为什么进/must_take-wishlist 丢掉为什么丢，#74），且须点到每个 TopN 名（码验子串，人抽看讲不讲得通）。
 
 ## 选择例（8 例，升级 4 + 商店 4）
 

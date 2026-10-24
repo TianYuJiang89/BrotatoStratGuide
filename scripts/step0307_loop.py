@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-"""Step03+07 agent loop (#62): frozen fewshot + discovery/evidence/ranking.
+"""Step03+07 agent loop (#62, #74 六组): frozen fewshot + discovery/evidence/ranking.
 
 Deterministic-first:
 - 固定代码只做: prompt 组装 (任务手册 + 全量整句 + 词汇表/一名/N份evidence/上游结果) /
   输出形状校验 / count 回填 (=len(quotes), agent 不填) / quote_details 重建
   (sentences lookup, 不信 agent) / 名在表 (道具词汇表 wiki-cache items,
   升级名在 ratings term_en, 幻觉即 fail) / 去重 / ban 件禁入 TopN /
-  四组覆盖 candidates 自洽 / 落盘 (candidates.json + grouping.json +
+  六组覆盖 candidates 自洽 / wishlist+taken 披露码保 / 落盘 (candidates.json + grouping.json +
   per_item/* + ranking.json + priorities.json + 日志).
 - agent judgment 只做: discovery 补全 (completeness 归它, slice 已退役) /
-  evidence 单件判断 (group建议+quotes+analysis+note) / grouping-ranking 定四组
-  (拿 quote 说话禁数帽, 可推翻 evidence group) / priority-ranking 定
-  upgrades/shop TopN (N 动态由它定, 可推翻 group 建议, 禁断层码切).
-- 缺件/编 quote/幻觉名/ban 进 TopN 即 fail loud, 不回落不补空.
+  evidence 单件判断 (group建议+quotes+analysis+note, wishlist/taken 须带披露) / grouping-ranking 定六组
+  (拿 quote 说话禁数帽, 可推翻 evidence group, 锁/买=拿除非明确不拿) / priority-ranking 定
+  upgrades/shop TopN (N 动态由它定, 可推翻 group 建议, 禁断层码切; shop 只禁 ban+T1, wishlist/taken 可进由 agent 定).
+- 缺件/编 quote/幻觉名/ban 进 TopN/缺披露即 fail loud, 不回落不补空.
 
 输入:
-- fewshot03: prompts/step03-grouping-fewshot.md (FROZEN 20-shot)
+- fewshot03: prompts/step03-grouping-fewshot.md (FROZEN v4 六组, #74)
 - fewshot07: prompts/step07-priorities-fewshot.md (FROZEN)
 - sentences: steps/01-sentences/sentences.json
 - item vocab: data/wiki-cache.json items (全局唯一, 不读 registry-slice, 不读 02-verbs)
@@ -24,10 +24,10 @@ Deterministic-first:
 输出 (03):
 - steps/03-grouping/candidates.json: [{name_en, count, quotes, quote_details}]
 - steps/03-grouping/per_item/<Safe>.json: evidence 原始 (validated, 无 count)
-- steps/03-grouping/ranking.json: {must_take[], mentioned_not_taken[], ban[], casual_mention[]}
-  每项 {name_en, note}
+- steps/03-grouping/ranking.json: {must_take[], wishlist[], taken[], mentioned_not_taken[], ban[], casual_mention[]} (#74 六组)
+  每项 {name_en, note} (wishlist note 须含没拿到/未拿到, taken note 须含无下文, 缺披露即 fail)
 - steps/03-grouping/grouping.json (+ outputs/groups.json):
-  [{name_en, count, group, quotes, analysis, note, quote_details}]
+  [{name_en, count, group, quotes, analysis, note, quote_details}] (#74 六组, 同上披露)
   - tier/confidence/inferred/has_verb/verb/verb_type/mapped_to/surface_*/reason 全退役 (出现即 fail).
 
 输出 (07):
@@ -54,7 +54,10 @@ REPO = Path(__file__).resolve().parent.parent
 
 FEWSHOT_03_REL = "prompts/step03-grouping-fewshot.md"
 FEWSHOT_07_REL = "prompts/step07-priorities-fewshot.md"
-VALID_GROUPS = ("must_take", "mentioned_not_taken", "ban", "casual_mention")
+# #74 六组: must_take(拿+战果) / wishlist(想要+追没拿到) / taken(拿/锁无下文) /
+# mentioned_not_taken(明确没拿) / ban(拒绝) / casual_mention(纯嘴提无买无锁).
+# 显示层: 必拿区=must_take+wishlist(强制没拿到标记), taken 单列必拿与 ban 之间.
+VALID_GROUPS = ("must_take", "wishlist", "taken", "mentioned_not_taken", "ban", "casual_mention")
 RETIRED_03_FIELDS = ("tier", "confidence", "inferred", "has_verb", "verb", "verb_type",
                      "mapped_to", "surface_verb", "surface_word", "discretion_reason",
                      "reason", "anchors", "score", "kind")
@@ -73,6 +76,16 @@ def _fail_short(who: str, note: str, quotes: list[str]) -> None:
     for s in shorts:
         if not any(s in q for q in quotes):
             _fail(f"{who} note 短引须逐字出自 quotes: {s[:60]!r} 改写/编造即 fail")
+
+
+def _check_disclosure(who: str, group: str, note: str) -> None:
+    """#74 披露码保: wishlist 须带没拿到/未拿到, taken 须带无下文, 缺披露即 fail."""
+    if group == "wishlist":
+        if ("没拿到" not in note) and ("未拿到" not in note):
+            _fail(f"{who} wishlist 缺披露即 fail: note 须含“没拿到”/“未拿到” (想要+追但没拿到, 缺件即 fail)")
+    elif group == "taken":
+        if "无下文" not in note:
+            _fail(f"{who} taken 缺披露即 fail: note 须含“无下文” (拿/锁无反悔但无战果, 缺件即 fail)")
 
 
 def _fail(msg: str) -> NoReturn:
@@ -200,14 +213,14 @@ def build_evidence_prompt(name_en: str, sentences: list[dict], fewshot_text: str
         + "\n\n---\n\n# TASK_EVIDENCE（本轮只判这一件道具，其它一律不判）\n\n"
         + f"TASK_ITEM: {name_en}\n\n"
         + "## 输出契约（只输出一件 JSON 对象，不输出其它文字）\n\n"
-        + '{"name_en": "<与 TASK_ITEM 一字不差>", "group": "must_take/mentioned_not_taken/ban/casual_mention（建议）", '
+        + '{"name_en": "<与 TASK_ITEM 一字不差>", "group": "must_take/wishlist/taken/mentioned_not_taken/ban/casual_mention（建议，六组 #74）", '
         + '"quotes": ["逐字出自上表，去重，非空"], '
         + '"analysis": "来源→机制→分组", '
-        + '"note": "≤120字人话+短引"}\n\n'
+        + '"note": "≤120字人话+短引（wishlist 须含没拿到/未拿到，taken 须含无下文）"}\n\n'
         + "- name_en 须与 TASK_ITEM 一字不差；幻觉名即 fail。\n"
         + "- quotes 须逐字等于上表某条 text，去重，非空；空证据即 fail（道具无 `-` 档）。编 quote 即 fail。\n"
-        + "- analysis 写全过程（来源→机制→分组）。\n"
-        + "- note ≤120 字，人话 + 短引（短引须出自本条 quotes 逐字）。\n"
+        + "- analysis 写全过程（来源→机制→分组；锁/买=拿除非明确不拿 skip/recycle/sell/ban）。\n"
+        + "- note ≤120 字，人话 + 短引（短引须出自本条 quotes 逐字；wishlist 须披露没拿到/未拿到，taken 须披露无下文，缺披露即 fail）。\n"
         + "- 你不输出 count。缺件即 fail，不回落不补空。\n"
     )
     return prompt
@@ -228,16 +241,18 @@ def build_grouping_ranking_prompt(sentences: list[dict], evidences: list[dict],
         + "```json\n" + blob + "\n```\n\n"
         + "## N 份 evidence（通览，全量，不截断）\n\n"
         + "```json\n" + ev_blob + "\n```\n\n"
-        + "\n\n---\n\n# TASK_GROUPING（只定四组，不编 quote；Top1 意图由你保）\n\n"
+        + "\n\n---\n\n# TASK_GROUPING（只定六组 #74，不编 quote；Top1 意图由你保）\n\n"
         + f"候选名单（须全部分组，一件不丢）: {names}\n\n"
         + "## 输出契约（只输出一件 JSON 对象，不输出其它文字）\n\n"
         + '{"must_take": [{"name_en": "<候选一字不差>", "note": "≤120字定稿人话+短引"}], '
+        + '"wishlist": [{"name_en": "...", "note": "...须含没拿到/未拿到..."}], '
+        + '"taken": [{"name_en": "...", "note": "...须含无下文..."}], '
         + '"mentioned_not_taken": [{"name_en": "...", "note": "..."}], '
         + '"ban": [{"name_en": "...", "note": "..."}], '
         + '"casual_mention": [{"name_en": "...", "note": "..."}]}\n\n'
-        + "- 四组须覆盖候选名单（一把不多一把不少）；幻觉名即 fail。\n"
-        + "- 可推翻 evidence group 建议；切分拿 quote 说话，禁数帽。\n"
-        + "- note 每条 ≤120 字，人话 + 短引（短引须出自对应 evidence quotes 逐字）。\n"
+        + "- 六组须覆盖候选名单（一把不多一把不少）；幻觉名即 fail。\n"
+        + "- 可推翻 evidence group 建议；切分拿 quote 说话，禁数帽；锁/买=拿除非明确不拿（skip/recycle/sell/ban 为反悔）。\n"
+        + "- note 每条 ≤120 字，人话 + 短引（短引须出自对应 evidence quotes 逐字；wishlist 须披露没拿到/未拿到，taken 须披露无下文，缺披露即 fail）。\n"
         + "- 你不输出 quotes/analysis/count（只定 group+note）。缺件即 fail。\n"
     )
     return prompt
@@ -265,7 +280,7 @@ def build_priority_ranking_prompt(sentences: list[dict], grouping: list[dict],
         fewshot_text
         + "\n\n## 该角色全量整句（含 start/end/t，原样全量，不截断）\n\n"
         + "```json\n" + blob + "\n```\n\n"
-        + "## grouping 四组（建议，可推翻）\n\n```json\n" + grp_blob + "\n```\n\n"
+        + "## grouping 六组 #74（建议，可推翻）\n\n```json\n" + grp_blob + "\n```\n\n"
         + "## 04 ratings（升级候选只认 term_en）\n\n```json\n" + rat_blob + "\n```\n\n"
         + "## 05 weapons（备查：T1 不重复进商店）\n\n```json\n" + w_blob + "\n```\n\n"
         + "## 06 phases（节奏备查，空段跳过）\n\n```json\n" + ph_blob + "\n```\n\n"
@@ -356,7 +371,7 @@ def validate_evidence(data: dict, name_en: str, sentences: list[dict]) -> dict:
     if data.get("name_en") != name_en:
         _fail(f"evidence name_en 须一字不差: 期望 {name_en!r}, 实得 {data.get('name_en')!r}")
     if data.get("group") not in VALID_GROUPS:
-        _fail(f"{name_en} evidence group 须为四组之一, got {data.get('group')!r}")
+        _fail(f"{name_en} evidence group 须为六组之一 #74, got {data.get('group')!r}")
     qs = data.get("quotes")
     if not isinstance(qs, list) or not qs or any(not isinstance(q, str) for q in qs):
         _fail(f"{name_en} evidence 空证据即 fail (quotes 须非空)")
@@ -375,6 +390,7 @@ def validate_evidence(data: dict, name_en: str, sentences: list[dict]) -> dict:
     if len(note) > NOTE_MAX_LEN:
         _fail(f"{name_en} evidence note 须≤{NOTE_MAX_LEN}字, got {len(note)}")
     _fail_short(f"{name_en} evidence", note, [q for q in qs if isinstance(q, str)])
+    _check_disclosure(f"{name_en} evidence", data.get("group", ""), note)
     return {"name_en": name_en, "group": data.get("group"),
             "quotes": list(qs), "analysis": str(ana).strip(), "note": str(note).strip()}
 
@@ -406,7 +422,7 @@ def validate_grouping_ranking(data: dict, candidate_names: list[str],
             name = e.get("name_en")
             note = e.get("note")
             if name in seen:
-                _fail(f"grouping-ranking {name!r} 重复 (四组须==candidates 去重)")
+                _fail(f"grouping-ranking {name!r} 重复 (六组须==candidates 去重)")
             seen.add(name)
             if name not in set(candidate_names):
                 _fail(f"grouping-ranking 幻觉名即 fail: {name!r} 不在 candidates 内")
@@ -419,9 +435,10 @@ def validate_grouping_ranking(data: dict, candidate_names: list[str],
             _evq = ev_by.get(name, {}).get("quotes", [])
             _fail_short(f"grouping-ranking {name}", note,
                         [q for q in _evq if isinstance(q, str)])
+            _check_disclosure(f"grouping-ranking {name}", grp, note)
             out[grp].append({"name_en": name, "note": str(note).strip()})
     if set(seen) != set(candidate_names):
-        _fail(f"grouping-ranking 四组须==candidates 自洽: 期望 {sorted(candidate_names)}, 实得 {sorted(seen)}")
+        _fail(f"grouping-ranking 六组须==candidates 自洽: 期望 {sorted(candidate_names)}, 实得 {sorted(seen)}")
     return out
 
 
@@ -922,7 +939,7 @@ def run_step03_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
         for r in ranking.get(grp, []):
             rank_by[r["name_en"]] = (grp, r.get("note", ""))
     if set(rank_by.keys()) != set(candidate_names):
-        _fail(f"合并自洽 fail: ranking 四组须==candidates: 期望 {sorted(candidate_names)}, 实得 {sorted(rank_by.keys())}")
+        _fail(f"合并自洽 fail: ranking 六组须==candidates: 期望 {sorted(candidate_names)}, 实得 {sorted(rank_by.keys())}")
     grouping: list[dict] = []
     for name in sorted(candidate_names):
         grp, note = rank_by[name]

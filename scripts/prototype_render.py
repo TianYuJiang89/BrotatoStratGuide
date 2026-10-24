@@ -260,9 +260,13 @@ def render_all(guide_path: Path, wiki_path: Path, terms_path: Path, roster_path:
     pitfalls_data = guide.get("pitfalls", [])
 
     must_take = [g for g in groups_data if g.get("group") == "must_take"]
+    wishlist = [g for g in groups_data if g.get("group") == "wishlist"]
+    taken = [g for g in groups_data if g.get("group") == "taken"]
     bans = [g for g in groups_data if g.get("group") == "ban"]
     skips = [g for g in groups_data if g.get("group") == "mentioned_not_taken"]
     casuals = [g for g in groups_data if g.get("group") == "casual_mention"]
+    # #74 显示层: 必拿区 = must_take + wishlist (wishlist 强制没拿到标记), taken 单列必拿与 ban 之间.
+    must_zone = must_take + wishlist
 
     # ----------------- 生成 HTML 内容 -----------------
     html_out = f"""<!DOCTYPE html>
@@ -1065,10 +1069,10 @@ table.guide-table th {{
     html_out += f"""    <div class="card" id="va-groups">
       <div class="card-header">
         <h2 class="card-title"><span>🎒</span> 道具池决策 (Groups · {len(groups_data)} 件)</h2>
-        <span class="card-subtext">必拿 {len(must_take)} 件 / 禁用 {len(bans)} 件 / 提过未拿 {len(skips)} 件 / 路过 {len(casuals)} 件</span>
+        <span class="card-subtext">必拿 {len(must_zone)} 件 (含愿望单 {len(wishlist)} 件没拿到) / 拿了无下文 {len(taken)} 件 / 禁用 {len(bans)} 件 / 提过未拿 {len(skips)} 件 / 路过 {len(casuals)} 件</span>
       </div>
 
-      <h4 style="color:#166534;margin:12px 0 6px;">⭐ 必拿道具 (Must Take · {len(must_take)} 件 · 见即买)</h4>
+      <h4 style="color:#166534;margin:12px 0 6px;">⭐ 必拿道具 (Must Take + Wishlist · {len(must_zone)} 件 · 见即买, 愿望单标没拿到)</h4>
       <div class="table-wrap">
         <table class="guide-table">
           <thead>
@@ -1080,7 +1084,40 @@ table.guide-table th {{
           <tbody>
 """
 
-    for g in must_take:
+    for g in must_zone:
+        name_en = g.get("name_en", "")
+        name_zh = g.get("name_zh", "")
+        note = g.get("note", "") or g.get("reason", "")
+        is_wish = g.get("group") == "wishlist"
+        i_wiki = wiki.get("items", {}).get(name_en, {})
+        i_thumb = i_wiki.get("thumb", "")
+        i_icon = icon_html(i_thumb, name_en)
+        i_tip_elem = item_tip(name_en, i_wiki, terms)
+        name_display = f"{esc(name_zh)} ({esc(name_en)})" if name_zh and name_zh != name_en else esc(name_en)
+        wish_badge = ' <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;font-size:11px;">愿望单·没拿到</span>' if is_wish else ''
+        name_cell = f'<span class="has-tip" tabindex="0">{i_icon}{name_display}{wish_badge}{i_tip_elem}</span>' 
+        html_out += f"""            <tr>
+              <td>{name_cell}</td>
+              <td><div style="font-size:13px;line-height:1.5;">{esc(note)}</div></td>
+            </tr>
+"""
+
+    html_out += f"""          </tbody>
+        </table>
+      </div>
+
+      <h4 style="color:#7c3aed;margin:18px 0 6px;">📦 拿了无下文 (Taken · {len(taken)} 件 · 已拿/已锁但后文无战果)</h4>
+      <div class="table-wrap">
+        <table class="guide-table">
+          <thead>
+            <tr>
+              <th style="width:220px;">道具</th>
+              <th>拿取原话与无下文说明</th>
+            </tr>
+          </thead>
+          <tbody>
+"""
+    for g in taken:
         name_en = g.get("name_en", "")
         name_zh = g.get("name_zh", "")
         note = g.get("note", "") or g.get("reason", "")
@@ -1089,13 +1126,12 @@ table.guide-table th {{
         i_icon = icon_html(i_thumb, name_en)
         i_tip_elem = item_tip(name_en, i_wiki, terms)
         name_display = f"{esc(name_zh)} ({esc(name_en)})" if name_zh and name_zh != name_en else esc(name_en)
-        name_cell = f'<span class="has-tip" tabindex="0">{i_icon}{name_display}{i_tip_elem}</span>'
+        name_cell = f'<span class="has-tip" tabindex="0">{i_icon}{name_display}<span class="badge" style="background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe;font-size:11px;margin-left:4px;">无下文</span>{i_tip_elem}</span>'
         html_out += f"""            <tr>
               <td>{name_cell}</td>
               <td><div style="font-size:13px;line-height:1.5;">{esc(note)}</div></td>
             </tr>
 """
-
     html_out += f"""          </tbody>
         </table>
       </div>
@@ -1487,6 +1523,8 @@ table.guide-table th {{
         <div class="c-filter-tabs">
           <button class="c-filter-btn active" data-filter="all" onclick="setShopFilter('all', this)">全部 ({len(groups_data)})</button>
           <button class="c-filter-btn" data-filter="must_take" onclick="setShopFilter('must_take', this)">⭐ 必拿 ({len(must_take)})</button>
+          <button class="c-filter-btn" data-filter="wishlist" onclick="setShopFilter('wishlist', this)">愿望单 ({len(wishlist)})</button>
+          <button class="c-filter-btn" data-filter="taken" onclick="setShopFilter('taken', this)">无下文 ({len(taken)})</button>
           <button class="c-filter-btn" data-filter="ban" onclick="setShopFilter('ban', this)">🚫 禁选 ({len(bans)})</button>
           <button class="c-filter-btn" data-filter="mentioned_not_taken" onclick="setShopFilter('mentioned_not_taken', this)">⚪ 提过未拿 ({len(skips)})</button>
           <button class="c-filter-btn" data-filter="casual_mention" onclick="setShopFilter('casual_mention', this)">💬 路过 ({len(casuals)})</button>
@@ -1507,12 +1545,16 @@ table.guide-table th {{
         name_display = f"{esc(name_zh)} ({esc(name_en)})" if name_zh and name_zh != name_en else esc(name_en)
         badge_cls = {
             "must_take": "badge-must-take",
+            "wishlist": "badge-must-take",
+            "taken": "badge-skip",
             "ban": "badge-ban",
             "mentioned_not_taken": "badge-skip",
             "casual_mention": "badge-casual",
         }.get(grp, "badge-casual")
         grp_lbl = {
             "must_take": "必拿",
+            "wishlist": "愿望单·没拿到",
+            "taken": "拿了无下文",
             "ban": "禁用",
             "mentioned_not_taken": "提过未拿",
             "casual_mention": "路过",

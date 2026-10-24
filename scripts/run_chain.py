@@ -135,7 +135,8 @@ def _reuse_ok_sentences(path: Path) -> bool:
 
 
 def _reuse_ok_grouping(path: Path) -> bool:
-    # #62: 新 schema {name_en,count,group,quotes,analysis,note,quote_details}, 旧件退役
+    # #62 新 schema + #74 六组 {name_en,count,group,quotes,analysis,note,quote_details}, 旧件退役
+    # #74 披露也进复用门: wishlist 须没拿到/未拿到, taken 须无下文, 否则不复用 (须重跑)
     d = _load_json(path)
     if not (isinstance(d, list) and len(d) > 0):
         return False
@@ -146,7 +147,11 @@ def _reuse_ok_grouping(path: Path) -> bool:
             for k in ("name_en", "count", "group", "quotes", "analysis", "note", "quote_details"):
                 if k not in r:
                     return False
-            if r.get("group") not in ("must_take", "mentioned_not_taken", "ban", "casual_mention"):
+            if r.get("group") not in ("must_take", "wishlist", "taken", "mentioned_not_taken", "ban", "casual_mention"):
+                return False
+            if r.get("group") == "wishlist" and ("没拿到" not in str(r.get("note", "")) and "未拿到" not in str(r.get("note", ""))):
+                return False
+            if r.get("group") == "taken" and "无下文" not in str(r.get("note", "")):
                 return False
             for _old in ("tier", "confidence", "inferred", "has_verb", "verb",
                           "verb_type", "mapped_to", "reason"):

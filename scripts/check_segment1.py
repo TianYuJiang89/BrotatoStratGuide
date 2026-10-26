@@ -64,6 +64,7 @@ def main(argv: list[str] | None = None) -> int:
         work / "steps" / "05-weapons" / "fewshot-discovery.md",
         work / "steps" / "05-weapons" / "fewshot-evidence.md",
         work / "steps" / "05-weapons" / "fewshot-ranking.md",
+        work / "steps" / "05-weapons" / "aliases.json",
         work / "steps" / "05-weapons" / "ranking.json",
         work / "steps" / "05-weapons" / "weapons.json",
         work / "outputs" / "weapons.json",
@@ -109,6 +110,22 @@ def main(argv: list[str] | None = None) -> int:
                 fail(f"steps/05-weapons/fewshot-{_task}.md must equal repo FROZEN fewshot (逐字节, 重跑 05 即回填)", errors)
         except Exception:
             fail(f"steps/05-weapons/fewshot-{_task}.md 读失败 (缺运行快照, 重跑 05 即回填)", errors)
+    # #75 别名映射表 provenance: 快照须与 repo data/weapon-aliases.json 逐字节一致 (重跑 05 即回填)
+    try:
+        _al_run = (work / "steps" / "05-weapons" / "aliases.json").read_bytes()
+        _al_repo_p = REPO / "data" / "weapon-aliases.json"
+        if not _al_repo_p.exists():
+            fail("data/weapon-aliases.json 缺失 (别名映射表缺件即 fail, #75)", errors)
+        else:
+            _al_repo = json.loads(_al_repo_p.read_text(encoding="utf-8"))
+            _al_repo_norm = {k: v for k, v in _al_repo.items() if not (isinstance(k, str) and k.startswith("_"))}
+            _al_expect = (json.dumps(_al_repo_norm, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
+            if _al_run != _al_expect:
+                fail("steps/05-weapons/aliases.json must equal repo data/weapon-aliases.json (逐字节, 重跑 05 即回填, #75)", errors)
+    except SystemExit:
+        raise
+    except Exception:
+        fail("steps/05-weapons/aliases.json 读失败 (缺运行快照, 重跑 05 即回填, #75)", errors)
 
     # --- 01-sentences 新 schema ---
     if not isinstance(sentences, list) or not sentences:

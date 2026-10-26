@@ -1,0 +1,10 @@
+{
+  "_comment": "#75 alias map: registry name_en -> spoken aliases (lowercase match; code scans by word boundary for prompt hints only;收/丢 still judged by agent, never auto收). New aliases require human review before adding; no hardcoded aliases in code.",
+  "Gatling Laser": [
+    "gatling gun",
+    "gatling"
+  ],
+  "Nuclear Launcher": [
+    "nuke launcher"
+  ]
+}

@@ -1,6 +1,6 @@
-# TASK_DISCOVERY（FROZEN 2026-10-21 v4：只判本批，逐个打勾收/丢）
+# TASK_DISCOVERY（FROZEN 2026-10-27 v5：只判本批，逐个打勾收/丢；v5 加别名归一）
 
-> v4 微修（判据并复数泛指、DIS-08 兼示范只提一次、补 quote_details 半句；其余例子未动）：discovery 逐个打勾——武器表动态分片（40/批），收+丢==本批（机检：缺件/重叠/陌生名即 fail）。判对判错归 agent、心抽复核。
+> v5 新增（#75 别名归一：原话俗称按映射表判注册表名， prompt 附别名预告仅解决名对不上，不代替买/丢判断）：discovery 逐个打勾——武器表动态分片（40/批），收+丢==本批（机检：缺件/重叠/陌生名即 fail）。判对判错归 agent、心抽复核。
 
 输出一件 JSON，不输出其它文字。
 
@@ -14,7 +14,11 @@
 收+丢==本批（一件恰好一次；空收可，漏判即 fail）。
 幻觉名/编 quote/收空 quotes 即 fail。你不填 count / quote_details。
 
-## 收（6 例）
+## 别名归一（只解决名对不上，不代替买/丢判断）
+
+原话俗称按映射表归一到注册表名；随附 prompt 的别名预告只告诉你本批哪些名在原话里以俗称出现、出现几次，收还是丢仍按上条买/丢判据逐句定。
+
+## 收（7 例）
 
 DIS-01 Slingshot：`So we're going to be using slingshot.` / `slingshot gives us the primitive weapon tag.` / `We'll buy a slingshot.` / `buy another slingshot.` → 收（用→买→锁→再买，体系入口）。
 DIS-02 Minigun：`Okay, minigun gives me a lot of healing from life steal as well.` / `So, I think I will sell this slingshot, buy the minigun.` / `the minigun was really nice giving me a bunch of life steal, and of course uh dealing the most damage.` → 收（卖旧买新+战果，后期转）。
@@ -22,6 +26,7 @@ DIS-03 Screwdriver：`The easiest way to win with the cyborg is to use screwdriv
 DIS-04 SMG：`That would be the ideal, but SMG does a a reasonable minigun impression.` / `It's the Walmart minigun.` → 收（过渡明示，1 句也收，禁数帽）。
 DIS-05 Medical Gun：`a cursed medical gun isn't uh the best weapon of all time, and we may sell it later, but it's a pretty powerful boost to our damage in the early game` / `I bought the medical gun.` → 收（买了+早期限伤+声明会卖，过渡位）。
 DIS-06 Nuclear Launcher（别名 nuke launcher 归一到此名）：`Uh, so this is a ranged weapon, the nuclear launcher.` / `We'll buy nuclear launcher.` / `given that we're going into the horde wave, I'm going to take the nuke launcher` → 收（买+horde 位）。
+DIS-11 Gatling Laser（别名 Gatling gun 归一到此名）：`I will buy Gatling gun.` / `100,000 damage from our Gatling guns.` → 收（别名命中+买+结算战果，名对上后按收判）。
 
 ## 丢（4 例）
 

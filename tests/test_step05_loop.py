@@ -312,13 +312,16 @@ def test_run_loop_with_fake_agents_cyborg_shape(tmp_path):
                     "t2": []}
         raise AssertionError(f"unknown kind {kind}")
 
-    # 用小词汇表 monkeypatch load_weapon_vocab
+    # 用小词汇表 monkeypatch load_weapon_vocab (+别名表置空, 假 vocab 不含 Gatling/Nuclear, #75)
     orig_vocab = m.load_weapon_vocab
+    orig_alias = m.load_weapon_aliases
     m.load_weapon_vocab = lambda: sorted(quotes_by.keys())
+    m.load_weapon_aliases = lambda: {}
     try:
         weapons = m.run_step05_loop(workdir, sents, agent_fn=fake_agent, force=True)
     finally:
         m.load_weapon_vocab = orig_vocab
+        m.load_weapon_aliases = orig_alias
     assert sorted([w["name_en"] for w in weapons["t1"]]) == ["Minigun", "Screwdriver"]
     assert weapons["t2"] == []
     # 打勾合并: 收==candidates, 丢不进下游; 全表覆盖机检
@@ -494,11 +497,14 @@ def test_ranking_loop_snapshots_selfcheck_provenance(tmp_path):
         raise AssertionError(kind)
 
     orig_vocab = m.load_weapon_vocab
+    orig_alias = m.load_weapon_aliases
     m.load_weapon_vocab = lambda: sorted(quotes_by.keys())
+    m.load_weapon_aliases = lambda: {}
     try:
         m.run_step05_loop(workdir, sents, agent_fn=fake_agent, force=True)
     finally:
         m.load_weapon_vocab = orig_vocab
+        m.load_weapon_aliases = orig_alias
     snap = (workdir / "steps" / "05-weapons" / "selfcheck.md").read_text(encoding="utf-8")
     assert snap == (REPO / "prompts" / "selfcheck-frozen.md").read_text(encoding="utf-8"), \
         "自验快照须与 repo FROZEN 逐字节一致 (#72)"

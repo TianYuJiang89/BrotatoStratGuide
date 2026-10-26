@@ -43,6 +43,7 @@ REPO = Path(__file__).resolve().parent.parent
 FEWSHOT_DISCOVERY_REL = "prompts/step05-discovery-fewshot.md"
 FEWSHOT_EVIDENCE_REL = "prompts/step05-evidence-fewshot.md"
 FEWSHOT_RANKING_REL = "prompts/step05-ranking-fewshot.md"
+ALIASES_REL = "data/weapon-aliases.json"
 SELFCHECK_FROZEN_REL = "prompts/selfcheck-frozen.md"
 SELFCHECK_MAX_REPAIRS = 2
 SELFCHECK_FILE = "ranking.selfcheck.json"
@@ -126,6 +127,58 @@ def load_weapon_vocab() -> list[str]:
     return names
 
 
+def load_weapon_aliases() -> dict[str, list[str]]:
+    """#75 别名映射表: 注册表名 -> 原话俗称列表 (显式维护, 代码内禁硬编码别名)."""
+    p = REPO / ALIASES_REL
+    if not p.exists():
+        _fail(f"missing {ALIASES_REL} (别名映射表缺件即 fail, 不回落)")
+    try:
+        d = json.loads(p.read_text(encoding="utf-8"))
+    except Exception as e:
+        _fail(f"weapon-aliases.json 读失败: {e!r}")
+    if not isinstance(d, dict):
+        _fail("weapon-aliases 非法 (须为对象: 注册表名 -> 别名数组)")
+    out: dict[str, list[str]] = {}
+    for k, v in d.items():
+        if isinstance(k, str) and k.startswith("_"):
+            continue  # _comment 等元字段跳过
+        if not isinstance(k, str) or not k.strip():
+            _fail(f"weapon-aliases 注册表名非法: {k!r}")
+        if not isinstance(v, list) or not v or any(not isinstance(a, str) or not a.strip() for a in v):
+            _fail(f"weapon-aliases {k!r} 须为非空字符串数组")
+        seen: list[str] = []
+        for a in v:
+            a = a.strip().lower()
+            if a and a not in seen:
+                seen.append(a)
+        out[k.strip()] = seen
+    return out
+
+
+def scan_alias_hits(sentences: list[dict], aliases: dict[str, list[str]]) -> dict[str, dict]:
+    """代码按词界扫原话别名 (仅作 prompt 预告, 不判收/丢). 返回 {注册表名: {hits: 命中句数, matched: [命中的别名]}}."""
+    texts = [s.get("text", "") for s in sentences if isinstance(s, dict)]
+    out: dict[str, dict] = {}
+    for name, alias_list in aliases.items():
+        matched: list[str] = []
+        hit_ids: set[int] = set()
+        for alias in alias_list:
+            try:
+                pat = re.compile(r"\b" + re.escape(alias) + r"s?\b", re.IGNORECASE)
+            except Exception:
+                _fail(f"weapon-aliases {name!r} 别名正则非法: {alias!r}")
+            found = False
+            for i, t in enumerate(texts):
+                if isinstance(t, str) and pat.search(t):
+                    hit_ids.add(i)
+                    found = True
+            if found:
+                matched.append(alias)
+        if hit_ids:
+            out[name] = {"hits": len(hit_ids), "matched": matched}
+    return out
+
+
 def chunk_vocab(vocab: list[str], size: int = DISCOVERY_CHUNK_SIZE) -> list[list[str]]:
     if not vocab:
         _fail("武器词汇表为空 (缺件即 fail)")
@@ -168,19 +221,37 @@ def _sentences_blob(sentences: list[dict]) -> str:
 
 def build_discovery_prompt(sentences: list[dict], chunk: list[str],
                            chunk_id: int, chunk_total: int,
-                           fewshot_text: str) -> str:
+                           fewshot_text: str,
+                           aliases: dict[str, list[str]] | None = None,
+                           alias_hits: dict[str, dict] | None = None) -> str:
     if not isinstance(sentences, list) or not sentences:
         _fail("sentences 为空 (缺件即 fail)")
     if not chunk:
         _fail("discovery 本批名单为空 (缺件即 fail)")
     blob = _sentences_blob(sentences)
     chunk_line = ", ".join(chunk)
+    alias_lines: list[str] = []
+    if aliases:
+        for name in chunk:
+            if name in aliases:
+                alist = aliases.get(name) or []
+                info = (alias_hits or {}).get(name) if alias_hits else None
+                n = info.get("hits", 0) if isinstance(info, dict) else 0
+                if n:
+                    alias_lines.append(f"- {name} ← 原话亦称 {', '.join(alist)}（原话命中 {n} 句，名对上后仍按买/丢判据定收丢）")
+                else:
+                    alias_lines.append(f"- {name} ← 原话亦称 {', '.join(alist)}（原话未命中，本批按注册表名直判）")
+    alias_block = ""
+    if alias_lines:
+        alias_block = ("\n\n## 别名归一预告（代码扫原话，仅供本批参考，不代替买/丢判断）\n\n"
+                         + "\n".join(alias_lines) + "\n")
     prompt = (
         fewshot_text
         + "\n\n## 该角色全量整句（含 start/end/t，原样全量，不截断）\n\n"
         + "```json\n" + blob + "\n```\n\n"
         + f"## 本批名单（第 {chunk_id + 1}/{chunk_total} 批，共 {len(chunk)} 件，只判这些，一字不差）\n\n"
-        + chunk_line + "\n\n"
+        + chunk_line + "\n"
+        + alias_block + "\n"
         + "---\n\n# TASK_DISCOVERY（打勾：逐个判收/丢，缺件即 fail）\n\n"
         + "## 输出契约（只输出一件 JSON 对象，不输出其它文字）\n\n"
         + '{"收": [{"name_en": "<本批一字不差>", "quotes": ["逐字，去重，≥1"]}], "丢": ["<本批一字不差>", ...]}\n\n'
@@ -639,6 +710,11 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
       测试请传 (kind, name, prompt) 三参; 若传二参函数, 按 evidence 处理会 fail loud.
     """
     vocab = load_weapon_vocab()
+    aliases = load_weapon_aliases()
+    for _ak in aliases:
+        if _ak not in set(vocab):
+            _fail(f"weapon-aliases 注册表名须在武器词汇表内: {_ak!r} (显式维护, 错名即 fail)")
+    alias_hits = scan_alias_hits(sentences, aliases)
     fewshot_d = load_fewshot(FEWSHOT_DISCOVERY_REL)
     fewshot_e = load_fewshot(FEWSHOT_EVIDENCE_REL)
     fewshot_r = load_fewshot(FEWSHOT_RANKING_REL)
@@ -653,6 +729,10 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
     (outdir / "fewshot-discovery.md").write_text(fewshot_d, encoding="utf-8", newline="\n")
     (outdir / "fewshot-evidence.md").write_text(fewshot_e, encoding="utf-8", newline="\n")
     (outdir / "fewshot-ranking.md").write_text(fewshot_r, encoding="utf-8", newline="\n")
+    # #75 别名快照进工作区 (与 repo data/weapon-aliases.json 逐字节一致, 审计可查; check 验相等)
+    (outdir / "aliases.json").write_text(
+        json.dumps(aliases, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8", newline="\n")
     # #72 自验快照进工作区 (与 repo FROZEN 逐字节一致, 审计可查; 外闸不验此件, 缺件不 fail)
     (outdir / "selfcheck.md").write_text(selfcheck_text, encoding="utf-8", newline="\n")
     _legacy = outdir / "fewshot.md"
@@ -668,7 +748,8 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
     def _do_disc(i: int, ch: list[str]):
         safe_i = f"chunk-{i}"
         per_path = outdir / f"discovery-{safe_i}.json"
-        prompt = build_discovery_prompt(sentences, ch, i, len(chunks), fewshot_d)
+        prompt = build_discovery_prompt(sentences, ch, i, len(chunks), fewshot_d,
+                                        aliases=aliases, alias_hits=alias_hits)
 
         def _parse(d):
             return validate_discovery_chunk(d, ch, sentences)
@@ -737,7 +818,8 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
     (outdir / "discovery.json").write_text(
         json.dumps({"chunk_size": DISCOVERY_CHUNK_SIZE,
                     "chunks": [list(ch) for ch in chunks],
-                    "收": sorted(seen_got), "丢": sorted(seen_drop)},
+                    "收": sorted(seen_got), "丢": sorted(seen_drop),
+                    "aliases": aliases, "alias_hits": alias_hits},
                    ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     # discovery 回填 candidates.json (code: count=len(quotes) + quote_details)

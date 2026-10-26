@@ -1,38 +1,40 @@
 ---
 name: brotato-guide
-description: Scaffold a new GitHub issue for building a Brotato character guide. Use when asked to create a guide for a character (e.g. 给工程师建攻略). This skill only writes the ticket, then stops.
+description: Scaffold a production issue for building a new-character Brotato guide on the current agent chain (取材→取证→真跑→人看). Use when asked to create a guide for a character (e.g. 给法师建攻略) with role and difficulty.
 ---
 
-# Brotato Guide Ticket Scaffolder
+# Brotato Guide Ticket Scaffolder（新链）
 
-You do one thing: open a new, fully-specified issue. You never source, fill, build, or review. Execution belongs to another agent (`/implement`) in another session.
+One job: open a new, fully-specified production issue. Never source, fill, build, or review. Execution belongs to another session.
+
+Pointers (point, never copy): chain `scripts/run_chain.py` (+ `fetch_inputs`, `check_segment1/2`); glossary `CONTEXT.md`; frozen fewshots `prompts/step*-fewshot.md` (never edit in production — gaps go to a separate ticket); exemplar [#56 five-role run](https://github.com/TianYuJiang89/BrotatoStratGuide/issues/56); audit `templates/audit.html`; render `scripts/prototype_render.py`.
 
 ## Steps
 
-### 1. Read the order template (once)
+### 1. Fix slug and variant (once)
 
-Read `docs/sop/character-issue-template.md` (the issue body contract) and `docs/sop/new-character-guide.md` §4–§9 (the requirements the ticket must point at). Role name comes from the human's message (`/skill:brotato-guide 给<角色>建攻略`); if the role is missing or ambiguous, ask once, then stop.
+Role and difficulty come from the human's message (`给<角色><难度>建攻略`); if either is missing or ambiguous, ask once, then stop.
 
-Completion: role fixed, template loaded.
+Completion: slug + variant fixed.
 
-### 2. Confirm tags, then stop if unclear
+### 2. Confirm state, then stop if unclear
 
-Check what already exists for this slug: `git log --oneline -- data/builds/<slug>.json`, `ls data/work/<slug>`, variant tags in the last builds file. Write into the ticket: 本次首建/重跑 + 开工清空范围 (`rm -rf data/work/<slug>` + old `data/builds/<slug>.json docs/<slug>.html`, executed by the runner at start). You never decide content, only record state.
+Check what already exists: `G:/brotato-work/<slug>/<variant>/inputs/manifest.json` (which video_id), `outputs/guide.json` (built or not). Write into the ticket: 本次首建/重跑. 清场由运行时自动做（换片整目录备份，见 #69），runner 不得手删；只记录状态，不判内容。
 
-Completion: 首建/重跑 + 清空范围 in hand.
+Completion: 首建/重跑 in hand.
 
 ### 3. Open the issue, then stop
 
 ```bash
-gh issue create --title "角色攻略：<角色名> (<EN>)" --label "ready-for-agent" --body-file <filled-template>
+gh issue create --title "角色攻略：<角色名> (<EN>) / <variant>" --label "ready-for-agent" --body-file <filled-template>
 ```
 
 Body rules (single source of truth stays in the repo; the ticket only points):
 
-- Role slots filled from the template (`目标角色`节); the `选定取材` section stays slotted: the executor retrieves Top3 per §4, the human picks, then the executor fills. You fill no video IDs.
-- Requirements section points at, never copies: `docs/sop/new-character-guide.md` (一事一过 8 步 + note rules + 三道闸), `docs/sop/reviewer-checklist.md` (six checks), `.agents/skills/brotato-guide/` is you — do not reference yourself.
-- Constraints line, verbatim: cookie collaboration (human provides repo-root `cookies.txt`, never committed; executor asks on block), TDD seams only (CLI exit codes + `docs/*.html` + `data/*.json` bytes), products human-never-hand-edits, no third-party transcription without a separate ticket.
-- Acceptance: reviewer gate + human 3-questions (选片对不对 / 转述忠不忠实 / 评级违不违手感). Guide tickets stay out of wayfinding: no wayfinder labels, no `Part of` map line.
-- Apply the AFK-ready triage label (`ready-for-agent` per `docs/agents/triage-labels.md`).
+- `目标角色`节填 slug/variant/covers；`选定取材`节保持空槽：executor 按取材口径检索 Top3（Cephalopocalypse 同角色，Ultimate > Nightmare Guide > Nightmare > Danger 5 保底，有 Guide 后缀才算教学局，标题链接+视频ID+发布日期+难度+字幕五元组），人拍 1 个后 executor 回填。你不填视频 ID。
+- Requirements 只指向：`run_chain` 用法、双 check 全绿、审计只读校验、渲染抽验、`CONTEXT.md` 术语。不复制。
+- Constraints：cookie 协作（人出 repo 根 `cookies.txt`，不入库；被风控即停等人重出）；fail loud（缺字幕/被风控/check 红灯即停，不猜测不回落）；产物人绝不手改；prompt/分组/schema 缺口一律另票，本票内不修。
+- Acceptance：双 check 全绿 + 审计同目录可读 + sha 对上 manifest；人看四抽（04 一条 S/A + 05 一把 T1 + 06 一段 + 08 两条，原话逐字 + 人话可执行，逐条过/不过）；渲染抽验（六节段序 + `?t=` 点跳）。
+- Production stays out of wayfinding：不挂 `wayfinder:*` 标签，不写 `Part of` 地图行（沿 21b8aa6/a3edfae）。
 
-Completion: issue number in hand, `gh issue view <new-N>` shows filled body + labels. Output the number and stop. Nothing else runs in this session.
+Completion: issue number in hand, `gh issue view <new-N>` shows filled body + `ready-for-agent`. Output the number and stop. Nothing else runs in this session.

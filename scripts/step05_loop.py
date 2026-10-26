@@ -295,7 +295,9 @@ def build_evidence_prompt(name_en: str, sentences: list[dict], fewshot_text: str
     return prompt
 
 
-def build_ranking_prompt(sentences: list[dict], evidences: list[dict], fewshot_text: str) -> str:
+def build_ranking_prompt(sentences: list[dict], evidences: list[dict], fewshot_text: str,
+                       aliases: dict[str, list[str]] | None = None,
+                       alias_hits: dict[str, dict] | None = None) -> str:
     if not isinstance(sentences, list) or not sentences:
         _fail("sentences 为空 (缺件即 fail)")
     if not evidences:
@@ -303,6 +305,20 @@ def build_ranking_prompt(sentences: list[dict], evidences: list[dict], fewshot_t
     blob = _sentences_blob(sentences)
     ev_blob = json.dumps(evidences, ensure_ascii=False, indent=2)
     names = ", ".join(e.get("name_en", "") for e in evidences)
+    alias_lines: list[str] = []
+    if aliases:
+        for e in evidences:
+            name = e.get("name_en", "")
+            if name in aliases:
+                alist = aliases.get(name) or []
+                info = (alias_hits or {}).get(name) if alias_hits else None
+                n = info.get("hits", 0) if isinstance(info, dict) else 0
+                if n:
+                    alias_lines.append(f"- {name} ← 原话亦称 {', '.join(alist)}（原话命中 {n} 句；evidence quotes 里俗称即此名，切分时一把不丢）")
+    alias_block = ""
+    if alias_lines:
+        alias_block = ("\n\n## 别名归一预告（代码扫原话，仅供切分对名，不代替分档判断）\n\n"
+                         + "\n".join(alias_lines) + "\n")
     prompt = (
         fewshot_text
         + "\n\n## 该角色全量整句（含 start/end/t，原样全量，不截断）\n\n"
@@ -310,7 +326,8 @@ def build_ranking_prompt(sentences: list[dict], evidences: list[dict], fewshot_t
         + "## N 份 evidence（通览，全量，不截断）\n\n"
         + "```json\n" + ev_blob + "\n```\n\n"
         + "\n\n---\n\n# TASK_RANKING（只切分，不编 quote；T1≥1 由你保）\n\n"
-        + f"候选名单（须全切分，一把不丢）: {names}\n\n"
+        + f"候选名单（须全切分，一把不丢）: {names}\n"
+        + alias_block + "\n"
         + "## 输出契约（只输出一件 JSON 对象，不输出其它文字）\n\n"
         + '{"t1": [{"name_en": "<候选一字不差>", "note": "≤120字定稿人话+短引", '
         + '"copies": "终定配比", "copies_quote": "逐字"}], '
@@ -866,7 +883,9 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
                 pass
         full_prompt = (ev_prompt
                        + f"\n\n只写相对路径 `steps/05-weapons/per_weapon/{safe}.json`，"
-                         f"禁 `..` 与绝对盘符。\n")
+                         f"禁 `..` 与绝对盘符。文件落盘为必须"
+                         f"（不写文件即缺件 fail）；“只输出一件 JSON”指文件内容格式，"
+                         f"写完文件后再输出同一 JSON。\n")
         if agent_fn is not None:
             try:
                 raw_e = agent_fn("evidence", name_en, ev_prompt)
@@ -906,7 +925,8 @@ def run_step05_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
             evidences = [by_name[n] for n in candidate_names]
 
     # ---- ranking (串行, #72 自验试点) ----
-    rank_prompt = build_ranking_prompt(sentences, evidences, fewshot_r)
+    rank_prompt = build_ranking_prompt(sentences, evidences, fewshot_r,
+                                        aliases=aliases, alias_hits=alias_hits)
     rank_path = outdir / "ranking.json"
     rank_log = outdir / "agent-ranking.log"
     rank_rel = "steps/05-weapons/ranking.json"

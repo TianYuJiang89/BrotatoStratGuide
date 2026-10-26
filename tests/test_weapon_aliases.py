@@ -111,11 +111,34 @@ def test_discovery_prompt_injects_alias_hints_per_chunk_only():
     assert "TASK_DISCOVERY" in p0
 
 
-def test_fewshot_teaches_gatling_alias():
+def test_fewshot_stays_v4_alias_lives_in_code():
+    """#75 修法只动代码不碰 frozen：fewshot 保持 v4（其余四单快照不动），别名预告由代码注入。"""
     txt = (REPO / "prompts" / "step05-discovery-fewshot.md").read_text(encoding="utf-8")
-    assert "FROZEN" in txt
-    assert "Gatling Laser" in txt and "Gatling gun" in txt, "#75 fewshot 须有 Gatling 别名例"
-    assert "别名归一" in txt
+    assert "FROZEN 2026-10-21 v4" in txt
+    assert "DIS-11" not in txt, "别名例不进 frozen（code-side 预告已覆盖，免全局重跑）"
+
+
+def test_ranking_prompt_injects_alias_hints():
+    """ranking 切分须全量：一把不丢，别名名须在候选名单处对上原话俗称。"""
+    m = _load("step05_loop_ranking", "scripts/step05_loop.py")
+    fewshot_r = (REPO / "prompts" / "step05-ranking-fewshot.md").read_text(encoding="utf-8")
+    sents = _ranger_like_sentences()
+    aliases = m.load_weapon_aliases()
+    hits = m.scan_alias_hits(sents, aliases)
+    evs = [
+        {"name_en": "Gatling Laser", "tier": "T1",
+         "quotes": [s["text"] for s in sents if "gatling" in s["text"].lower()],
+         "analysis": "a", "note": "n", "copies": "x", "copies_quote": ""},
+        {"name_en": "Slingshot", "tier": "T1", "quotes": ["We'll buy a slingshot."],
+         "analysis": "a", "note": "n", "copies": "x", "copies_quote": ""},
+    ]
+    p = m.build_ranking_prompt(sents, evs, fewshot_r, aliases=aliases, alias_hits=hits)
+    assert "别名归一预告" in p
+    assert "Gatling Laser" in p and "gatling gun" in p.lower()
+    assert "一把不丢" in p
+    # 向后兼容: 老 3 参调用仍可用
+    p0 = m.build_ranking_prompt(sents, evs, fewshot_r)
+    assert "TASK_RANKING" in p0
 
 
 def test_run_loop_writes_alias_snapshot_and_flows_gatling(tmp_path):

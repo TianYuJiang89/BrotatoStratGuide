@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""新链索引页生成器 (Issue #73): 五角色 guide 一页可达.
+"""新链索引页生成器 (Issue #73, 去写死): work-root 发现式扫描, 各 guide 一页可达.
 
 视觉继承旧版索引页 (同 CSS/同筛选搜索/同卡片结构/同页脚署名),
 只是卡片数据对接新链: 名单与字段现场读 G work, 不手写.
@@ -19,9 +19,10 @@ Deterministic-first + No silent fallback:
   跨盘 (D: repo -> G: work) 则回退 `file://` 绝对 URI (由 --work-root 派生, 代码内无硬编码盘符).
 - 测试读 G 盘 (`--work-root G:/brotato-work`), 正式随产物发布 (沿 standing).
 
-固定五单 (增减须改码 + 改测, 发现式扫描一律不做):
-  cyborg/ultimate, doctor/nightmare, engineer/ultimate, one-armed/ultimate, ranger/ultimate.
-  顺序沿 data/roster.json 名录序.
+组装 (发现式, 去写死): 扫描 `<work-root>/<slug>/<variant>/`, 仅合法 slug 字符集
+(bak/杂项目录自动排除, 见 _discover_variants). 四件 (guide.json + meta.json +
+manifest.json + guide.html) 齐才收卡, 任一缺件整页 fail loud.
+顺序沿 data/roster.json 名录序.
 
 用法:
   python scripts/build_new_index.py
@@ -39,15 +40,40 @@ import sys
 from pathlib import Path
 from typing import Any, NoReturn
 
-# 固定五单 (Issue #73 回归: 五卡齐全可点; 缺一单 fail loud).
-# 顺序沿 data/roster.json 名录序 (cyborg 10 < doctor 12 < engineer 13 < one-armed 35 < ranger 37).
-EXPECTED: list[tuple[str, str]] = [
-    ("cyborg", "ultimate"),
-    ("doctor", "nightmare"),
-    ("engineer", "ultimate"),
-    ("one-armed", "ultimate"),
-    ("ranger", "ultimate"),
-]
+# 发现式扫描 (去写死): 顺序最终沿 roster 名录序, 此处仅给确定性初序.
+_SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+def _is_junk_dir(name: str) -> bool:
+    """备份/杂项目录判定 (去写死配套): 含 bak/backup 标记 (两种备份命名都命中:
+    ultimate.bak.<TS> 与 ultimate-backup-pre75-<TS>) 即排除. 难度词天然不含该子串."""
+    low = name.lower()
+    return ("bak" in low) or ("backup" in low)
+
+
+def _discover_variants(work_root: Path) -> list[tuple[str, str]]:
+    """扫描 <work-root>/<slug>/<variant>/, 仅合法 slug 字符集.
+
+    bak/杂项目录 (ultimate.bak.*, __pycache__ 等, 含点/下划线/大写) 自动排除.
+    初序 sorted (确定性, 与 scandir 任意序无关); 最终顺序由 roster 名录序定.
+    """
+    try:
+        slugs = sorted(p.name for p in work_root.iterdir() if p.is_dir())
+    except OSError as e:
+        fail(f"缺件即 fail: work-root 不可读: {work_root} ({e})")
+        raise AssertionError("unreachable")
+    found: list[tuple[str, str]] = []
+    for slug in slugs:
+        if not _SLUG_RE.match(slug) or _is_junk_dir(slug):
+            continue
+        try:
+            variants = sorted(p.name for p in (work_root / slug).iterdir() if p.is_dir())
+        except OSError:
+            continue
+        for variant in variants:
+            if _SLUG_RE.match(variant) and not _is_junk_dir(variant):
+                found.append((slug, variant))
+    return found
 
 _SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -123,7 +149,7 @@ def _static_card(entry: dict[str, Any]) -> str:
 
 
 def build(work_root: Path, out_path: Path, repo: Path) -> Path:
-    """组装五卡索引 (旧版视觉); 任一缺件/错键即 fail loud, 成功才写盘."""
+    """组装索引 (旧版视觉, 发现式); 任一缺件/错键即 fail loud, 成功才写盘."""
     roster_raw = _load_json(repo / "data" / "roster.json", "repo data/roster.json")
     if not isinstance(roster_raw, list):
         fail("格式错即 fail: data/roster.json 须为数组")
@@ -135,7 +161,12 @@ def build(work_root: Path, out_path: Path, repo: Path) -> Path:
     char_map: dict[str, Any] = chars if isinstance(chars, dict) else {}
 
     entries: list[dict[str, Any]] = []
-    for slug, variant in EXPECTED:
+    order = {r.get("id"): i for i, r in enumerate(roster_raw) if isinstance(r, dict)}
+    discovered = _discover_variants(work_root)
+    if not discovered:
+        fail(f"缺件即 fail: work-root 下未发现任何 <slug>/<variant>/ 变体目录: {work_root}")
+    discovered.sort(key=lambda sv: (order.get(sv[0], 1 << 30), sv[0], sv[1]))
+    for slug, variant in discovered:
         base = work_root / slug / variant
         guide_path = base / "outputs" / "guide.json"
         meta_path = base / "inputs" / "meta.json"
@@ -260,7 +291,7 @@ header p {{ color:var(--muted); margin:0 0 12px; font-size:14px; }}
 <div class="wrap">
 <header>
 <h1>土豆兄弟 (Brotato) · 新链攻略索引</h1>
-<p>旧版视觉 · 新链数据现场组装 · 五角色一页可达 · 纯静态 · 双击可开 · 手机可读</p>
+<p>旧版视觉 · 新链数据现场组装 · {len(entries)}角色一页可达 · 纯静态 · 双击可开 · 手机可读</p>
 </header>
 <div class="filter" role="search">
 <input id="q" type="search" placeholder="搜索：赛博 / cyborg / ranger…" autocomplete="off">
@@ -337,7 +368,7 @@ render();
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="新链索引页生成器 (Issue #73): 五角色 guide 一页可达 (旧版视觉 + 新链数据)")
+    parser = argparse.ArgumentParser(description="新链索引页生成器 (发现式: 扫描 work-root, 旧版视觉 + 新链数据)")
     parser.add_argument("--work-root", default="G:/brotato-work", help="G 盘工作区根目录")
     parser.add_argument("--out", default="docs/new_index.html", help="输出 HTML 路径")
     args = parser.parse_args()

@@ -221,6 +221,7 @@ def build_evidence_prompt(name_en: str, sentences: list[dict], fewshot_text: str
         + "- quotes 须逐字等于上表某条 text，去重，非空；空证据即 fail（道具无 `-` 档）。编 quote 即 fail。\n"
         + "- analysis 写全过程（来源→机制→分组；锁/买=拿除非明确不拿 skip/recycle/sell/ban）。\n"
         + "- note ≤120 字，人话 + 短引（短引须出自本条 quotes 逐字；wishlist 须披露没拿到/未拿到，taken 须披露无下文，缺披露即 fail）。\n"
+        + "- note 必须含 原话“...” 标记（短引须带 原话 前缀，裸“...”即缺件 fail）；“人话+短引”指必须同时有，非二选一。\n"
         + "- 你不输出 count。缺件即 fail，不回落不补空。\n"
     )
     return prompt

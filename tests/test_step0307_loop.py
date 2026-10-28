@@ -525,3 +525,13 @@ def test_discovery_chunk_suffix_file_write_takes_precedence():
     assert "文件落盘为必须" in src, "discovery chunk prompt 须声明落盘必须 (#70)"
     assert "只输出一件 JSON" in src and "文件内容格式" in src, \
         "须说明 JSON-only 指文件内容格式 (#70)"
+
+
+def test_evidence_suffix_requires_yuanhua_marker():
+    """#82: evidence 后缀须写明 note 原话标记必须 (消歧 短引 vs 原话前缀)."""
+    m = _load("step0307_loop", "scripts/step0307_loop.py")
+    fewshot03 = (REPO / "prompts" / "step03-grouping-fewshot.md").read_text(encoding="utf-8")
+    ev = m.build_evidence_prompt("Acid", _sentences(), fewshot03)
+    assert "原话" in ev, "evidence prompt 须声明原话标记必须 (#82)"
+    assert "裸" in ev and "缺件 fail" in ev, \
+        "须说明裸引号即缺件 fail (#82)"

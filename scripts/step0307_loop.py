@@ -254,6 +254,7 @@ def build_grouping_ranking_prompt(sentences: list[dict], evidences: list[dict],
         + "- 六组须覆盖候选名单（一把不多一把不少）；幻觉名即 fail。\n"
         + "- 可推翻 evidence group 建议；切分拿 quote 说话，禁数帽；锁/买=拿除非明确不拿（skip/recycle/sell/ban 为反悔）。\n"
         + "- note 每条 ≤120 字，人话 + 短引（短引须出自对应 evidence quotes 逐字；wishlist 须披露没拿到/未拿到，taken 须披露无下文，缺披露即 fail）。\n"
+        + "- note 必须含 原话“...” 标记（短引须带 原话 前缀，裸“...”即缺件 fail）；“人话+短引”指必须同时有，非二选一。\n"
         + "- 你不输出 quotes/analysis/count（只定 group+note）。缺件即 fail。\n"
     )
     return prompt

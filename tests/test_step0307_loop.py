@@ -535,3 +535,16 @@ def test_evidence_suffix_requires_yuanhua_marker():
     assert "原话" in ev, "evidence prompt 须声明原话标记必须 (#82)"
     assert "裸" in ev and "缺件 fail" in ev, \
         "须说明裸引号即缺件 fail (#82)"
+
+
+def test_grouping_ranking_suffix_requires_yuanhua_marker():
+    """#83: grouping-ranking 后缀须写明 note 原话标记必须 (#82 同症)."""
+    m = _load("step0307_loop", "scripts/step0307_loop.py")
+    fewshot03 = (REPO / "prompts" / "step03-grouping-fewshot.md").read_text(encoding="utf-8")
+    sents = _sentences()
+    rank = m.build_grouping_ranking_prompt(sents, [
+        {"name_en": "Acid", "group": "must_take", "quotes": [sents[3]["text"]],
+         "analysis": "a", "note": "n"}], fewshot03)
+    assert "原话" in rank, "ranking prompt 须声明原话标记必须 (#83)"
+    assert "裸" in rank and "缺件 fail" in rank, \
+        "须说明裸引号即缺件 fail (#83)"

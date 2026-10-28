@@ -127,6 +127,7 @@ def build_attribute_prompt(term_en: str, sentences: list[dict], fewshot_text: st
         + "- term_en 须与 TASK_ATTR 一字不差；你不输出 count。\n"
         + "- quotes 须逐字等于上表某条 text，去重；编 quote 即 fail。\n"
         + "- 若你判定作者未提及，rating 必 `-`，quotes 必 []，summary 写作者未提及。\n"
+        + "- rating `-` 时 summary 只写作者未提及，不要给属性名加引号；summary 内任何 “...”/\"...\" 均按短引验（须出自 quotes，quotes==[] 时即 fail）。\n"
         + "- analysis 写全过程（来源→机制→评级），犹豫/tradeoff/未知一律写进 analysis。\n"
         + "- 缺句/编 quote 即 fail，不回落不补空。\n"
     )

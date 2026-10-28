@@ -206,3 +206,14 @@ def test_audit_04_node_list_per_convention():
     assert "TERM=" in html, "04节点入参须标明单属性名"
     assert "for-loop 单属性 agent" not in html, "04节过程描述屁话须删"
     assert "/ 39 terms" not in html, "04节计数拼串须删"
+
+
+def test_attr_suffix_dash_no_quoted_attr_name():
+    """#84: attr 后缀须写明 - 未提及时 summary 不要给属性名加引号."""
+    m = _load("step04_loop", "scripts/step04_loop.py")
+    fewshot = (REPO / "prompts" / "step04-ratings-fewshot.md").read_text(encoding="utf-8")
+    prompt = m.build_attribute_prompt("% Damage against Bosses", _sentences(), fewshot)
+    assert "作者未提及" in prompt
+    assert "不要给属性名加引号" in prompt, "attr prompt 须禁 - 时属性名引号 (#84)"
+    assert "quotes==[]" in prompt or "quotes 必 []" in prompt, \
+        "须说明空 quotes 下引号即 fail (#84)"

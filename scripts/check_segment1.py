@@ -31,6 +31,22 @@ def fail(msg: str, errors: list[str]) -> None:
     print(f"FAIL: {msg}")
 
 
+def classify_adjacent_dups(texts: list[str]) -> tuple[list[int], list[int]]:
+    """相邻整句重复分类 (#90: 真复读须人判, 机器只分类).
+
+    真复读 (golem/ultimate #85 前例: 相邻两句同文, VTT 词级时间戳
+    42.8s vs 43.8s 证明两次独立 utterance 的强调复读) 与滚动折叠
+    artifact 在 sentences.json 层面不可区分 (同文、不同 cue 时间戳),
+    机器无法自动判定.
+    - >=3 对: FAIL 名单 (折叠回归信号; 历史全绿为 0, 坏折叠产出几十对).
+    - 1-2 对: WARN 名单 (reviewer 按 VTT 词级时间戳复核, 如 golem 102/103).
+    返回 (fail 下标, warn 下标), 下标指向每对的后一句 (texts 内下标)."""
+    pairs = [i for i in range(1, len(texts)) if texts[i] == texts[i - 1]]
+    if len(pairs) >= 3:
+        return (pairs, [])
+    return ([], pairs)
+
+
 def _valid_ts(v) -> bool:
     return v is None or (isinstance(v, str) and bool(TS_RE.match(v)))
 
@@ -137,11 +153,16 @@ def main(argv: list[str] | None = None) -> int:
         # #43滚动折叠后: 411±100 (ultimate 411/danger-5 459/nightmare 442, 1496旧数作废)
         if not (300 <= len(sentences) <= 600):
             fail(f"sentences count must be 411±150折叠后 (300-600), got {len(sentences)}", errors)
-        # #43无半句复读: 相邻句不得完全相同 (自然复读如Incredible.允许隔句, 滚动半句复读为相邻重复)
-        texts = [s.get("text","") for s in sentences if isinstance(s, dict)]
-        adj = sum(1 for i in range(1,len(texts)) if texts[i]==texts[i-1])
-        if adj>0:
-            fail(f"sentences must have no adjacent dups折叠后无半句复读, got {adj}", errors)
+        # #43无半句复读 (#90 修: 真复读与折叠 artifact 不可区分, 1-2 对 WARN 人判, >=3 对 FAIL)
+        dict_sents = [s for s in sentences if isinstance(s, dict)]
+        texts = [s.get("text", "") for s in dict_sents]
+        fail_idx, warn_idx = classify_adjacent_dups(texts)
+        if fail_idx:
+            fail(f"sentences adjacent dups >=3 对 (折叠回归信号): {len(fail_idx)} 对", errors)
+        for i in warn_idx:
+            warns.append(
+                f"WARN: sentences 相邻复读 (作者强调复读可能, reviewer 按 VTT 词级时间戳复核): "
+                f"id={dict_sents[i].get('id')}")
         for s in sentences[:5]:
             if not isinstance(s.get("text"), str) or not s["text"].strip():
                 fail(f"sentence text empty: {s.get('id')}", errors)

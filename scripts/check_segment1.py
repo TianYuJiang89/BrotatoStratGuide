@@ -25,6 +25,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 TS_RE = re.compile(r"^\d{2}:\d{2}:\d{2}[.,]\d{3}$")
 
+# #93: 相邻复读 FAIL 阈值. 真复读实测 1 对 (golem #85) / 3 对 (demon #86),
+# 坏折叠产出几十对 (#90 观察) → 门槛放 10, 1..9 对交人抽.
+DUP_FAIL_MIN = 10
+
 
 def fail(msg: str, errors: list[str]) -> None:
     errors.append(msg)
@@ -32,17 +36,19 @@ def fail(msg: str, errors: list[str]) -> None:
 
 
 def classify_adjacent_dups(texts: list[str]) -> tuple[list[int], list[int]]:
-    """相邻整句重复分类 (#90: 真复读须人判, 机器只分类).
+    """相邻整句重复分类 (#90 真复读须人判, 机器只分类; #93 阈值 3→10).
 
     真复读 (golem/ultimate #85 前例: 相邻两句同文, VTT 词级时间戳
     42.8s vs 43.8s 证明两次独立 utterance 的强调复读) 与滚动折叠
     artifact 在 sentences.json 层面不可区分 (同文、不同 cue 时间戳),
     机器无法自动判定.
-    - >=3 对: FAIL 名单 (折叠回归信号; 历史全绿为 0, 坏折叠产出几十对).
-    - 1-2 对: WARN 名单 (reviewer 按 VTT 词级时间戳复核, 如 golem 102/103).
+    - >=10 对: FAIL 名单 (折叠回归信号; 坏折叠产出几十对, #90 观察).
+    - 1-9 对: WARN 名单 (reviewer 按 VTT 词级时间戳复核, 如 golem 102/103 一对,
+      demon/ultimate #86 三对 `Roll again.` — 作者连刷商店三次, 非叠字).
+    阈值依据 (#93): 真复读实测 1/3 对, 坏折叠「几十对」, 差一个数量级.
     返回 (fail 下标, warn 下标), 下标指向每对的后一句 (texts 内下标)."""
     pairs = [i for i in range(1, len(texts)) if texts[i] == texts[i - 1]]
-    if len(pairs) >= 3:
+    if len(pairs) >= DUP_FAIL_MIN:
         return (pairs, [])
     return ([], pairs)
 
@@ -155,12 +161,13 @@ def main(argv: list[str] | None = None) -> int:
         from sentence_band import band_errors_for_workdir
         for _band_err in band_errors_for_workdir(work, len(sentences)):
             fail(_band_err, errors)
-        # #43无半句复读 (#90 修: 真复读与折叠 artifact 不可区分, 1-2 对 WARN 人判, >=3 对 FAIL)
+        # #43无半句复读 (#90 修: 真复读与折叠 artifact 不可区分, 1-2 对 WARN 人判;
+        # #93: FAIL 阈值 3→10, 1-9 对 WARN 人判)
         dict_sents = [s for s in sentences if isinstance(s, dict)]
         texts = [s.get("text", "") for s in dict_sents]
         fail_idx, warn_idx = classify_adjacent_dups(texts)
         if fail_idx:
-            fail(f"sentences adjacent dups >=3 对 (折叠回归信号): {len(fail_idx)} 对", errors)
+            fail(f"sentences adjacent dups >={DUP_FAIL_MIN} 对 (折叠回归信号): {len(fail_idx)} 对", errors)
         for i in warn_idx:
             warns.append(
                 f"WARN: sentences 相邻复读 (作者强调复读可能, reviewer 按 VTT 词级时间戳复核): "

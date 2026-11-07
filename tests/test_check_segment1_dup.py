@@ -1,9 +1,10 @@
-"""#90 check_segment1 相邻复读口径: 真复读 WARN, 折叠回归 FAIL.
+"""#90/#93 check_segment1 相邻复读口径: 真复读 WARN, 折叠回归 FAIL.
 
 真复读 (golem/ultimate #85 前例: id 102/103 同文 `Clear these enemies.`,
-VTT 词级时间戳 42.8s vs 43.8s 证明两次独立 utterance) 与折叠 artifact
-在 sentences.json 层面不可区分, 须人判. 机器只对 >=3 对 FAIL,
-1-2 对 WARN 交 reviewer 按词级时间戳复核.
+VTT 词级时间戳 42.8s vs 43.8s 证明两次独立 utterance; demon/ultimate #86:
+句 660/661/662 三句 `Roll again.` = 作者连刷商店三次) 与折叠 artifact
+在 sentences.json 层面不可区分, 须人判. 机器只对 >=10 对 FAIL (#93 从 3 上调,
+因为坏折叠产出几十对, 而真复读实测 1-3 对), 1-9 对 WARN 交 reviewer 按词级时间戳复核.
 """
 from __future__ import annotations
 
@@ -48,16 +49,36 @@ def test_golem_style_single_pair_warns_not_fails() -> None:
 
 def test_two_pairs_warn() -> None:
     m = _load("check_segment1", "scripts/check_segment1.py")
-    fail_idx, warn_idx = m.classify_adjacent_dups(_texts(10, 2))
+    fail_idx, warn_idx = m.classify_adjacent_dups(_texts(30, 2))
     assert fail_idx == []
     assert warn_idx == [1, 3]
 
 
-def test_three_pairs_fail_as_fold_regression_signal() -> None:
+def test_demon_style_three_pairs_warns_not_fails() -> None:
+    """#86 前例: 作者连刷商店说三遍 `Roll again.` → 3 对仍是 WARN, 不挡门."""
     m = _load("check_segment1", "scripts/check_segment1.py")
-    fail_idx, warn_idx = m.classify_adjacent_dups(_texts(10, 3))
+    fail_idx, warn_idx = m.classify_adjacent_dups(_texts(30, 3))
+    assert fail_idx == [], "3 对须不 FAIL (demon/ultimate #86 真复读前例)"
+    assert warn_idx == [1, 3, 5]
+
+
+def test_nine_pairs_still_warn() -> None:
+    m = _load("check_segment1", "scripts/check_segment1.py")
+    fail_idx, warn_idx = m.classify_adjacent_dups(_texts(40, 9))
+    assert fail_idx == []
+    assert warn_idx == [1, 3, 5, 7, 9, 11, 13, 15, 17]
+
+
+def test_ten_pairs_fail_as_fold_regression_signal() -> None:
+    m = _load("check_segment1", "scripts/check_segment1.py")
+    fail_idx, warn_idx = m.classify_adjacent_dups(_texts(40, 10))
     assert warn_idx == []
-    assert fail_idx == [1, 3, 5], ">=3 对须 FAIL (折叠回归信号)"
+    assert fail_idx == [1, 3, 5, 7, 9, 11, 13, 15, 17, 19], ">=10 对须 FAIL (折叠回归信号)"
+
+
+def test_dup_fail_min_is_ten() -> None:
+    m = _load("check_segment1", "scripts/check_segment1.py")
+    assert m.DUP_FAIL_MIN == 10
 
 
 def test_check_wires_warn_not_fail_for_few_dups() -> None:

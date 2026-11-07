@@ -468,7 +468,7 @@ def run_01_05(workdir: Path, force: set[str]) -> tuple[list[dict], list[dict], l
         sentences = step01(workdir)
         print(f"[chain] 01-sentences DONE: {len(sentences)} 句 -> steps/01-sentences/sentences.json")
     assert isinstance(sentences, list) and sentences
-    # #92: 绝对带 300-600 退役 (拿 31-38 分钟片校准, 片长一长必红); 换密度带 + 折叠有效比.
+    # #92: 句数闸口径见 scripts/sentence_band.py (绝对带 300-600 已退役).
     band_errors = band_errors_for_workdir(workdir, len(sentences))
     if band_errors:
         raise SystemExit("FAIL: 01-sentences 句数闸红灯 (#92 句密度/折叠有效比; 永不直接重试, 须重修): "

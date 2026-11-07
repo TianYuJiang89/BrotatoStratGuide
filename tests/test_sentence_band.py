@@ -73,41 +73,39 @@ def test_count_raw_cues_ignores_timestamp_only_blocks() -> None:
 
 def test_band_green_for_historical_runs_and_demon() -> None:
     # 历史 12 例区间 395-555 句 / 31-38 分钟 / 折比 0.233-0.330 + demon 726 句 / 47:33 / 0.330
-    cases = [
-        (n, dur, raw)
-        for n, dur, raw in (
-            (395, "35:04", 1592), (442, "31:30", 1428), (411, "33:23", 1450),
-            (501, "35:16", 1618), (443, "35:10", 1570), (412, "34:54", 1744),
-            (555, "37:27", 1780), (441, "38:03", 1892), (415, "33:26", 1504),
-            (415, "35:55", 1702), (451, "35:06", 1516),
-            (726, "47:33", 2198),  # demon/ultimate #86
-        )
-    ]
+    cases = (
+        (395, "35:04", 1592), (442, "31:30", 1428), (411, "33:23", 1450),
+        (501, "35:16", 1618), (443, "35:10", 1570), (412, "34:54", 1744),
+        (555, "37:27", 1780), (441, "38:03", 1892), (415, "33:26", 1504),
+        (415, "35:55", 1702), (451, "35:06", 1516),
+        (726, "47:33", 2198),  # demon/ultimate #86
+    )
     for n, dur, raw in cases:
         assert sentence_band_errors(n, dur, "auto", raw) == [], f"{n}/{dur}/{raw} should be green"
 
 
 def test_band_fails_too_sparse() -> None:
-    # 200 句 / 47:33 = 4.2 句每分 → 过度折叠/断句崩
-    errs = sentence_band_errors(200, "47:33", "auto", 2198)
+    # #92 指定样例: 5 句每分 → 过于稀疏
+    errs = sentence_band_errors(200, "40:00", "auto", 1000)
     assert errs and any("密度" in e for e in errs), errs
 
 
 def test_band_fails_too_dense() -> None:
-    # 1200 句 / 35:00 = 34.3 句每分 → 折叠没生效
-    errs = sentence_band_errors(1200, "35:00", "auto", 2400)
+    # #92 指定样例: 30 句每分 → 折叠没生效
+    errs = sentence_band_errors(1050, "35:00", "auto", 2400)
     assert errs and any("密度" in e for e in errs), errs
 
 
 def test_band_fails_fold_ratio_low() -> None:
-    # 726/20000 = 0.036 → 折叠几乎没合并
-    errs = sentence_band_errors(726, "47:33", "auto", 20000)
+    # #92 指定样例: 折比 0.05 → 折叠几乎没合并 (密度 11.4 句/分 合法, 隔离折比一条)
+    errs = sentence_band_errors(400, "35:00", "auto", 8000)
     assert errs and any("折叠" in e for e in errs), errs
+    assert not any("密度" in e for e in errs), errs
 
 
 def test_band_fails_fold_ratio_high() -> None:
-    # 726/1300 = 0.558 → 折叠过度 (把多句合并了)
-    errs = sentence_band_errors(726, "47:33", "auto", 1300)
+    # #92 指定样例: 折比 0.80 → 折叠过度
+    errs = sentence_band_errors(400, "35:00", "auto", 500)
     assert errs and any("折叠" in e for e in errs), errs
 
 
@@ -167,6 +165,7 @@ def test_band_errors_for_workdir_requires_inputs(tmp_path: Path) -> None:
 def test_band_errors_for_workdir_green_on_demon_run() -> None:
     """真件回归: demon/ultimate 726 句 / 47:33 / auto, 旧绝对带误杀的那一例."""
     workdir = Path("G:/brotato-work/demon/ultimate")
-    if not (workdir / "inputs" / "source.vtt").exists():
-        pytest.skip("demon/ultimate inputs 不在本机 (G work 未落地)")
+    src = workdir / "inputs" / "source.vtt"
+    if not src.exists():
+        raise AssertionError("G work demon/ultimate inputs missing (先取证后跑前置, 缺件即 fail)")
     assert band_errors_for_workdir(workdir, 726) == []

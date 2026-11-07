@@ -140,4 +140,7 @@ def test_chain_deterministic_idempotent(tmp_path: Path) -> None:
     s2 = m1.step01(workdir)
     b2 = (workdir / "steps" / "01-sentences" / "sentences.json").read_bytes()
     assert b1 == b2, "deterministic step01 must be byte-identical (幂等)"
-    assert 300 <= len(s1) <= 600, f"sentences must be 300-600 (折叠后), got {len(s1)}"
+    # #92: 绝对带 300-600 退役 → 与片长无关的密度带 + 折叠有效比
+    from sentence_band import band_errors_for_workdir
+    assert band_errors_for_workdir(workdir, len(s1)) == [], \
+        f"sentences must pass density/fold-ratio band (#92), got {len(s1)}"

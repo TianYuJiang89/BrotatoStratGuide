@@ -21,7 +21,7 @@ _Avoid_: 重跑
 _Avoid_: 重跑，重试
 - **复用**: 已绿步骤跳过不跑（存在 + schema 绿即 SKIP）；`--force-step` 才覆盖。
 _Avoid_: 跳过，缓存
-- **幂等**: 同输入同代码必出同文件；确定性代码步覆盖须逐字节一致，否则 fail；sentences 1496/折叠后 411 为不变式，偏差即 fail。
+- **幂等**: 同输入同代码必出同文件；确定性代码步覆盖须逐字节一致，否则 fail；01-sentences 折叠后句数闸走与片长无关的两条 (#92)：句密度 `句/分 ∈ [8,22]` + 折叠有效比 `折叠后/原始cue ∈ [0.15,0.50]` (仅 `subs_source=auto`)，绝对带 300-600 退役（按 31-38 分钟片校准，片长一长必红）。
 - **过程审计视图**: `templates/audit.html` 常设资产，每步 check 与审计节一一对应；测试读 G 盘，正式随产物发布，不由 agent 生成。
 _Avoid_: 测试报告
 - **outputs/**: per-variant final product under `G:/brotato-work/<slug>/<variant>/outputs/`. Pilot: `groups.json`; B-段1加 `ratings.json` + `weapons.json` (与 steps/04-*/05-* 一致, sha 对上). B-段2加 `phases.json` + `priorities.json` + `pitfalls.json` + `guide.json` (与 steps/06-*/07-*/08-*/09-* 一致, guide.sha 对上 manifest).

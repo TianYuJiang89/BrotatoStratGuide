@@ -458,6 +458,7 @@ def spawn_step_agent(workdir: Path, prompt_rel: str, output_rel: str,
 def run_01_05(workdir: Path, force: set[str]) -> tuple[list[dict], list[dict], list[dict], dict]:
     """01/03/04/05 确定性 (复用已绿 SKIP, 否则跑代码; 幂等: 同输入同代码必同文件; #66 02 已退役)."""
     from run_segment1 import step01, step03, step04, step05
+    from sentence_band import band_errors_for_workdir
     # 01-sentences
     s_path = workdir / "steps" / "01-sentences" / "sentences.json"
     if not should_force("01", force) and _reuse_ok_sentences(s_path):
@@ -467,8 +468,11 @@ def run_01_05(workdir: Path, force: set[str]) -> tuple[list[dict], list[dict], l
         sentences = step01(workdir)
         print(f"[chain] 01-sentences DONE: {len(sentences)} 句 -> steps/01-sentences/sentences.json")
     assert isinstance(sentences, list) and sentences
-    if not (300 <= len(sentences) <= 600):
-        raise SystemExit(f"FAIL: sentences count {len(sentences)} 越界 300-600 (折叠后; 偏差即 fail)")
+    # #92: 绝对带 300-600 退役 (拿 31-38 分钟片校准, 片长一长必红); 换密度带 + 折叠有效比.
+    band_errors = band_errors_for_workdir(workdir, len(sentences))
+    if band_errors:
+        raise SystemExit("FAIL: 01-sentences 句数闸红灯 (#92 句密度/折叠有效比; 永不直接重试, 须重修): "
+                         + "; ".join(band_errors))
     # #66 02-verbs 已退役: 01 直达 03/04/05, 不经 02, verbs.json 停产.
     # 03-grouping
     g_path = workdir / "steps" / "03-grouping" / "grouping.json"

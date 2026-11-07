@@ -55,13 +55,15 @@ def _fmt_ts(h: str, m: str, s: str, ms: str) -> str:
     return f"{h}:{m}:{s}.{ms}"
 
 
-def parse_vtt_timed(text: str) -> list[dict]:
+def parse_vtt_timed(text: str, fold: bool = True) -> list[dict]:
     """Timed VTT 解析: 与 parse_vtt 同文本口径 + start/end.
 
     - 按空行分块 (同 build_mentions.parse_vtt 正则), 复读原样保留.
     - 时间戳与文本分块时 (滚动字幕), 用 pending 关联到下一文本句.
     - 文本清洗与旧口径完全一致 (去头/去时间戳行/去序号/去 HTML tag/join/cap 500).
     - 返回 [{text, start, end, start_s, end_s}] (无时间戳则 None, 如首句 header).
+    - fold=False 只跳过 #43 滚动折叠 (返回折叠前原始 cue), 断句清洗口径不变
+      (供 scripts/sentence_band.py 数原始 cue, 避免规则两处漂移).
     """
     blocks = re.split(r"\r?\n\s*\r?\n", text)
     cues: list[dict] = []
@@ -118,6 +120,8 @@ def parse_vtt_timed(text: str) -> list[dict]:
             # 若连续两文本块无时间戳间隔 (不应发生), 第二句将无时间戳, 诚实置空.
             pending = None
     # #43 滚动折叠: 与 build_mentions 同口径, auto 折叠为整句, manual 自动 no-op.
+    if not fold:
+        return cues
     try:
         from build_mentions import fold_timed_cues as _fold_timed
     except Exception:

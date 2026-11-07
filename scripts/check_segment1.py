@@ -150,9 +150,11 @@ def main(argv: list[str] | None = None) -> int:
         ids = [s.get("id") for s in sentences]
         if ids != list(range(1, len(sentences) + 1)):
             fail(f"sentences id must be 1..N continuous, got head {ids[:5]}", errors)
-        # #43滚动折叠后: 411±100 (ultimate 411/danger-5 459/nightmare 442, 1496旧数作废)
-        if not (300 <= len(sentences) <= 600):
-            fail(f"sentences count must be 411±150折叠后 (300-600), got {len(sentences)}", errors)
+        # #92: 绝对带 300-600 退役 (拿 31-38 分钟片校准, 片长一长必红);
+        # 换密度带 (句/分) + 折叠有效比 (折叠后/原始 cue, 仅 auto).
+        from sentence_band import band_errors_for_workdir
+        for _band_err in band_errors_for_workdir(work, len(sentences)):
+            fail(_band_err, errors)
         # #43无半句复读 (#90 修: 真复读与折叠 artifact 不可区分, 1-2 对 WARN 人判, >=3 对 FAIL)
         dict_sents = [s for s in sentences if isinstance(s, dict)]
         texts = [s.get("text", "") for s in dict_sents]

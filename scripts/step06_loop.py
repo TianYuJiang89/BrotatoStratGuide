@@ -563,6 +563,31 @@ def run_step06_loop(workdir, sentences, agent_fn=None, timeout: float = 1800.0,
     (outdir / "buckets.json").write_text(
         json.dumps(buckets, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
+    # 陈坑清扫 (#97): N 变小后超编 per_phase/agent-wording 残留即 check fail 源 (log 数须==N), 直接清掉.
+    _keep = len(buckets)
+    for _stale in sorted(per_dir.glob("*.json")):
+        try:
+            _idx = int(_stale.stem)
+        except ValueError:
+            # Safe 名旧残留 (上一代命名): N 变后无法对齐, 直接清掉重跑
+            try:
+                _stale.unlink()
+            except Exception:
+                pass
+            continue
+        if _idx >= _keep:
+            try:
+                _stale.unlink()
+            except Exception:
+                pass
+    for _stale in sorted(outdir.glob("agent-wording-*.log*")):
+        _m = re.search(r"agent-wording-(\d+)\.log", _stale.name)
+        if _m and int(_m.group(1)) >= _keep:
+            try:
+                _stale.unlink()
+            except Exception:
+                pass
+
     # ---- wording×N (并行, 每桶独立单 agent) ----
     # per_phase/log 按桶序号命名 (00.json/01.json, agent-wording-00.log), 不按 phase 名 (运营语言多为中文, safe 会碰撞)
     def _do_one(bucket: dict, idx: int):

@@ -317,3 +317,55 @@ def test_audit_06_shows_nodes_not_chapters():
     seg06 = m.group(0) if m else ""
     assert "chapter" not in seg06.lower(), "audit 06节须清掉 chapter 字样 (#63)"
     assert "窗" not in seg06, "audit 06节须清掉 窗 字样 (#63)"
+
+
+def test_rerun_with_smaller_n_clears_stale_per_phase_and_logs(tmp_path):
+    """#97 陈坑清扫: N 变小后, 超编 per_phase/<idx>.json 与 agent-wording-<idx>.log* 须清掉.
+
+    check_segment2 要求 「wording log 数 == 桶数」; 06 的 N 不定且不卡, 变小属正常,
+    残留旧索引件即 check fail 源 (fisherman #87: N=10 → N=8, 实得 14 个 log 直接红灯)。
+    """
+    m = _load("step06_loop", "scripts/step06_loop.py")
+    sents = _sentences()
+    work = tmp_path / "fisherman" / "ultimate"
+    outdir = work / "steps" / "06-phases"
+    per_dir = outdir / "per_phase"
+    per_dir.mkdir(parents=True)
+
+    def _mk_buckets(n: int) -> list[dict]:
+        pairs = [
+            ("前期远程攒伤", "", [sents[0]["text"], sents[1]["text"]]),
+            ("horde 波转核弹清场", "horde wave", [sents[2]["text"], sents[3]["text"]]),
+            ("抗线换血", "", [sents[4]["text"]]),
+            ("末段收束", "wave 20", [sents[5]["text"]]),
+        ]
+        return [{"phase": p, "waves": w, "quotes": list(q)} for p, w, q in pairs[:n]]
+
+    calls = {"n": 0}
+
+    def _agent_fn(kind, name, prompt):
+        if kind == "segmentation":
+            return {"buckets": _mk_buckets(calls["n"])}
+        # wording: 用 prompt 里的 TASK_PHASE 找桶回写三问
+        phase = prompt.split("TASK_PHASE: ")[1].split("\n")[0].strip()
+        bucket = [b for b in _mk_buckets(calls["n"]) if b["phase"] == phase][0]
+        short = bucket["quotes"][0].split()[0]
+        return {"phase": phase,
+                "goal": "前期攒伤保 elite 速杀，原话“" + short + "”。",
+                "focus": "补第二把远程保住输出，原话“" + short + "”。",
+                "pivot": "攒伤转清场不断档，原话“" + short + "”。",
+                "extra_quotes": []}
+
+    # 第一次: N=4
+    calls["n"] = 4
+    m.run_step06_loop(work, sents, agent_fn=_agent_fn, force=True)
+    assert len(list(per_dir.glob("*.json"))) == 4
+
+    # 第二次: N=2 (超编 02/03 与对应 log 须被清掉)
+    calls["n"] = 2
+    m.run_step06_loop(work, sents, agent_fn=_agent_fn, force=True)
+    assert sorted(p.name for p in per_dir.glob("*.json")) == ["00.json", "01.json"]
+    logs = sorted(p.name for p in outdir.glob("agent-wording-*.log*"))
+    assert all(("00" in n or "01" in n) for n in logs), f"stale wording logs must go: {logs}"
+    phases = json.loads((outdir / "phases.json").read_text(encoding="utf-8"))
+    assert len(phases) == 2

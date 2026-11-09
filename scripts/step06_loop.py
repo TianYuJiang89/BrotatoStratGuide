@@ -43,7 +43,7 @@ from typing import NoReturn
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # #95 共享 prompt 契约
 REPO = Path(__file__).resolve().parent.parent
 
-from prompt_contract import QUOTE_WHOLE_SENTENCE  # noqa: E402  # #95 整句 quote 消歧
+from prompt_contract import QUOTE_WHOLE_SENTENCE, SHORT_QUOTE_MARKER  # noqa: E402  # #95/#96
 
 FEWSHOT_REL = "prompts/step06-phases-fewshot.md"
 # segmentation 输出退役字段 (只活 phase/waves/quotes; count/details/三问/章题时间窗全退役)
@@ -148,6 +148,7 @@ def build_wording_prompt(bucket: dict, sentences: list[dict], fewshot_text: str)
         + '"extra_quotes": ["逐字，真桶外，无则[]"]}\n\n'
         + "- phase 须与 TASK_PHASE 一字不差；goal/focus/pivot 各 ≥8 字，人话综合多条+短引（短引须出自本桶 quotes 逐字，桶外引须先入 extra 才可引）；整句复制某条 quote 即 fail。\n"
         + "- extra_quotes 须逐字等于全量整句某条 text，去重，且不在本桶 quotes 内（真桶外）；与本桶重复/桶内已收判负；无则 []。编 quote 即 fail。\n"
+        + SHORT_QUOTE_MARKER
         + "- 禁模具话/计数泄漏/编数字（原话数字须逐字，未提空出不脑补）。缺件即 fail，不回落不补空。\n"
     )
     return prompt

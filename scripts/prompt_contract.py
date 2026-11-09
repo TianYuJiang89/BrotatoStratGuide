@@ -12,3 +12,9 @@ QUOTE_WHOLE_SENTENCE = (
     "- quote 须整句逐字：从该条 text 的第一个词抄到句末标点，"
     "开头词（And/So/Now/Yeah 等）与原始大小写一个都不许省；禁截片段、禁改写；截断即 fail。\n"
 )
+
+# 短引标记消歧 (#96 fisherman 06 wording: 写了短引但没带 `原话` 二字 → 机检抓不到判缺件).
+SHORT_QUOTE_MARKER = (
+    "- 短引一律写成 原话“...”：原话 二字 + 引号内逐字（须是某条 quotes 的子串）；"
+    "裸 “...” 无 原话 前缀即缺件 fail。\n"
+)

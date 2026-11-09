@@ -45,7 +45,7 @@ from typing import NoReturn
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # #95 共享 prompt 契约
 REPO = Path(__file__).resolve().parent.parent
 
-from prompt_contract import QUOTE_WHOLE_SENTENCE  # noqa: E402  # #95 整句 quote 消歧
+from prompt_contract import QUOTE_WHOLE_SENTENCE, SHORT_QUOTE_MARKER  # noqa: E402  # #95/#96
 
 FEWSHOT_REL = "prompts/step07-priorities-fewshot.md"
 # selection 只活 name/quotes; 其它全退役 (why/how_to_get 归 wording, count/details 只活代码)
@@ -245,6 +245,7 @@ def build_wording_prompt(item: dict, sentences: list[dict], fewshot_text: str,
         + '{"name": "<与 TASK_ITEM 一字不差>", "why": "≤120字人话+短引", '
         + '"how_to_get": "≤120字人话，原话数字不丢"}\n\n'
         + "- why 人话一句+短引（短引须逐字出自本项 quotes）；how_to_get 人话一句（原话数字不丢，未提空出不脑补）。\n"
+        + SHORT_QUOTE_MARKER
         + "- 数字不丢：why/how_to_get 里每个 ≥2 位数字须逐字出自本项 quotes（编数字即 fail，码验子串；phases/synthesis 数字禁进文案）。\n"
         + "- 整句复制某条 quote 当 why/how_to_get 即 fail（小结须≠原文）。\n"
         + "- B 级例外须在 why 写清为什么例外。how_to_get 必含通道词（升级/商店/捡/锁/roll 其一，缺即 fail；属性项交代升级4选1还是配装带，商店项交代买还是捡）。缺件即 fail，不回落不补空。\n"

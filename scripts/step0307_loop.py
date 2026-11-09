@@ -53,7 +53,7 @@ from typing import NoReturn
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # #95 共享 prompt 契约
 REPO = Path(__file__).resolve().parent.parent
 
-from prompt_contract import QUOTE_WHOLE_SENTENCE  # noqa: E402  # #95 整句 quote 消歧
+from prompt_contract import QUOTE_WHOLE_SENTENCE, SHORT_QUOTE_MARKER  # noqa: E402  # #95/#96
 
 FEWSHOT_03_REL = "prompts/step03-grouping-fewshot.md"
 FEWSHOT_07_REL = "prompts/step07-priorities-fewshot.md"
@@ -305,6 +305,7 @@ def build_priority_ranking_prompt(sentences: list[dict], grouping: list[dict],
         + "- quotes 须逐字等于全量整句某条 text，去重，非空；编 quote 即 fail。\n"
         + QUOTE_WHOLE_SENTENCE
         + "- why 须带短引（须逐字出自本条 quotes）；how_to_get 原话数字不丢，未提空出不脑补。\n"
+        + SHORT_QUOTE_MARKER
         + "- 你不输出 count。缺件即 fail，不回落不补空。\n"
     )
     return prompt

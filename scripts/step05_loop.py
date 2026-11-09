@@ -41,7 +41,7 @@ from typing import NoReturn
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # #95 共享 prompt 契约
 REPO = Path(__file__).resolve().parent.parent
 
-from prompt_contract import QUOTE_WHOLE_SENTENCE  # noqa: E402  # #95 整句 quote 消歧
+from prompt_contract import QUOTE_WHOLE_SENTENCE, SHORT_QUOTE_MARKER  # noqa: E402  # #95/#96
 
 FEWSHOT_DISCOVERY_REL = "prompts/step05-discovery-fewshot.md"
 FEWSHOT_EVIDENCE_REL = "prompts/step05-evidence-fewshot.md"
@@ -293,6 +293,7 @@ def build_evidence_prompt(name_en: str, sentences: list[dict], fewshot_text: str
         + QUOTE_WHOLE_SENTENCE
         + "- analysis 写全过程（来源→机制→分档）。\n"
         + "- note ≤120 字，人话 + 短引（短引须出自本条 quotes 逐字，含把数/波次数字逐字，不编数字）。\n"
+        + SHORT_QUOTE_MARKER
         + "- copies 配比是 judgment 不是数数：≤20字人话（可模糊）；copies_quote 逐字出自本条 quotes；"
         + "没提拿几把写 copies=未提及 + copies_quote 空串；编数字即 fail。\n"
         + "- 你不输出 count。缺件即 fail，不回落不补空。\n"
@@ -340,6 +341,7 @@ def build_ranking_prompt(sentences: list[dict], evidences: list[dict], fewshot_t
         + "- T1≥1（验收线，由你保）；可推翻 evidence tier；切分拿 quote 说话，禁数帽。\n"
         + "- T1+T2 须 == 候选名单（自洽，一把不多一把不少）；幻觉名即 fail。\n"
         + "- note 每条 ≤120 字，人话 + 短引（短引须出自对应 evidence quotes 逐字）。\n"
+        + SHORT_QUOTE_MARKER
         + "- copies 每条终定（可推翻 evidence）：copies_quote 须逐字出自对应 evidence quotes；"
         + "evidence 未提及则只能未提及，copies 没提拿几把写 copies=未提及 + copies_quote 空串（沿 evidence 口径）；编数字即 fail。\n"
         + "- 你不输出 quotes/analysis/count（只定 tier+note+copies）。缺件即 fail。\n"

@@ -118,3 +118,9 @@ def test_clean_cue_text_is_single_source() -> None:
     assert hasattr(BM, "clean_cue_text")
     assert BM.clean_cue_text("&gt;&gt; And yeah.") == "And yeah."
     assert BM.clean_cue_text("take<00:00:01.200><c> the</c> spear") == "take the spear"
+
+
+def test_clean_cue_text_keeps_internal_spacing() -> None:
+    """只剥标记与其后空白, 标记前的句内空白原样留 (逐字口径: 原文双空格不改)。"""
+    assert BM.clean_cue_text("And  then  >> we go.") == "And  then  we go."
+    assert BM.clean_cue_text("And then >> we go.") == "And then we go."

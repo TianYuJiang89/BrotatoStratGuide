@@ -42,9 +42,10 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NoReturn
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))  # #95 共享 prompt 契约
 REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "scripts"))  # #95 共享 prompt 契约 / #97 陈坑清扫
 
+from loop_cleanup import clean_stale_indexed  # noqa: E402
 from prompt_contract import QUOTE_WHOLE_SENTENCE  # noqa: E402  # #95 整句 quote 消歧
 
 FEWSHOT_REL = "prompts/step08-pitfalls-fewshot.md"
@@ -573,25 +574,8 @@ def run_step08_loop(workdir, sentences, grouping=None, agent_fn=None,
     cand_path.write_text(json.dumps(candidates, ensure_ascii=False, indent=2) + "\n",
                          encoding="utf-8")
 
-    # 陈坑清扫：N 变小后超编的 per_pitfall/agent-wording 残留即 check fail 源（log 数须==N），直接清掉
-    _keep = len(pits_raw)
-    for _stale in sorted(per_dir.glob("*.json")):
-        try:
-            _idx = int(_stale.stem)
-        except ValueError:
-            continue
-        if _idx >= _keep:
-            try:
-                _stale.unlink()
-            except Exception:
-                pass
-    for _stale in sorted(outdir.glob("agent-wording-*.log*")):
-        _m = re.search(r"agent-wording-(\d+)\.log", _stale.name)
-        if _m and int(_m.group(1)) >= _keep:
-            try:
-                _stale.unlink()
-            except Exception:
-                pass
+    # 陈坑清扫 (#97): N 变小后超编 per_*/agent-wording 残留即 check fail 源 (log 数须==N).
+    clean_stale_indexed(outdir, per_dir, keep=len(pits_raw), log_prefix='agent-wording')
 
     # ---- wording×N (并行, 每条独立单 agent) ----
     def _do_one(pit: dict, idx: int):

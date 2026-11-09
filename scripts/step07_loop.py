@@ -42,9 +42,10 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NoReturn
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))  # #95 共享 prompt 契约
 REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "scripts"))  # #95 共享 prompt 契约 / #97 陈坑清扫
 
+from loop_cleanup import clean_stale_indexed  # noqa: E402
 from prompt_contract import QUOTE_WHOLE_SENTENCE, SHORT_QUOTE_MARKER  # noqa: E402  # #95/#96
 
 FEWSHOT_REL = "prompts/step07-priorities-fewshot.md"
@@ -670,30 +671,8 @@ def run_step07_loop(workdir, sentences, grouping, ratings, weapons, phases,
             return f"{nm}，{(_rat_map.get(nm) or '?')}级"
         return f"{nm}，{(_grp_map.get(nm) or '?')}组"
 
-    # 陈坑清扫: N 变小后超编 per_item/agent-wording 残留即 check fail 源, 直接清掉
-    _keep = len(ordered)
-    for _stale in sorted(per_dir.glob("*.json")):
-        try:
-            _idx = int(_stale.stem)
-        except ValueError:
-            # Safe 名旧残留 (上一代 Safe 文件): N 变后无法对齐, 直接清掉重跑
-            try:
-                _stale.unlink()
-            except Exception:
-                pass
-            continue
-        if _idx >= _keep:
-            try:
-                _stale.unlink()
-            except Exception:
-                pass
-    for _stale in sorted(outdir.glob("agent-wording-*.log*")):
-        _m = re.search(r"agent-wording-(\d+)\.log", _stale.name)
-        if _m and int(_m.group(1)) >= _keep:
-            try:
-                _stale.unlink()
-            except Exception:
-                pass
+    # 陈坑清扫 (#97): N 变小后超编 per_*/agent-wording 残留即 check fail 源 (log 数须==N).
+    clean_stale_indexed(outdir, per_dir, keep=len(ordered), log_prefix='agent-wording')
 
     # ---- wording×N (并行, 每项独立单 agent, 带标签+synthesis+phases) ----
     def _do_one(it: dict, idx: int):

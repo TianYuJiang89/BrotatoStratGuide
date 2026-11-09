@@ -176,7 +176,6 @@ def build_pattern_map(
 
 # #94: 自动字幕的讲话人切换标记 (`&gt;&gt;` / `>>`) 及其后空白; `&gt;&gt; And` → `And`.
 SPEAKER_MARK_RE = re.compile(r"(?:^|\s)>{2,}\s*")
-SPACE_RE = re.compile(r"\s+")
 
 
 def clean_cue_text(line: str) -> str:
@@ -184,13 +183,14 @@ def clean_cue_text(line: str) -> str:
 
     - 去 HTML 标签 (`<c>` / `<00:xx>` 词级时间戳, yt-dlp auto-sub 自带);
     - `html.unescape` 解码实体 (`&amp;` / `&#39;` / `&gt;`; 只解一次, 不二次解);
-    - 剥讲话人切换标记 (`>>` / `&gt;&gt;`, 句首与句内都剥), 连空白收成单空格.
+    - 剥讲话人切换标记 (`>>` / `&gt;&gt;`, 句首与句内都剥), 只剥标记本身和紧贴空白,
+      **不动句内其它空白** (逐字口径: 原文双空格原样留).
     顺序固定: 先去标签再解实体 (先解会把 `&lt;c&gt;` 变成标签误伤原文).
     """
     s = re.sub(r"<[^>]+>", "", line or "")
     s = html.unescape(s)
     s = SPEAKER_MARK_RE.sub(" ", s)
-    return SPACE_RE.sub(" ", s).strip()
+    return s.strip()
 
 
 def detect_subs_source(text: str) -> str:

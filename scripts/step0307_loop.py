@@ -50,9 +50,10 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NoReturn
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))  # #95 共享 prompt 契约
 REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "scripts"))  # #95 共享 prompt 契约 / #97 陈坑清扫
 
+from loop_cleanup import clean_stale_indexed  # noqa: E402
 from prompt_contract import QUOTE_WHOLE_SENTENCE, SHORT_QUOTE_MARKER  # noqa: E402  # #95/#96
 
 FEWSHOT_03_REL = "prompts/step03-grouping-fewshot.md"

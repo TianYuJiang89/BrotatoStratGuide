@@ -35,8 +35,8 @@ from pathlib import Path
 from collections import defaultdict
 from typing import NoReturn
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))  # #95 共享 prompt 契约
 REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "scripts"))  # #95 共享 prompt 契约
 
 from prompt_contract import QUOTE_WHOLE_SENTENCE  # noqa: E402  # #95 整句 quote 消歧
 

@@ -360,12 +360,43 @@ def test_rerun_with_smaller_n_clears_stale_per_phase_and_logs(tmp_path):
     calls["n"] = 4
     m.run_step06_loop(work, sents, agent_fn=_agent_fn, force=True)
     assert len(list(per_dir.glob("*.json"))) == 4
+    # 模拟真跑留下的 agent log (agent_fn 注入路径不 spawn, 手造占位件)
+    for _tag in ("00", "01", "02", "03"):
+        (outdir / f"agent-wording-{_tag}.log").write_text("x", encoding="utf-8")
+        (outdir / f"agent-wording-{_tag}.log.jsonl").write_text("x", encoding="utf-8")
 
     # 第二次: N=2 (超编 02/03 与对应 log 须被清掉)
     calls["n"] = 2
     m.run_step06_loop(work, sents, agent_fn=_agent_fn, force=True)
     assert sorted(p.name for p in per_dir.glob("*.json")) == ["00.json", "01.json"]
     logs = sorted(p.name for p in outdir.glob("agent-wording-*.log*"))
-    assert all(("00" in n or "01" in n) for n in logs), f"stale wording logs must go: {logs}"
+    assert logs == ["agent-wording-00.log", "agent-wording-00.log.jsonl",
+                    "agent-wording-01.log", "agent-wording-01.log.jsonl"]
     phases = json.loads((outdir / "phases.json").read_text(encoding="utf-8"))
     assert len(phases) == 2
+
+
+def test_loop_cleanup_prunes_non_numeric_and_keep_zero(tmp_path):
+    """#97 共用清扫: 旧代 Safe 名残留与 keep=0 全清。"""
+    import importlib.util as _ilu
+
+    spec = _ilu.spec_from_file_location("loop_cleanup_t", str(REPO / "scripts" / "loop_cleanup.py"))
+    assert spec is not None and spec.loader is not None
+    mod = _ilu.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    step = tmp_path / "steps" / "06-phases"
+    per = step / "per_phase"
+    per.mkdir(parents=True)
+    (per / "00.json").write_text("{}", encoding="utf-8")
+    (per / "之前-Safe名.json").write_text("{}", encoding="utf-8")
+    (step / "agent-wording-00.log").write_text("x", encoding="utf-8")
+    (step / "agent-wording-00.log.jsonl").write_text("x", encoding="utf-8")
+
+    removed = mod.clean_stale_indexed(step, per, keep=2, log_prefix="agent-wording")
+    assert sorted(removed) == ["per_phase/之前-Safe名.json"]
+    assert (per / "00.json").exists() and (step / "agent-wording-00.log").exists()
+
+    mod.clean_stale_indexed(step, per, keep=0, log_prefix="agent-wording")
+    assert list(per.glob("*.json")) == []
+    assert list(step.glob("agent-wording-*.log*")) == []

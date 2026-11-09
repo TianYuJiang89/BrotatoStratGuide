@@ -1,7 +1,11 @@
-"""#95 共享 prompt 契约句（代码侧 TASK 后缀，frozen fewshot 不动）。
+"""#95/#96 共享 prompt 契约句（代码侧 TASK 后缀，frozen fewshot 不动）。
 
 一调用一 builder，一条契约只写这里一份，禁各 loop 各抄一遍（防口径漂移）。
 本模块只放**已被 validator 强制**的契约句，不新立判法、不放宽校验。
+
+已知例外（**有意为之，不是漏抄**）：`step0307_loop.build_evidence_prompt` /
+`build_grouping_ranking_prompt` 保留 #82/#83 立的专用句（“note 必须含 原话“...” 标记…”），
+因那两句还带了 03 特有的“非二选一”判法；本模块的通用句不叠加进那两处，避免同一条说两次。
 """
 
 from __future__ import annotations

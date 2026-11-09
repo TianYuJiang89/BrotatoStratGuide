@@ -12,11 +12,9 @@ from pathlib import Path
 
 import pytest
 
-REPO = Path(__file__).resolve().parent.parent
-sys_path_note = REPO / "scripts"
-import sys as _sys
+from prompt_fixtures import FEWSHOT, GROUPING, PHASES, RATINGS, SENTENCES, SYNTHESIS, WEAPONS
 
-_sys.path.insert(0, str(sys_path_note))
+REPO = Path(__file__).resolve().parent.parent
 
 
 def _load(name: str, rel: str):
@@ -33,27 +31,6 @@ S05 = _load("s05d", "scripts/step05_loop.py")
 S06 = _load("s06d", "scripts/step06_loop.py")
 S07 = _load("s07d", "scripts/step07_loop.py")
 S08 = _load("s08d", "scripts/step08_loop.py")
-
-FEWSHOT = "# TASK\nFROZEN 测试用 fewshot 占位。\n"
-SENTENCES = [
-    {"id": 1, "text": "And I'm going to lock the small magazine.", "start": "00:00:01.000",
-     "end": "00:00:02.000", "start_s": 1.0, "end_s": 2.0, "t": 1},
-    {"id": 2, "text": "Small magazine is is very good.", "start": "00:00:03.000",
-     "end": "00:00:04.000", "start_s": 3.0, "end_s": 4.0, "t": 3},
-]
-GROUPING = [{"name_en": "Small Magazine", "count": 1, "group": "must_take",
-             "quotes": [SENTENCES[1]["text"]], "analysis": "a", "note": "n",
-             "quote_details": []}]
-RATINGS = [{"term_en": "Max HP", "term_zh": "最大生命", "type": "primary", "count": 1,
-            "rating": "B", "quotes": [SENTENCES[1]["text"]], "analysis": "a",
-            "summary": "s", "quote_details": []}]
-WEAPONS = {"t1": [{"name_en": "Spear", "count": 1, "tier": "t1", "quotes": [SENTENCES[1]["text"]],
-                   "analysis": "a", "note": "n", "copies": "未提及", "copies_quote": "",
-                   "quote_details": []}], "t2": []}
-PHASES = [{"phase": "p", "waves": "", "goal": "g", "focus": "f", "pivot": "v",
-           "quotes": [SENTENCES[1]["text"]], "quote_details": []}]
-SYNTHESIS = {"upgrade_view": "u", "shop_view": "s", "channel_rule": "c",
-             "rhythm": "r", "exceptions": "e"}
 
 
 def _count(prompt: str) -> int:
@@ -72,11 +49,7 @@ def test_contract_constant_is_single_source() -> None:
         pytest.param(lambda: S0307.build_priority_ranking_prompt(
             SENTENCES, GROUPING, RATINGS, WEAPONS, PHASES, FEWSHOT), id="0307-priority-ranking"),
         pytest.param(lambda: S05.build_evidence_prompt("Spear", SENTENCES, FEWSHOT), id="05-evidence"),
-        pytest.param(lambda: S05.build_ranking_prompt(
-            SENTENCES,
-            [{"name_en": "Spear", "count": 1, "tier": "t1", "quotes": [SENTENCES[1]["text"]],
-              "analysis": "a", "note": "n", "copies": "未提及", "copies_quote": "",
-              "quote_details": []}], FEWSHOT), id="05-ranking"),
+        pytest.param(lambda: S05.build_ranking_prompt(SENTENCES, WEAPONS["t1"], FEWSHOT), id="05-ranking"),
         pytest.param(lambda: S06.build_wording_prompt(
             {"phase": "p", "waves": "", "quotes": [SENTENCES[1]["text"]]}, SENTENCES, FEWSHOT),
             id="06-wording"),

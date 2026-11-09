@@ -2,8 +2,8 @@
 
 Seams (deterministic, no LLM, no network):
 - `scripts/prompt_contract.QUOTE_WHOLE_SENTENCE` 单一来源（禁各 loop 各写一份）
-- 8 个输出整句 quotes 的 builder 必含该句**恰好一次**
-- 短引类 builder（wording/per_item/pitfalls-wording/grouping-ranking）不挂（不回归）
+- 9 个输出整句 quotes 的 builder 必含该句**恰好一次**
+- 短引类 builder（06/08 wording）不挂（不回归）
 
 红灯来源 (#87 fisherman): discovery agent 把 `And ` 省掉、其余逐字 → 「编 quote」闸。
 """
@@ -13,6 +13,8 @@ import importlib.util
 from pathlib import Path
 
 import pytest
+
+from prompt_fixtures import FEWSHOT, GROUPING, PHASES, RATINGS, SENTENCES, WEAPONS
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -32,25 +34,6 @@ S05 = _load("s05c", "scripts/step05_loop.py")
 S06 = _load("s06c", "scripts/step06_loop.py")
 S07 = _load("s07c", "scripts/step07_loop.py")
 S08 = _load("s08c", "scripts/step08_loop.py")
-
-FEWSHOT = "# TASK\nFROZEN 测试用 fewshot 占位。\n"
-SENTENCES = [
-    {"id": 1, "text": "And I'm going to lock the small magazine.", "start": "00:00:01.000",
-     "end": "00:00:02.000", "start_s": 1.0, "end_s": 2.0, "t": 1},
-    {"id": 2, "text": "Small magazine is is very good.", "start": "00:00:03.000",
-     "end": "00:00:04.000", "start_s": 3.0, "end_s": 4.0, "t": 3},
-]
-GROUPING = [{"name_en": "Small Magazine", "count": 1, "group": "must_take",
-             "quotes": [SENTENCES[1]["text"]], "analysis": "a", "note": "n",
-             "quote_details": []}]
-RATINGS = [{"term_en": "Max HP", "term_zh": "最大生命", "type": "primary", "count": 1,
-            "rating": "B", "quotes": [SENTENCES[1]["text"]], "analysis": "a",
-            "summary": "s", "quote_details": []}]
-WEAPONS = {"t1": [{"name_en": "Spear", "count": 1, "tier": "t1", "quotes": [SENTENCES[1]["text"]],
-                   "analysis": "a", "note": "n", "copies": "未提及", "copies_quote": "",
-                   "quote_details": []}], "t2": []}
-PHASES = [{"phase": "p", "waves": "", "goal": "g", "focus": "f", "pivot": "v",
-           "quotes": [SENTENCES[1]["text"]], "quote_details": []}]
 
 
 def _count(prompt: str) -> int:

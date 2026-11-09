@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import html
 import json
 import re
 import sys
@@ -171,6 +172,25 @@ def build_pattern_map(
         pats = ITEM_PATTERNS.get(en, [_wordnames_to_pattern(en)])
         out[f"item:{en}"] = _compile(pats)
     return out
+
+
+# #94: 自动字幕的讲话人切换标记 (`&gt;&gt;` / `>>`) 及其后空白; `&gt;&gt; And` → `And`.
+SPEAKER_MARK_RE = re.compile(r"(?:^|\s)>{2,}\s*")
+SPACE_RE = re.compile(r"\s+")
+
+
+def clean_cue_text(line: str) -> str:
+    """单行字幕清洗 (#43 去标签 + #94 实体解码/标记剥离), 两处 parser 共用.
+
+    - 去 HTML 标签 (`<c>` / `<00:xx>` 词级时间戳, yt-dlp auto-sub 自带);
+    - `html.unescape` 解码实体 (`&amp;` / `&#39;` / `&gt;`; 只解一次, 不二次解);
+    - 剥讲话人切换标记 (`>>` / `&gt;&gt;`, 句首与句内都剥), 连空白收成单空格.
+    顺序固定: 先去标签再解实体 (先解会把 `&lt;c&gt;` 变成标签误伤原文).
+    """
+    s = re.sub(r"<[^>]+>", "", line or "")
+    s = html.unescape(s)
+    s = SPEAKER_MARK_RE.sub(" ", s)
+    return SPACE_RE.sub(" ", s).strip()
 
 
 def detect_subs_source(text: str) -> str:
@@ -321,10 +341,10 @@ def parse_vtt(text: str) -> list[str]:
                 continue
             if ln.strip().lower().startswith(("kind:", "language:")):
                 continue
-            # 去 HTML 标签.
-            no_tag = re.sub(r"<[^>]+>", "", ln).strip()
-            if no_tag:
-                content.append(no_tag)
+            # 去 HTML 标签 + 解实体 + 剥讲话人标记 (#43/#94, 口径见 clean_cue_text).
+            clean = clean_cue_text(ln)
+            if clean:
+                content.append(clean)
         if content:
             cue = " ".join(content).strip()
             # 长度截断防膨胀, 保留原句可审.

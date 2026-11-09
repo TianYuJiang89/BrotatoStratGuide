@@ -60,12 +60,14 @@ def parse_vtt_timed(text: str, fold: bool = True) -> list[dict]:
 
     - 按空行分块 (同 build_mentions.parse_vtt 正则), 复读原样保留.
     - 时间戳与文本分块时 (滚动字幕), 用 pending 关联到下一文本句.
-    - 文本清洗与旧口径完全一致 (去头/去时间戳行/去序号/去 HTML tag/join/cap 500).
+    - 文本清洗与旧口径完全一致 (去头/去时间戳行/去序号/去 HTML tag/解实体/剥讲话人标记/join/cap 500).
     - 返回 [{text, start, end, start_s, end_s}] (无时间戳则 None, 如首句 header).
     - fold=False 只跳过 #43 滚动折叠 (返回折叠前原始 cue), 断句清洗口径不变
       (供 scripts/sentence_band.py 数原始 cue, 避免规则两处漂移).
     """
     blocks = re.split(r"\r?\n\s*\r?\n", text)
+    # #94: 清洗单一来源 (build_mentions.clean_cue_text), 禁两处 parser 口径漂移.
+    from build_mentions import clean_cue_text
     cues: list[dict] = []
     pending: dict | None = None
     for block in blocks:
@@ -105,9 +107,9 @@ def parse_vtt_timed(text: str, fold: bool = True) -> list[dict]:
                 continue
             if ln.strip().lower().startswith(("kind:", "language:")):
                 continue
-            no_tag = re.sub(r"<[^>]+>", "", ln).strip()
-            if no_tag:
-                content.append(no_tag)
+            clean = clean_cue_text(ln)
+            if clean:
+                content.append(clean)
         if content:
             cue = " ".join(content).strip()
             if len(cue) > 500:

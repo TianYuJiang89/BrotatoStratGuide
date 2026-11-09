@@ -42,7 +42,10 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NoReturn
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # #95 共享 prompt 契约
 REPO = Path(__file__).resolve().parent.parent
+
+from prompt_contract import QUOTE_WHOLE_SENTENCE  # noqa: E402  # #95 整句 quote 消歧
 
 FEWSHOT_REL = "prompts/step07-priorities-fewshot.md"
 # selection 只活 name/quotes; 其它全退役 (why/how_to_get 归 wording, count/details 只活代码)
@@ -203,6 +206,7 @@ def build_selection_prompt(sentences: list[dict], grouping: list[dict],
         + "- S/A 优先但 B 级可例外（例外须在文案 why 论证，此处只管给足 quotes 证据）。\n"
         + "- 可推翻 grouping 建议，拿 quote 说话；ban 件/T1 武器名永不进 shop（交集码验；#74 wishlist/taken 可进 shop，由 agent 定，只禁 ban+T1）。\n"
         + "- quotes 须逐字等于全量整句某条 text，去重，每条非空；编 quote / 幻觉名 / 空 TopN 即 fail。\n"
+        + QUOTE_WHOLE_SENTENCE
         + "- synthesis 必写五句非空：upgrade_view（升级4选1按什么顺序拿属性）、shop_view（商店刷出按什么顺序买item）、channel_rule（同属性走哪条通道：Max HP 只走升级/Engineering 靠转/item 买或捡）、rhythm（按 06 排先后）、exceptions（B 进为什么进/must_take-wishlist 丢掉为什么丢，#74），且须点到每个 TopN 名（码验子串，人抽看讲不讲得通）。\n"
         + "- 你不输出 why/how_to_get/count（只定名单+证据+综合论证）。缺件即 fail，不回落不补空。\n"
     )

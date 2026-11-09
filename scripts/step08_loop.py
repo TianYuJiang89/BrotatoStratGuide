@@ -42,7 +42,10 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NoReturn
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # #95 共享 prompt 契约
 REPO = Path(__file__).resolve().parent.parent
+
+from prompt_contract import QUOTE_WHOLE_SENTENCE  # noqa: E402  # #95 整句 quote 消歧
 
 FEWSHOT_REL = "prompts/step08-pitfalls-fewshot.md"
 VALID_SEVERITIES = {"fatal", "risky", "trap"}
@@ -135,6 +138,7 @@ def build_discovery_prompt(sentences: list[dict], fewshot_text: str,
         + '"seeds": ["逐字，去重，≥1"], "extra": ["逐字，去重，可空，真坑外"]}, ...]}\n\n'
         + "- 每坑至少一句 seeds（≥1）；无事件则 `{\"pits\": []}` 诚实交，不硬凑。\n"
         + "- seeds/extra 须逐字等于上表某条 text，去重；extra 与 seeds 不交；跨坑不重叠（一句只进一坑）。编 quote / 空 seeds / 交叠 / 重叠即 fail。\n"
+        + QUOTE_WHOLE_SENTENCE
         + "- 无警告词真坑也收（事件同一性归你判）；利好句/已拿句/泛泛抱怨一律丢。take 系已拿不算坑（拿不是坑）。\n"
         + "- N 不定（码不卡 N，粒度靠人抽）。你不输出 severity/why/how_to_avoid/reason/count。缺件即 fail，不回落不补空。\n"
     )

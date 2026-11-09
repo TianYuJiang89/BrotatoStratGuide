@@ -38,7 +38,10 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NoReturn
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # #95 共享 prompt 契约
 REPO = Path(__file__).resolve().parent.parent
+
+from prompt_contract import QUOTE_WHOLE_SENTENCE  # noqa: E402  # #95 整句 quote 消歧
 
 FEWSHOT_DISCOVERY_REL = "prompts/step05-discovery-fewshot.md"
 FEWSHOT_EVIDENCE_REL = "prompts/step05-evidence-fewshot.md"
@@ -259,6 +262,7 @@ def build_discovery_prompt(sentences: list[dict], chunk: list[str],
         + "- 本批每件必须出现在收或丢中恰好一次；空收可以（如本批全路过），但漏判一件即 fail。\n"
         + "- name_en 须与本批一字不差；陌生名即 fail。\n"
         + "- quotes 须逐字等于上表某条 text，去重，每把 ≥1。编 quote 即 fail。\n"
+        + QUOTE_WHOLE_SENTENCE
         + "- 收空 quotes 即 fail；你不输出 count。\n"
         + "- 缺件/空收+空丢即 fail，不回落不补空。\n"
     )
@@ -286,6 +290,7 @@ def build_evidence_prompt(name_en: str, sentences: list[dict], fewshot_text: str
         + '"copies_quote": "逐字出自本条quotes（未提及则空）"}\n\n'
         + "- name_en 须与 TASK_WEAPON 一字不差；幻觉名即 fail。\n"
         + "- quotes 须逐字等于上表某条 text，去重，非空；空证据即 fail（武器无 `-` 档）。编 quote 即 fail。\n"
+        + QUOTE_WHOLE_SENTENCE
         + "- analysis 写全过程（来源→机制→分档）。\n"
         + "- note ≤120 字，人话 + 短引（短引须出自本条 quotes 逐字，含把数/波次数字逐字，不编数字）。\n"
         + "- copies 配比是 judgment 不是数数：≤20字人话（可模糊）；copies_quote 逐字出自本条 quotes；"

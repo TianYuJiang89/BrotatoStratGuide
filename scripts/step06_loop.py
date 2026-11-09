@@ -40,7 +40,10 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NoReturn
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # #95 共享 prompt 契约
 REPO = Path(__file__).resolve().parent.parent
+
+from prompt_contract import QUOTE_WHOLE_SENTENCE  # noqa: E402  # #95 整句 quote 消歧
 
 FEWSHOT_REL = "prompts/step06-phases-fewshot.md"
 # segmentation 输出退役字段 (只活 phase/waves/quotes; count/details/三问/章题时间窗全退役)
@@ -118,6 +121,7 @@ def build_segmentation_prompt(sentences: list[dict], fewshot_text: str) -> str:
         + '"waves": "<原话作证，无证据空串>", "quotes": ["逐字，去重，≥1"]}]}\n\n'
         + "- phase 运营语言互异，不抄作者章题；waves 原话作证（须为本桶 quotes 子串或波次关键词出自本桶），无证据空串不编，无波次纯配装转折允许空串。\n"
         + "- quotes 须逐字等于上表某条 text，去重，每桶 ≥1；桶间不重叠（一句只进一桶）。编 quote / 空桶 / 重叠即 fail。\n"
+        + QUOTE_WHOLE_SENTENCE
         + "- N 不定（演示 4-8 不进码，码不卡 N，粒度靠人抽）。你不输出 goal/focus/pivot/count。缺件即 fail，不回落不补空。\n"
     )
     return prompt

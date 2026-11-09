@@ -50,7 +50,10 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NoReturn
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # #95 共享 prompt 契约
 REPO = Path(__file__).resolve().parent.parent
+
+from prompt_contract import QUOTE_WHOLE_SENTENCE  # noqa: E402  # #95 整句 quote 消歧
 
 FEWSHOT_03_REL = "prompts/step03-grouping-fewshot.md"
 FEWSHOT_07_REL = "prompts/step07-priorities-fewshot.md"
@@ -195,6 +198,7 @@ def build_discovery_prompt(sentences: list[dict], chunk: list[str],
         + "- 收=真聊道具（买/锁/拿/升/ban/skip 语义皆算真聊，判据见上文发现段例子）；丢=路过名词（类别口头/属性词/地图同名/动词同形）。\n"
         + "- name_en 须与本批一字不差；幻觉名即 fail。\n"
         + "- 收的 quotes 须逐字等于上表某条 text，去重，每件 ≥1。编 quote 即 fail。\n"
+        + QUOTE_WHOLE_SENTENCE
         + "- 只判本批名单，不判其它；你不输出 count。缺件即 fail，不回落不补空。\n"
     )
     return prompt
@@ -219,6 +223,7 @@ def build_evidence_prompt(name_en: str, sentences: list[dict], fewshot_text: str
         + '"note": "≤120字人话+短引（wishlist 须含没拿到/未拿到，taken 须含无下文）"}\n\n'
         + "- name_en 须与 TASK_ITEM 一字不差；幻觉名即 fail。\n"
         + "- quotes 须逐字等于上表某条 text，去重，非空；空证据即 fail（道具无 `-` 档）。编 quote 即 fail。\n"
+        + QUOTE_WHOLE_SENTENCE
         + "- analysis 写全过程（来源→机制→分组；锁/买=拿除非明确不拿 skip/recycle/sell/ban）。\n"
         + "- note ≤120 字，人话 + 短引（短引须出自本条 quotes 逐字；wishlist 须披露没拿到/未拿到，taken 须披露无下文，缺披露即 fail）。\n"
         + "- note 必须含 原话“...” 标记（短引须带 原话 前缀，裸“...”即缺件 fail）；“人话+短引”指必须同时有，非二选一。\n"
@@ -298,6 +303,7 @@ def build_priority_ranking_prompt(sentences: list[dict], grouping: list[dict],
         + "- shop 须出自 grouping candidates 且不在 ban 组；ban 件进 TopN 即 fail。\n"
         + "- upgrades 须出自 ratings term_en；幻觉名即 fail。\n"
         + "- quotes 须逐字等于全量整句某条 text，去重，非空；编 quote 即 fail。\n"
+        + QUOTE_WHOLE_SENTENCE
         + "- why 须带短引（须逐字出自本条 quotes）；how_to_get 原话数字不丢，未提空出不脑补。\n"
         + "- 你不输出 count。缺件即 fail，不回落不补空。\n"
     )

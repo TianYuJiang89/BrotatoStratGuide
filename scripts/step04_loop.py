@@ -35,7 +35,10 @@ from pathlib import Path
 from collections import defaultdict
 from typing import NoReturn
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # #95 共享 prompt 契约
 REPO = Path(__file__).resolve().parent.parent
+
+from prompt_contract import QUOTE_WHOLE_SENTENCE  # noqa: E402  # #95 整句 quote 消歧
 
 FEWSHOT_REL = "prompts/step04-ratings-fewshot.md"
 VALID_RATINGS = {"S", "A", "B", "C", "D", "-"}
@@ -126,6 +129,7 @@ def build_attribute_prompt(term_en: str, sentences: list[dict], fewshot_text: st
         + '"summary": "≤120字中文人话"}\n\n'
         + "- term_en 须与 TASK_ATTR 一字不差；你不输出 count。\n"
         + "- quotes 须逐字等于上表某条 text，去重；编 quote 即 fail。\n"
+        + QUOTE_WHOLE_SENTENCE
         + "- 若你判定作者未提及，rating 必 `-`，quotes 必 []，summary 写作者未提及。\n"
         + "- rating `-` 时 summary 只写作者未提及，不要给属性名加引号；summary 内任何 “...”/\"...\" 均按短引验（须出自 quotes，quotes==[] 时即 fail）。\n"
         + "- analysis 写全过程（来源→机制→评级），犹豫/tradeoff/未知一律写进 analysis。\n"

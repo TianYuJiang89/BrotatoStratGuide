@@ -227,6 +227,43 @@ def render_quote_badge(video_url: str, qd: dict[str, object] | None, fallback_qu
         return f'<div class="quote-line"><span class="quote-text">“{esc(fallback_quote)}”</span></div>'
 
 
+def _jump_url(video_url: str, t: int) -> str:
+    """视频秒级跳转 URL: 已带 query 用 `&t=` 否则 `?t=` (#98, 与审计视图同口径)."""
+    sep = "&" if "?" in video_url else "?"
+    return f"{video_url}{sep}t={t}s"
+
+
+def render_jump_links(video_url: str, qds: object) -> str:
+    """表格行紧凑形: 每句原话一个 `▶mm:ss` 秒级跳链 (悬浮显原话) (#98).
+
+    只接受 guide 里已有 `quote_details` (带 `t`); 无 t 的条目不出链 (不猜秒数).
+    """
+    if not isinstance(qds, list) or not video_url:
+        return ""
+    links: list[str] = []
+    for qd in qds:
+        if not isinstance(qd, dict):
+            continue
+        t = qd.get("t")
+        if not isinstance(t, int):
+            continue
+        label = str(qd.get("start", "")).split(".")[0] or format_seconds(t)
+        links.append(
+            f'<a class="yt-jump" href="{esc(_jump_url(video_url, t))}" target="_blank" '
+            f'rel="noopener" title="{esc(qd.get("quote", ""))}">▶{esc(label)}</a>'
+        )
+    return f'<span class="qlinks">{" ".join(links)}</span>' if links else ""
+
+
+def render_quote_lines(video_url: str, qds: object) -> str:
+    """卡片形: 逐句原话可见 + 同一条 ⏱ 跳链 (#98)."""
+    if not isinstance(qds, list) or not qds:
+        return ""
+    rows = [render_quote_badge(video_url, qd) for qd in qds if isinstance(qd, dict)]
+    rows = [r for r in rows if r]
+    return f'<div class="quote-block">{"".join(rows)}</div>' if rows else ""
+
+
 def render_all(guide_path: Path, wiki_path: Path, terms_path: Path, roster_path: Path, out_path: Path) -> None:
     guide = json.loads(guide_path.read_text(encoding="utf-8"))
     wiki = json.loads(wiki_path.read_text(encoding="utf-8"))
@@ -495,6 +532,12 @@ a:hover {{ text-decoration: underline; }}
   flex-shrink: 0;
 }}
 .yt-jump:hover {{ background: #cc0000; }}
+/* #98 逐句秒级跳链: 表格行紧凑形 / 卡片原话块 */
+.qlinks {{ display: inline-flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }}
+.qlinks .yt-jump {{ font-size: 10px; padding: 0 5px; }}
+.quote-block {{ display: flex; flex-direction: column; gap: 2px; margin-top: 6px;
+  padding-top: 6px; border-top: 1px dashed var(--line); }}
+.quote-block .quote-line {{ margin-top: 2px; font-size: 12px; }}
 .play-icon {{ font-size: 9px; }}
 .quote-text {{
   color: var(--ink-secondary);
@@ -966,6 +1009,7 @@ table.guide-table th {{
               <td style="text-align:center;">{rating_cell}</td>
               <td>
                 <div style="font-size:13px;line-height:1.5;margin-bottom:3px;font-weight:500;">{summary_html}</div>
+                {render_jump_links(video_url, r.get("quote_details") or [])}
               </td>
             </tr>
 """
@@ -1013,7 +1057,7 @@ table.guide-table th {{
         html_out += f"""              <tr>
                 <td>{name_cell}</td>
                 <td style="text-align:center;">{rating_cell}</td>
-                <td><div style="font-size:13px;line-height:1.5;margin-bottom:3px;">{summary_html}</div></td>
+                <td><div style="font-size:13px;line-height:1.5;margin-bottom:3px;">{summary_html}</div>{render_jump_links(video_url, r.get("quote_details") or [])}</td>
               </tr>
 """
 
@@ -1058,6 +1102,7 @@ table.guide-table th {{
             </div>
           </div>
           <div style="font-size:13px;color:var(--ink-secondary);margin-bottom:8px;line-height:1.5;">{esc(note)}</div>
+          {render_jump_links(video_url, w_item.get("quote_details") or [])}
         </div>
 """
 
@@ -1098,7 +1143,7 @@ table.guide-table th {{
         name_cell = f'<span class="has-tip" tabindex="0">{i_icon}{name_display}{wish_badge}{i_tip_elem}</span>' 
         html_out += f"""            <tr>
               <td>{name_cell}</td>
-              <td><div style="font-size:13px;line-height:1.5;">{esc(note)}</div></td>
+              <td><div style="font-size:13px;line-height:1.5;">{esc(note)}</div>{render_jump_links(video_url, g.get("quote_details") or [])}</td>
             </tr>
 """
 
@@ -1129,7 +1174,7 @@ table.guide-table th {{
         name_cell = f'<span class="has-tip" tabindex="0">{i_icon}{name_display}<span class="badge" style="background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe;font-size:11px;margin-left:4px;">无下文</span>{i_tip_elem}</span>'
         html_out += f"""            <tr>
               <td>{name_cell}</td>
-              <td><div style="font-size:13px;line-height:1.5;">{esc(note)}</div></td>
+              <td><div style="font-size:13px;line-height:1.5;">{esc(note)}</div>{render_jump_links(video_url, g.get("quote_details") or [])}</td>
             </tr>
 """
     html_out += f"""          </tbody>
@@ -1159,7 +1204,7 @@ table.guide-table th {{
         name_cell = f'<span class="has-tip" tabindex="0">{i_icon}{name_display}{i_tip_elem}</span>'
         html_out += f"""            <tr>
               <td>{name_cell}</td>
-              <td><div style="font-size:13px;line-height:1.5;color:#991b1b;">{esc(note)}</div></td>
+              <td><div style="font-size:13px;line-height:1.5;color:#991b1b;">{esc(note)}</div>{render_jump_links(video_url, g.get("quote_details") or [])}</td>
             </tr>
 """
 
@@ -1196,7 +1241,7 @@ table.guide-table th {{
         html_out += f"""              <tr>
                 <td>{name_cell}</td>
                 <td style="text-align:center;"><span class="badge {badge_cls}">{badge_lbl}</span></td>
-                <td><div style="font-size:13px;line-height:1.5;">{esc(note)}</div></td>
+                <td><div style="font-size:13px;line-height:1.5;">{esc(note)}</div>{render_jump_links(video_url, g.get("quote_details") or [])}</td>
               </tr>
 """
 
@@ -1222,8 +1267,7 @@ table.guide-table th {{
         focus = p.get("focus", "")
         pivot = p.get("pivot", "")
         qds = p.get("quote_details", [])
-        qd_first = qds[0] if qds else None
-        quote_html = render_quote_badge(video_url, qd_first)
+        quote_html = render_quote_lines(video_url, qds)
 
         waves_badge = f'<span class="badge" style="background:#3a3229;color:#fff;">波次: {esc(waves)}</span>' if waves else '<span class="badge" style="background:#5a544c;color:#fff;font-size:11px;">阶段过渡</span>'
         html_out += f"""        <div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--card-subtle);">
@@ -1234,7 +1278,7 @@ table.guide-table th {{
           <div style="font-size:13px;line-height:1.5;margin-bottom:4px;">🎯 <b>本阶段目标:</b> {esc(goal)}</div>
           <div style="font-size:13px;line-height:1.5;margin-bottom:4px;">🔍 <b>操作与构筑焦点:</b> {esc(focus)}</div>
           <div style="font-size:13px;line-height:1.5;margin-bottom:6px;">⚡ <b>进入下一阶段转折点:</b> {esc(pivot)}</div>
-          
+          {quote_html}
         </div>
 """
 
@@ -1264,6 +1308,7 @@ table.guide-table th {{
           </div>
           <div style="font-size:13px;line-height:1.5;color:var(--ink);margin-bottom:6px;"><b>核心论证:</b> {esc(why)}</div>
           <div style="font-size:12px;color:var(--ink-secondary);"><b>获取建议:</b> {esc(how)}</div>
+          {render_jump_links(video_url, p.get("quote_details") or [])}
         </div>
 """
 
@@ -1295,6 +1340,7 @@ table.guide-table th {{
           </div>
           <div style="font-size:13px;line-height:1.5;color:var(--ink);margin-bottom:6px;"><b>核心论证:</b> {esc(why)}</div>
           <div style="font-size:12px;color:var(--ink-secondary);"><b>获取建议:</b> {esc(how)}</div>
+          {render_jump_links(video_url, p.get("quote_details") or [])}
         </div>
 """
 
@@ -1316,8 +1362,7 @@ table.guide-table th {{
         why = pit.get("why", "")
         avoid = pit.get("how_to_avoid", "")
         qds = pit.get("quote_details", [])
-        qd_first = qds[0] if qds else None
-        quote_html = render_quote_badge(video_url, qd_first)
+        quote_html = render_quote_lines(video_url, qds)
         badge_cls = f"badge-{sev}"
         sev_label = {"fatal": "致命 🔴", "risky": "危险 🟡", "trap": "陷阱 🟣"}.get(sev, sev)
 
@@ -1328,7 +1373,7 @@ table.guide-table th {{
           </div>
           <div style="font-size:13px;margin-bottom:6px;"><b>为什么是坑:</b> {esc(why)}</div>
           <div style="font-size:13px;margin-bottom:8px;color:#854d0e;"><b>如何避开:</b> {esc(avoid)}</div>
-          
+          {quote_html}
         </div>
 """
 
